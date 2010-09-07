@@ -1,5 +1,6 @@
 Why do we need another programming language when we have mql4/mql5 in forex?
 
+
 It has long been known that functional programming makes one more productive than statically typed languages such as c#,c++, and java. However, for years metatrader, a free,popular forex trading platform, has been limited to a proprietary language mql4 and soon to be mql5. This causes problems - first, the language appears to have evolved too slowly (its basically a c clone with less power and more focus to forex), and it is way to specific. It does not support general programming such as database access, neural networks, genetic programming, etc (accept via dll calls).
 
 Enter clojure. Easy access to any java library. Dynamic, meaning you can instantly test any function. This is extremely advantageous compared to a static language, but is even more advantageous over mql4 because debugging there is horrible - (maybe it will be remedied in mql5?) Clojure is also a lisp, which means it can be made into a domain specific language which will potentially allow it to be more convenient than the static 'domain specific' mql language.
