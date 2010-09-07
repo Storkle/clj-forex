@@ -1,0 +1,36 @@
+* Why do we need another programming language when we have mql4/mql5 in forex?
+** Dynamic  Programming vs Static Programming
+It has long been known that dynamic  programming makes one more productive than statically typed languages such
+ as c#,c++, and java. However, for years metatrader, a free,popular forex trading platform, has been limited to a proprietary language mql4 and soon to be mql5. 
+This causes problems - first, the language appears to have evolved too slowly (its basically a c clone with less power and more focus to forex
+and soon to be a c++ clone!), and it is way to specific. It does not support general programming such as database access, neural networks, genetic programming, 
+etc (accept via dll calls, which are clumsy).
+** Lisp + Java = awesome!
+Enter clojure. Easy access to any java library. Dynamic, meaning you can instantly test any function. 
+This is extremely advantageous compared to a static language, but is even more advantageous over mql4 
+because debugging there is horrible - (maybe it will be remedied in mql5?)
+
+Clojure is also a lisp, which means it can be made into a domain 
+specific language for forex using macros (its hard to explain, and if you dont know lisp/clojure, you probably wont believe!)
+** Speed
+In order to achieve this we can write server code in mql which will allow us to access all mql features. 
+In terms of speed, clojure+sockets is plenty fast - all we technically need is the latest close 
+price and the ability to open/close trades. Everything else can be stored in a database and indicators 
+can be calculated clojure side using the stored price data. Of course, it is perfectly possible to query metatrader 
+for custom indicator data, and one can hash it if one knows that it doesn't overwrite previos data.
+
+
+* Path to Development
+At the end of the day, all I want to do is write my conditions for a trade, 'enter' the ea into the ea handler, 
+and then forget about it all while the ea runs forever. 
+** Server
+** Error handling and logging 
+for power outage, lost interntet, mql errors, etc
+** Database
+** Indicator 
+creation, access current metatrader indicators
+** EA
+
+
+* Usage
+TODO
