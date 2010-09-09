@@ -2,10 +2,13 @@
 ;#1 ROBUSTNESS/INFORMATIVE
 ;;this code will be developed modularly and goal oriented
 ;; i want an ea which will run continuosly, and 'survive' internet faulty connections, power shutoff, etc.
+;; i want to be able to automatically distribute loads (think zeromq sockets) , i want to be able to
+;;    automatically restart metatrader if there are problems, or to connect to another port. i want to use lisp-like  awesome condition handling (restarts) to allow the user
+;;    to define different strategies for the fault conditions above. I want all conditions logged.
 ;; i want to be able to query the status of the ea. i want to have a graphical interface in my toolbar in which i can get any logs, messages
 ;; i want the option to have an alert box which will pop up, just like in metatrader, it will contain all alerts!
 
-;;this ea will be simple, in terms of logic - not something which trades, but maybe warns when 2 eas cross over! (with the option to trade i suppose!)
+;;this ea will be simple, in terms of logic - maybe it warns when 2 moving averages cross over! (with the option to trade i suppose!)
 ;;that is the goal ....
 
 
