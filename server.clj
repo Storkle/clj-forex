@@ -1,4 +1,5 @@
-;;FUTURE GOALS
+;;GOALS
+;#1 ROBUSTNESS/INFORMATIVE
 ;;this code will be developed modularly and goal oriented
 ;; i want an ea which will run continuosly, and 'survive' internet faulty connections, power shutoff, etc.
 ;; i want to be able to query the status of the ea. i want to have a graphical interface in my toolbar in which i can get any logs, messages
@@ -6,6 +7,7 @@
 
 ;;this ea will be simple, in terms of logic - not something which trades, but maybe warns when 2 eas cross over! (with the option to trade i suppose!)
 ;;that is the goal ....
+
 
 (ns server
   (:use clojure.contrib.except clojure.contrib.def)
