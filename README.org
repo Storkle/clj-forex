@@ -49,7 +49,9 @@ must install http://github.com/technomancy/leiningen.
 Finally, in the clj-forex directory, do
 #+begin_src sh
   lein deps 
+
   lein compile
+
   lein repl
 #+end_src sh
 
@@ -57,7 +59,9 @@ and you should have a repl to use which defaults in namespace clj-forex. You can
 metatrader up and the ea in place, type the following
 #+begin_src clojure
   (connect)
+
   (env! {:symbol "USDJPY"})
+
   (low 0)
 #+end_src clojure
  to give the current low.
