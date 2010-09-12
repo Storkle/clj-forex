@@ -31,6 +31,28 @@ for power outage, lost interntet, mql errors, etc
 creation, access current metatrader indicators
 ** EA
 
-
 * Usage
-TODO
+clj-forex is definitely very alpha and is not even near complete! 
+Use at own risk! 
+
+You need to place the src/mql4 files in the correct directory for metatrader.
+Go to your experts folder in your metatrader. Now, place files in include in 
+include, in scripts in scripts, and server.mq4 ea in experts.
+Start up metatrader and place the server.mq4 ea on a currency. Make sure load
+dll is enabled and if you want enable trading. If succesful, you should
+see in the journal something like 'succesfully binded' to a default socket
+in localhost. Note,that the socket is *not secure* anything can connect to it. Also, the script server.mq4 will, for some
+reason, cause the currency you place it on to not work (you will get bogus indicator values if you connect to server)
+
+Next, you must have java 1.6 or greater. You
+must install http://github.com/technomancy/leiningen.
+Finally, in the clj-forex directory, do
+lein deps 
+lein compile
+lein repl
+
+and you should have a repl to use which defaults in namespace clj-forex. You can now, if you have
+metatrader up and the ea in place, type in (connect). And then (env! {:symbol "USDJPY"}) and then (low 0) to give the current low.
+Finally, look in example1.clj for an example.
+
+** TODO: incorporating in emacs, hacking on, etc. A command line repl is really not too useful without an IDE to work in. Also, give an easy to use example
