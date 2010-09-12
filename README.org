@@ -47,12 +47,20 @@ reason, cause the currency you place it on to not work (you will get bogus indic
 Next, you must have java 1.6 or greater. You
 must install http://github.com/technomancy/leiningen.
 Finally, in the clj-forex directory, do
-lein deps 
-lein compile
-lein repl
+#+begin_src sh
+  lein deps 
+  lein compile
+  lein repl
+#+end_src sh
 
 and you should have a repl to use which defaults in namespace clj-forex. You can now, if you have
-metatrader up and the ea in place, type in (connect). And then (env! {:symbol "USDJPY"}) and then (low 0) to give the current low.
+metatrader up and the ea in place, type the following
+#+begin_src clojure
+  (connect)
+  (env! {:symbol "USDJPY"})
+  (low 0)
+#+end_src clojure
+ to give the current low.
 Finally, look in example1.clj for an example.
 
 ** TODO: incorporating in emacs, hacking on, etc. A command line repl is really not too useful without an IDE to work in. Also, give an easy to use example
