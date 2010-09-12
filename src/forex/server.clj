@@ -13,7 +13,7 @@
 
 
 (ns forex.server
-  (:use clojure.contrib.except clojure.contrib.def forex.tar.test)
+  (:use clojure.contrib.except clojure.contrib.def)
   (:import
    (java.net Socket)
    (java.io PrintWriter InputStreamReader BufferedReader)))
