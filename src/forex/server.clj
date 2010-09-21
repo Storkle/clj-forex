@@ -14,10 +14,10 @@
 
 (ns forex.server
   (:use clojure.contrib.except clojure.contrib.def)
+  (:require [clojure.contrib.str-utils2 :as s])
   (:import
    (java.net Socket)
    (java.io PrintWriter InputStreamReader BufferedReader)))
-(require '[clojure.contrib.str-utils2 :as s])
 
 (defn group
   ([coll] (group coll 2))
@@ -70,16 +70,17 @@
   +BUYSTOP+ 4
   +SELLSTOP+ 5)
 
-(defvar *env* (atom {:timeframe +D1+}))
+(defonce- *env* (atom {:timeframe +D1+}))
 (defn env [key] (key @*env*))
 (defn env! [map] (swap! *env* #(merge-with (fn [a b] (or b a)) % %2) map))
 
-(defn connect-socket [server]
+(defn connect-socket [server] (pr server)
   (let [socket (Socket. (:name server) (:port server))
 	in (BufferedReader. (InputStreamReader. (.getInputStream socket)))
 	out (PrintWriter. (.getOutputStream socket))
-	conn (ref {:in in :out out})]
+	conn (ref {:in in :out out :socket socket})] 
     conn))
+
 (defn write-stream [conn msg]
   (throw-if-not conn "no connection provided")
   (doto (:out @conn)
@@ -94,11 +95,27 @@
   (write-stream (:socket @*env*) msg)
   (receive-stream (:socket @*env*)))
 
-;;we now can use the sockets - now we need
-;;mql error handling and parsing numbers if no error!
-(def metatrader {:name "localhost" :port 2007})
-(defn connect []
-  (env! {:socket (connect-socket metatrader)}))
+(defonce- *connections* (atom {}))
+(defn connect
+  ([] (connect 2007))
+  ([port-id]
+     (let [port (get  @*connections* port-id)]
+       (if (and (:socket port) (.isClosed (:socket port))) (swap! *connections* dissoc port-id))
+       (if port
+	 (throw (Exception. "port already exists and is active - cannot connect!"))
+	 (let [socket (connect-socket {:name "localhost" :port port-id})]
+	   (env! {:socket socket})
+	   (swap! *connections* assoc port-id socket))))))
+
+(defn disconnect
+  ([] (disconnect 2007))
+  ([port-id]
+     (let [port (get @*connections* port-id)]
+       (when port 
+	     (.close (:socket @port)) (.close (:in @port)) (.close (:out @port))
+	     (swap! *connections* dissoc port-id)
+	     true))))
+
 (defmacro wenv [[ & {symbol :symbol socket :socket timeframe :timeframe}] & body]
   `(binding [*env*  (atom (merge-with #(or %2 %1) @*env* {:symbol ~symbol :socket ~socket :timeframe ~timeframe}))] ~@body))
 
@@ -133,5 +150,3 @@
 (defn low
   ([] (low 0))
   ([index] (mva 1 index :price +LOW+)))
-
-

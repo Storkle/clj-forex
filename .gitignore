@@ -2,3 +2,5 @@
 classes
 lib
 *~
+/clj-forex-0.1.jar
+/pom.xml
