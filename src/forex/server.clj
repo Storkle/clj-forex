@@ -1,16 +1,6 @@
-;;GOALS
-;#1 ROBUSTNESS/INFORMATIVE
-;;this code will be developed modularly and goal oriented
-;; i want an ea which will run continuosly, and 'survive' internet faulty connections, power shutoff, etc.
-;; i want to be able to automatically distribute loads (think zeromq sockets) , i want to be able to
-;;    automatically restart metatrader if there are problems, or to connect to another port. i want to use lisp-like  awesome condition handling (restarts) to allow the user
-;;    to define different strategies for the fault conditions above. I want all conditions logged.
-;; i want to be able to query the status of the ea. i want to have a graphical interface in my toolbar in which i can get any logs, messages
-;; i want the option to have an alert box which will pop up, just like in metatrader, it will contain all alerts!
 
-;;this ea will be simple, in terms of logic - maybe it warns when 2 moving averages cross over! (with the option to trade i suppose!)
-;;that is the goal ....
-
+					;NOTE: error 4054 = no symbol used!
+					;NOTE ALSO: one must compiler server.mq4, not just protocol.mq4, or it wont update itself!
 
 (ns forex.server
   (:use clojure.contrib.except clojure.contrib.def)
@@ -70,11 +60,11 @@
   +BUYSTOP+ 4
   +SELLSTOP+ 5)
 
-(defonce- *env* (atom {:timeframe +D1+}))
+(defonce- *env* (atom {:timeframe +D1+ :index 0}))
 (defn env [key] (key @*env*))
 (defn env! [map] (swap! *env* #(merge-with (fn [a b] (or b a)) % %2) map))
 
-(defn connect-socket [server] (pr server)
+(defn connect-socket [server]
   (let [socket (Socket. (:name server) (:port server))
 	in (BufferedReader. (InputStreamReader. (.getInputStream socket)))
 	out (PrintWriter. (.getOutputStream socket))
@@ -89,12 +79,17 @@
   conn)
 (defn receive-stream [conn]
   (assert conn)
-  (rest (s/split (.readLine (:in @conn)) #" +")))
+  (let [result (.readLine (:in @conn))] 
+   (rest (s/split result #" +"))))
 
-(defn receive [msg]
+(defn Receive [msg]
   (write-stream (:socket @*env*) msg)
   (receive-stream (:socket @*env*)))
-
+(defn receive [msg]
+  (let [result  (Receive msg)]
+    (if (= (first result) "error")
+      (throwf (str "error" (second result)))
+      result)))
 (defonce- *connections* (atom {}))
 (defn connect
   ([] (connect 2007))
@@ -107,6 +102,17 @@
 	   (env! {:socket socket})
 	   (swap! *connections* assoc port-id socket))))))
 
+
+;;offset in minutes of server time from greg time
+(def +offset+ (* 6 60))
+;;TODO fix!
+(defn date
+  ([] (date 0))
+  ([index]
+     (let [cal (Calendar/getInstance)]
+       (.add cal Calendar/MINUTE (+ +offset+ (* -1 (* (env :timeframe) index))))
+       (.getTime cal))))
+
 (defn disconnect
   ([] (disconnect 2007))
   ([port-id]
@@ -116,11 +122,9 @@
 	     (swap! *connections* dissoc port-id)
 	     true))))
 
-(defmacro wenv [[ & {symbol :symbol socket :socket timeframe :timeframe}] & body]
-  `(binding [*env*  (atom (merge-with #(or %2 %1) @*env* {:symbol ~symbol :socket ~socket :timeframe ~timeframe}))] ~@body))
+(defmacro wenv [[ & {symbol :symbol socket :socket timeframe :timeframe index :index}] & body]
+  `(binding [*env*  (atom (merge-with #(or %2 %1) @*env* {:symbol ~symbol :socket ~socket :timeframe ~timeframe :index ~index}))] ~@body))
 
-(defn iMA [symbol timeframe period mode price index]
-  (receive (format "iMA %s %s %s %s %s %s" symbol timeframe period mode price index)))
 
 (defmacro wait-for-update [& body]
   `(let [call# (fn [] ~@body)]
@@ -129,14 +133,78 @@
        (if (and (= (first result#) "error") (= (second result#) "4066"))
 	 (do (Thread/sleep 250) (if (< try# 4) (recur (call#) (inc try#)) (throwf "mql4 error %s" (rest result#))))
 	 (if (= (first result#) "error") (throwf "mql4 error %s" (rest result#)) result#)))))
-(defn jpy? [] (re-find #"JPY" (env :symbol)))
-(defn pt [] (if (jpy?) 0.01 0.0001))
-(defn pips [p] (/ p (pt)))
-(defn points [p] (* p (pt)))
+
+(defn iMA [symbol timeframe period mode price index]
+  (assert (and (number? timeframe) (string? symbol)))
+  (Receive (format "iMA %s %s %s %s %s %s" symbol timeframe period mode price (+ (env :index) index))))
+(defn iVMA [symbol timeframe adx weight ma index]
+  (assert (and (number? timeframe) (string? symbol))) 
+  (Receive (format "FantailVMA %s %s %s %s %s %s" symbol timeframe adx weight ma (+ (env :index) index))))
+
+(defmacro iprocess [& body] `(Double/parseDouble (first (wait-for-update ~@body))))
+
+(defonce- *orders* (atom {}))
+
+(defn record-order [order] 
+  (swap! *orders* assoc (:id order) order))
+
+(defn OrderSend [symbol cmd volume price slippage color sl tp]
+  (let [num (Double/parseDouble (first (receive (format "OrderSend %s %s %s %s %s %s" symbol cmd volume price slippage color))))
+	ticket {:id num :symbol symbol :cmd cmd :sl (or sl 0) :tp (or tp 0) :lots volume :price price :slippage slippage :color color}]
+    (record-order ticket)
+    ticket))
+
+
+(defn OrderModify [ticket price sl tp]
+  (assert (and (number? ticket) (number? price) (number? sl) (number? tp)))
+  (receive (format "OrderModify %f %f %f %f" (double ticket) (double price) (double sl) (double tp))))
+
+(defn buy [{symbol :symbol lots :lots price :price slippage :slippage sl :sl tp :tp}]
+  (assert (and (number? lots) (number? price)))
+  (let [ticket (OrderSend (or symbol (env :symbol) (throwf "no symbol passed to buy!")) +BUY+ lots price (or slippage 3) "Green" sl tp)]
+    (if (or sl tp) (OrderModify num price sl tp))
+    ticket))
+
+(defn sell [{symbol :symbol, lots :lots, price :price, slippage :slippage sl :sl tp :tp}]
+  (assert (and (number? lots) (number? price)))
+  (let [ticket (OrderSend (or symbol (env :symbol) (throwf "no symbol passed to buy!")) +SELL+ lots price (or slippage 3) "Green" sl tp)]
+    (if (or sl tp) (OrderModify num price sl tp))
+    ticket))
+(defn modify [ticket]
+  (OrderModify (:id ticket) (:price ticket) (or (:sl ticket) 0) (or (:tp ticket) 0)))
+
+(defn remove-order [id] (swap! *orders*  dissoc  id))
+;todo: what? (float 3.5486207E7)
+(defn close-order [order]
+  (OrderClose (:id order) (:lots order) (:price order) (:slippage order))
+  (remove-order (:id order)) true)
+
+(defn OrderClose [id lots price slippage]
+  (assert (and (number? id) (number? lots) (number? price) (number? slippage)))
+  (receive (format "OrderClose %f %f %f %f RED" (double id) (double lots) (double price) (double slippage))) "true" (pr "HI")
+  (remove-order id) true)
+
+(defn order [id] (get  @*orders* id))
+(defn order? [ticket] (if (order (:id ticket)) true false))
+
+;(sell {:volume 0.1 :price (close)})
+
+(defn account-equity [] (Double/parseDouble (first (receive "AccountEquity"))))
+(defn vma [params & index]
+  (assert (and (number? (first params)) (number? (second params)) (number? (second (rest params)))))
+  (let [result (fn [index]
+		 (iprocess (iVMA (env :symbol) (env :timeframe) (first params) (second params) (second (rest params)) index)))]
+    (if index (result (first index)) result)))
 
 (defn mva [period index & {mode :mode price :price}]
-  (Float/parseFloat
-   (first (wait-for-update (iMA (env :symbol) (env :timeframe) period (or mode +MODE_SMA+) (or price +CLOSE+) index)))))
+  (iprocess (iMA (env :symbol) (env :timeframe) period (or mode +MODE_SMA+) (or price +CLOSE+) index)))
+
+
+(defn jpy? [] (re-find #"JPY" (env :symbol)))
+(defn point [] (if (jpy?) 0.01 0.0001))
+(defn dollar [p] (/ p (point)))
+(defn pips [p] (* p (point)))
+
 
 (defn close
   ([] (close 0))
@@ -150,3 +218,13 @@
 (defn low
   ([] (low 0))
   ([index] (mva 1 index :price +LOW+)))
+
+
+;test!
+(defn vma-cross? []
+ (let [large (vma '(2 2 100))
+       small (vma '(2 2 1))]
+   (let [large_prev (large 1) large_current (large 0)
+	 small_prev (small 1) small_current (small 0)]
+     (cond (and (> large_prev small_prev) (<= large_current small_current)) :up
+	   (and (< large_prev small_prev) (>= large_current small_current)) :down))))
