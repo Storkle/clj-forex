@@ -3,6 +3,8 @@
 ;;TODO: make convenient macros for ea function; do on bar, intra bar, etc.
 ;;TODO: integrate mmemail to send email alerts
 ;;TODO: make debugging simple: statuses, etc.
+					;TODO: multiple connections, and this means no indicator serving and that it automatically manages any scalping trades
+
 (defonce *ea* (atom {}))
 (defn bar-id [] (open))
 
