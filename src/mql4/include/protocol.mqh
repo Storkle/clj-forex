@@ -256,17 +256,26 @@ string process_OrderLots(string command[]) {
 }
 
 
+//symbol,timeframe,period,shift
+string process_iATR(string command[]) {
+      //parse arguments
+      string symbol = command[2];
+      int timeframe = StrToInteger(command[3]);
 
+      int period = StrToInteger(command[4]);
+      int index = StrToInteger(command[5]);
+      //body
+      double atr = iATR(symbol,timeframe,period,index);
+      int err = GetLastError();
+      if (err!=0) 
+         return(error(err));
+      return(DoubleToStr(atr,5));
+ }
 string process_FantailVMA(string command[]) {
       //parse arguments
       string symbol = command[2];
       int timeframe = StrToInteger(command[3]);
       
-      //extern int    ADX_Length=2; 
-      //extern double Weighting=2.0;
-      //extern int  MA_Length=1;//This must be =1 so that the VMA base line does not get averaged.
-      //extern int  MA_Mode=1;
-
       int ADX_Length = StrToInteger(command[4]);
       double Weighting = StrToDouble(command[5]);
       int MA_Length = StrToInteger(command[6]);
@@ -339,6 +348,8 @@ string process(string id, string s) {
    GetLastError();
    if (c =="iMA") 
      result = process_iMA(commands); 
+   else if (c=="iATR")
+     result = process_iATR(commands);
    else if (c=="AccountEquity")     
      result = process_AccountEquity(commands);
    else if (c=="FantailVMA") 
