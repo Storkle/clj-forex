@@ -3,6 +3,16 @@
   (:require [clojure.contrib.def :as d]
 	    [clojure.contrib.str-utils2 :as s]))
 
+(defn log [e] (pr "ERROR!: " e))
+(defmacro wlog [& body]
+  `(try (do ~@body) (catch Exception e# (log e#))))
+(defmacro mapc [& args] `(dorun (map ~@args)))
+(defmacro thread [& body]
+  `(let [thread# (Thread. (bound-fn [] (wlog ~@body)))]
+     (.start thread#)
+     thread#))
+
+
 (defmacro throwf [message & args]
   (if args
     `(throw (Exception. (format ~message ~@args)))
