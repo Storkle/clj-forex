@@ -19,7 +19,7 @@ Its like an artist! Give an artist more efficient tools in the toolbox and who k
 Currently there is no release. Once i feel that it is stable and relatively feature complete, I will place the code on clojars and update this README so that
 you no longer see this sentence! Until then - plans are
 
-+ Indicator calculate on java side
++ Indicators calculated on java side
 + Automatic parsing of metatrader indicators to java
 + Ability to view indicator in metatrader
 + FXCM .NET backend
