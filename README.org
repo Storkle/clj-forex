@@ -1,70 +1,32 @@
-* Why do we need another programming language when we have mql4/mql5 in forex?
-** Dynamic  Programming vs Static Programming
-It has long been known that dynamic  programming makes one more productive than statically typed languages such
- as c#,c++, and java. However, for years metatrader, a free,popular forex trading platform, has been limited to a proprietary language mql4 and soon to be mql5. 
-This causes problems - first, the language appears to have evolved too slowly (its basically a c clone with less power and more focus to forex
-and soon to be a c++ clone!), and it is way to specific. It does not support general programming such as database access, neural networks, genetic programming, 
-etc (accept via dll calls, which are clumsy).
-** Lisp + Java = awesome!
-Enter clojure. Easy access to any java library. Dynamic, meaning you can instantly test any function. 
-This is extremely advantageous compared to a static language, but is even more advantageous over mql4 
-because debugging there is horrible - (maybe it will be remedied in mql5?)
+* What is clj-forex?
+Clj forex is an in progress effort to create a non-graphical backend to various forex backends. Right now Metatrader is the focus. 
+The ultimate goal of clj-forex is to create a robust library to allow the creation of EA (expert advisors) in the scripting language clojure. Indicators
+will be calculated java side using price bars retrieved from the backends. Integration of indicator data to the various gui backends (atleast for debugging purposes initially) 
+will be supported.
+The only purpose of the forex backend is to allow access to spreads, current price, ability to buy/sell, etc. The next planned backend is FXCMs .NET API so that eas
+can run on micro accounts!
 
-Clojure is also a lisp, which means it can be made into a domain 
-specific language for forex using macros (its hard to explain, and if you dont know lisp/clojure, you probably wont believe!)
-** Speed
-In order to achieve this we can write server code in mql which will allow us to access all mql features. 
-In terms of speed, clojure+sockets is plenty fast - all we technically need is the latest close 
-price and the ability to open/close trades. Everything else can be stored in a database and indicators 
-can be calculated clojure side using the stored price data. Of course, it is perfectly possible to query metatrader 
-for custom indicator data, and one can hash it if one knows that it doesn't overwrite previos data.
+* The Difference
+Im not sure why noone has done this before, but integration of a scripting language to create eas is, in my opinion, vital. Integration of a lisp-like
+dialect, like clojure, will allow much more rapid creation and prototyping of eas. This combined with easy access to any java library (clojure is implemented
+on the java virtual machine) makes for a winning combination! Things like neural networks, and other such 'advanced' concepts can now be much more easily
+integrated.
 
+Its like an artist! Give an artist more efficient tools in the toolbox and who knows what can be created! 
+[And clojure is fun to learn anyways!]
 
-* Path to Development
-At the end of the day, all I want to do is write my conditions for a trade, 'enter' the ea into the ea handler, 
-and then forget about it all while the ea runs forever. 
-** Server
-** Error handling and logging 
-for power outage, lost interntet, mql errors, etc
-** Database
-** Indicator 
-creation, access current metatrader indicators
-** EA
+* Status
+Currently there is no release. Once i feel that it is stable and relatively feature complete, I will place the code on clojars and update this README so that
+you no longer see this sentence! Until then - plans are
 
-* Usage
-clj-forex is definitely very alpha and is not even near complete! 
-Use at own risk! 
++ Indicator calculate on java side
++ Automatic parsing of metatrader indicators to java
++ Ability to view indicator in metatrader
++ FXCM .NET backend
++ EA framework with fault tolerance to internet disconnects.
+  + Ability to 'recover' orders
+  + hedging emulation 
++ EA Backtesting (visual?)
++ Comprehensive Unit Tests
++ Large demo ea (i.e. ea that im planning on building for my agi research)
 
-You need to place the src/mql4 files in the correct directory for metatrader.
-Go to your experts folder in your metatrader. Now, place files in include in 
-include, in scripts in scripts, and server.mq4 ea in experts.
-Start up metatrader and place the server.mq4 ea on a currency. Make sure load
-dll is enabled and if you want enable trading. If succesful, you should
-see in the journal something like 'succesfully binded' to a default socket
-in localhost. Note,that the socket is *not secure* anything can connect to it. Also, the script server.mq4 will, for some
-reason, cause the currency you place it on to not work (you will get bogus indicator values if you connect to server)
-
-Next, you must have java 1.6 or greater. You
-must install http://github.com/technomancy/leiningen.
-Finally, in the clj-forex directory, do
-#+begin_src sh
-  lein deps 
-
-  lein compile
-
-  lein repl
-#+end_src sh
-
-and you should have a repl to use which defaults in namespace clj-forex. You can now, if you have
-metatrader up and the ea in place, type the following
-#+begin_src clojure
-  (connect)
-
-  (env! {:symbol "USDJPY"})
-
-  (low 0)
-#+end_src clojure
- to give the current low.
-Finally, look in example1.clj for an example.
-
-** TODO: incorporating in emacs, hacking on, etc. A command line repl is really not too useful without an IDE to work in. Also, give an easy to use example
