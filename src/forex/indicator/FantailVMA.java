@@ -1,5 +1,7 @@
-package forex.indicator;
+//translated from original indicator by IgorAD,igorad2003@yahoo.co.uk
+//@ http://forex-strategies-revealed.com/files/MT4/FantailVMA3.mq4
 
+package forex.indicator;
 import forex.indicator.core.*;
 
 //TODO: fix: doesn't quite work  as can be seen with the metatrader indicator plotter
