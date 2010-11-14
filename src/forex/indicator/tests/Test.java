@@ -13,6 +13,8 @@ import forex.indicator.core.*;
 			source.update(); ind.update(); 
 		}  
  */
+//TODO: make cci more general with any stream, not just typical price
+//cci: 10, -154.91606714625223
 public class Test {
 	public static void main(String[] args) {
 		CsvSource source = new CsvSource("/home/seth/Desktop/eurusd.csv");

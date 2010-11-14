@@ -126,7 +126,7 @@ public abstract class Indicator extends SeqVar implements IndicatorInterface {
 			return "";
 		}
 	}	
-	public boolean stopped = false;
+	protected boolean stopped = false;
 	public void fail (int error) {
 		throw new Indicator.ReturnCodeException(error);
 	}
