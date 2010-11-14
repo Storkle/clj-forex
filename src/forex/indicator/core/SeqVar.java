@@ -30,15 +30,11 @@ public class SeqVar extends Seq implements AbsoluteSequence {
 	}
 
 	//Set functions...
-	public Double set(Integer obj) {	
-		return set(obj*1.0);
-	}
+
 	public Double set(Integer index,Integer obj) {
 		return set(index,obj*1.0);
 	}
-	public Double set(Double obj) {
-		return set(0,obj);
-	}
+
 	//TODO: fix SeqArray?
 	public Double set(Integer index, Double obj) {
         super.put(Bars.size()-1-index, obj);

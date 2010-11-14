@@ -16,7 +16,7 @@ public class CCI extends Indicator {
 	SeqVar tp = new SeqVar(this);
 	SeqVar dev = new SeqVar(this);
 	@input
-	Integer period = 14;
+	int period = 14;
 
 	public void Init() {
 		sma = new SMA(Bars, tp, period);
