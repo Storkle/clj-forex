@@ -13,7 +13,7 @@ public class SMA extends PriceIndicator {
 	int period = 2;
 
 	public void Init() {
-		Check.isNatural(period);
+		Check.is(period>0,"in sma, period must be >0");
 	}
 
 	public int Execute() {

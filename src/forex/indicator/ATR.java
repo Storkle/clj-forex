@@ -13,7 +13,7 @@ public class ATR extends Indicator {
 	SeqVar tr = new SeqVar(this);
 	Indicator tr_average;
 	public void Init() {
-		Check.isNatural(period);
+		Check.is(period>0,"in atr, period must be >0");
 		tr_average = new SMA(Bars, tr, period);
 	}
 	//TODO: when should we use Integer vs Double

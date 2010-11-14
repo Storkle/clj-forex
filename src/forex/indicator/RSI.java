@@ -28,7 +28,7 @@ public class RSI extends PriceIndicator {
 	}
 
 	public void Init() {
-		Check.isNatural(period);
+		Check.is(period>0,"in RSI, period must be >0");
 	}
 
 	// TODO: bars needs to be based on price sequence; make it general!

@@ -14,7 +14,7 @@ public class EMA extends PriceIndicator {
 	double weight;
 
 	public void Init() {
-		Check.isNatural(period);
+		Check.is(period>0,"in ema, period must be >0");
 		weight = 2.0 / (period + 1);
 	}
 

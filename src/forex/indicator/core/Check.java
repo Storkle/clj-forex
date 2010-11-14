@@ -1,9 +1,14 @@
 package forex.indicator.core;
 
 public class Check {
-	public static void isNatural(int i) {
-		if (i<=0) 
-			throw new InvalidIndicatorParameter("parameter "+i+" is less than 1");
+	public static void is(boolean result,String s, Object ... params) {
+		if (result==false) {
+		  String errMessage = String.format(s,params);
+		  if (errMessage=="") {
+			  errMessage = "is failed: invalid indicator parameters";
+		  }
+		  throw new InvalidIndicatorParameter(errMessage);
+		}
 	}
 
 }
