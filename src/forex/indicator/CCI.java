@@ -5,14 +5,6 @@ import forex.indicator.core.PriceStream;
 import forex.indicator.core.SeqVar;
 import forex.indicator.core.input;
 
-/*
- Calculate the last period's Typical Price (TP) = (H+L+C)/3 where H = high, L = low, and C = close.
- Calculate the 20-period Simple Moving Average of the Typical Price (SMATP).
- Calculate the Mean Deviation. First, calculate the absolute value of the difference between the last period's SMATP and the typical price for each of the past 20 periods. Add all of these absolute values together and divide by 20 to find the Mean Deviation.
- The final step is to apply the Typical Price (TP), the Simple Moving Average of the Typical Price (SMATP), the Mean Deviation and a Constant (.015) to the following formula:
- CCI = ( Typical Price - SMATP ) / ( .015 X Mean Deviation )
- */
-
 public class CCI extends Indicator {
 	public CCI(PriceStream Bars, int period) {
 		super(Bars);
@@ -24,7 +16,7 @@ public class CCI extends Indicator {
 	SeqVar tp = new SeqVar(this);
 	SeqVar dev = new SeqVar(this);
 	@input
-	Integer period = 2;
+	Integer period = 14;
 
 	public void Init() {
 		sma = new SMA(Bars, tp, period);

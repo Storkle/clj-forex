@@ -18,7 +18,7 @@ public class SMA extends PriceIndicator {
 
 	public int Execute() {
 		if (bars() < period)
-			not(period,bars());
+			not(period);
 		int limit = limit();
 		double sum = 0;
 		// initialize

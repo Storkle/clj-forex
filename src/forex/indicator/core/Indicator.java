@@ -42,8 +42,8 @@ public abstract class Indicator extends SeqVar implements IndicatorInterface {
 		}
 		
 	}
-	protected void not (int bars_needed,int amount) {
-		throw new Indicator.NotEnoughBarsException(bars_needed,amount);
+	protected void not (int bars_needed) {
+		throw new Indicator.NotEnoughBarsException(bars_needed,bars());
 	}
 	
 	//updating indicator

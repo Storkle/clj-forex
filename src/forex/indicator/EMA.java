@@ -22,7 +22,7 @@ public class EMA extends PriceIndicator {
 	// Exponent) + (previous day's EMA x (1-Exponent))
 	public int Execute() {
 		if (bars() < period)
-			not(period,bars()); 
+			not(period); 
 		int limit = limit();
 		// initialize with SMA
 		if (isStart()) {
