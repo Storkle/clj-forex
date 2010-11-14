@@ -5,18 +5,21 @@ import java.util.HashMap;
 // a sequence is an array with infinite size! and if you put something in it,it
 //assumes everything started at 0, so there! otherwise with nothing, length is zero!
 public class Seq extends HashMap<Integer,Double>{
-	private Integer max=null;
+	private Integer max=null, min = null;
 	//TODO: make public?
 	private Double defaultValue = 0.0;
 	
 	protected Seq reset () {
-		clear(); max = null; return this;
+		clear(); max = null; min=null; return this;
 	}
 	
+	public Integer start() {
+		return min;
+	}
 	public int size() {
 		if (max==null)
 			return 0;
-		return max+1;
+		return max-min+1;
 	}
 
 	public Double add(Double obj) {	
@@ -25,6 +28,8 @@ public class Seq extends HashMap<Integer,Double>{
 			max=0;
 		else
 			max+=1;	
+		if (min==null)
+			min=0;
 		return obj;
 	}
 	
@@ -35,12 +40,16 @@ public class Seq extends HashMap<Integer,Double>{
 		if (max == null || index > max) {
 			max = index;
 		}
+		if (min==null || index<min) 
+			min = index;
 		return obj;
 	}
 
+	//once youve started a sequence at an index, WE CANT GO SMALLER! Yay!
+	//TODO: change?
 	public Double get(Integer index) {
-		if (index==null||index>size() || index<0)
-			throw new IndexOutOfBoundsException("Attempting to access sequence of size "+size()+" at index "+index);
+		if (index==null||index>max || index<min)
+			throw new IndexOutOfBoundsException("Attempting to access sequence with min/max of "+min+"/"+max+" at index "+index);
 	    Double result = super.get(index);
 	    if (result==null) {
 	    	System.out.println("Warning: using default value of 0.0 for sequence");

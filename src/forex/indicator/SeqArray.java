@@ -9,6 +9,6 @@ public class SeqArray extends SeqVar {
     }
 
 	public int bars () {
-    	return size()-1;
+    	return size();
     }
 }

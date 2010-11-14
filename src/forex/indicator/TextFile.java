@@ -34,9 +34,13 @@ public class TextFile implements Iterable<String> {
 		this.filename = filename;
 	}
 
+	TextFileIterator iterator;
 	// This is the one method of the Iterable interface
 	public Iterator<String> iterator() {
-		return new TextFileIterator();
+		if (iterator==null) {
+			iterator = new TextFileIterator();
+		}
+		return iterator;
 	}
 
 	// This non-static member class is the iterator implementation

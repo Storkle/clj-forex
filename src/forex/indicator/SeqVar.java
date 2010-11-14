@@ -3,28 +3,32 @@ package forex.indicator;
 
 //TODO: allow prepending of data!??
 
-public class SeqVar extends Seq {
-	PriceStream Bars;
-	public SeqVar() {
-		
+public class SeqVar extends Seq implements AbsoluteSequence {
+	private AbsoluteSequence Bars;
+	protected SeqVar () {};
+	public SeqVar (Indicator ind) {
+		this.Bars = ind.Bars;
 	}
-	public SeqVar(Indicator ind) {
-		Bars = ind.Bars;
+	public SeqVar (AbsoluteSequence Bars) {
+		this.Bars = Bars;
 	}
-	public SeqVar (PriceStream bars) {
-		//used to synchronize size of sequence with indicator data amount
-		this.Bars = bars;
+	
+	public Integer start () {
+		Integer bars = bars()-1;
+		if (super.start()==null || bars ==null) 
+			return null;
+		return bars-super.start();
 	}
 	
 	public int bars() {
-		return Bars.size()-1;
+		return Bars.size();
 	}
 	//get functions...
 	public Double get() {
 		return get(0);
 	}
 	public Double get(Integer index) {
-		return super.get(bars()-index);
+		return super.get(bars()-1-index);
 	}
 
 	//Set functions...
@@ -37,8 +41,9 @@ public class SeqVar extends Seq {
 	public Double set(Double obj) {
 		return set(0,obj);
 	}
+	//TODO: fix SeqArray?
 	public Double set(Integer index, Double obj) {
-        super.put(bars()-index, obj);
+        super.put(bars()-1-index, obj);
 		return obj;
 	}
 }

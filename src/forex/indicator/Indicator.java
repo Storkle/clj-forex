@@ -1,76 +1,125 @@
 package forex.indicator;
 
+
+import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Hashtable;
+import java.util.concurrent.locks.ReadWriteLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 
-public  abstract class Indicator extends SeqVar implements IndicatorInterface {
-	SeqVar Price;
-	PriceStream Bars;
+//get read lock when reading! but only for pooled indicators!
 
-	
-	public Indicator(PriceStream Bars, SeqVar Price) {
+public abstract class Indicator extends SeqVar implements IndicatorInterface {
+	public void Init() {};
+	public void Destroy() {};
+	public Indicator(PriceStream Bars) {
 		super(Bars);
 		this.Bars = Bars;
-		this.Price = Price;
-		Init();    
-	} 
-	
-    public void Init() {};
-	public void Destroy() {};
-	
-	private Hashtable<Integer,Boolean> changed = new Hashtable<Integer,Boolean>();
-	public Double set(Integer obj) {	
-		return set(obj*1.0);
 	}
-	public Double set(Integer index,Integer obj) {
-		return set(index,obj*1.0);
-	}
-	public Double set(Double obj) {
-		return set(0,obj);
-	}
-	//TODO: make thread safe!
-	public Double set(Integer index, Double obj) {
-		Double result = super.set(index,obj);
-		changed.put(index,true);
-        return result;
-	}
-	
-	private int _counted = 0;
-	public int counted () {
-		//return counted-1
-		//TODO: why? metatrader does it?
-		if (_counted==0) 
-			return 0;
-		return _counted-1;
-	}
-	
-	//TODO: actually  deinit indicator
-	protected int process() {
-		//basically we record how many bars are 'counted'. So this is why we 'rewrite' the set methods of SeqVar below
-		changed.clear();
-		int ret = Execute();
-		if (ret==0) 
+		
+	public static final int NOT = -22;
+	public static final int EXCEPTION = -2222;
+	protected PriceStream Bars;
+	ReadWriteLock lock = new ReentrantReadWriteLock();
+
+	//updating indicator
+	public int update() {
+		int ret = -1; Exception except = null;
+		try {
+			lock();
+			ret = Execute();
+		} catch (Exception e) {
+			except = e;
+		} finally {
+			unlock();
+		}
+		if (ret == 0)
 			_counted = changed.size();
-		else  {
+		else {
 			_counted = 0;
-			throw new RuntimeException("deinitialized indicator due to error code "+ret+" ...");
+			if (except!=null) {
+				fail(EXCEPTION,"deinitializing indicator "+this.toString()+":: "+except.toString());
+			} else {
+			  fail(ret,"deinitialized indicator " + this.toString()
+					+ " due to error code " + ret + " ...");		  
+			}
 		}
 		return ret;
 	}
 	
-	ArrayList<SeqVar> sequences = new ArrayList<SeqVar>(8);
-	//TODO: should really only be public to SeqVar
-	public void addSeq (SeqVar seq) {
-		sequences.add(seq);
+    //locking the indicator 
+	public void lock () {
+		lock.writeLock().lock();
+	}
+	public void unlock () {
+		lock.writeLock().unlock();
+	}
+	public void readLock () {
+		lock.readLock().lock();
+	}
+	public void readUnlock() {
+		lock.readLock().unlock();
 	}	
+	public boolean tryRead() {
+		return lock.readLock().tryLock();
+	}
+	public boolean tryWrite() {
+		return lock.writeLock().tryLock();
+	}
+	
+	//setting the indicator - overriden because we need to record changes in changed???
+	private Hashtable<Integer, Boolean> changed = new Hashtable<Integer, Boolean>();
+	public Double set(Integer index, Double obj) {
+		Double result = super.set(index, obj);
+		changed.put(index, true);
+		return result;
+	}
+	private int _counted = 0;
+	
+	protected int counted() {
+		// return counted-1
+		// TODO: why? metatrader does it?
+		Integer s = size();
+		if (s==null || s==0)
+			return 0;
+		return s-1;
+	}
+	
+	//TODO: does above affect this?
+	public boolean isStart () {
+		return counted()==0; 
+	}
+	
+	public int limit () {
+		return bars()-1-counted();
+	}
+	
+	//deinitialize indicator
+	public String parseError(int error) {
+		switch (error) {
+		case EXCEPTION:
+			return "java exception";
+		default:
+			return "";
+		}
+	}	
+	public boolean stopped = false;
+	public void fail (int error) {
+		fail(error,"");
+	}
+	public void warn(String msg) {
+		System.out.println("Warning: "+msg);
+	}
+	public void fail(int error,String s) {
+		if (error!=NOT) {
+           stopped = true; 
+		   throw new RuntimeException("fail: error "+parseError(error)+": "+s);
+		} else {
+			warn("not enough bars for indicator "+this.toString());
+		}
+	}
 
-	//TODO: put in a interface?
-	public Double price() {
-		return Price.get(0);
-	}
-	public Double price(int index) {
-		return Price.get(index);
-	}
+	//more convenient interface with the price stream
 	public Double open(int index) {
 		return Bars.Open.get(index);
 	}

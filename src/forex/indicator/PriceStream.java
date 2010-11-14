@@ -1,14 +1,22 @@
 package forex.indicator;
-public class PriceStream {
+
+import java.util.ArrayList;
+
+public class PriceStream implements AbsoluteSequence {
 	public SeqArray High, Open, Low, Close;
 	public DataSource source;
 	
+	//TODO: change id
+	public int id () {
+		return "".hashCode();
+	}
 	public PriceStream(DataSource s) {
 		source = s;
 		High = new SeqArray();
 		Open = new SeqArray();
 		Low = new SeqArray();
 		Close = new SeqArray();
+		s.addStream(this);
 	}
 
 	public PriceStream reset() {
@@ -36,6 +44,12 @@ public class PriceStream {
 		return this;
 	}
 
+	
+	ArrayList<Indicator> indicators = new ArrayList<Indicator>();	
+	public PriceStream addIndicator(Indicator ind) {
+		indicators.add(ind);return this;
+	}
+	
 	public PriceStream update() {
 		source.update(this);
 		return this;
