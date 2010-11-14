@@ -1,4 +1,4 @@
-package forex.indicator;
+package forex.indicator.core;
 /*
 License for Java 1.5 'Tiger': A Developer's Notebook
      (O'Reilly) example package

@@ -1,4 +1,4 @@
-package forex.indicator;
+package forex.indicator.core;
 
 public interface IndicatorInterface {
   public int Execute();

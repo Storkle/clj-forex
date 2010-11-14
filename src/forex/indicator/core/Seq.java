@@ -1,4 +1,4 @@
-package forex.indicator;
+package forex.indicator.core;
 
 import java.util.HashMap;
 
@@ -47,8 +47,9 @@ public class Seq extends HashMap<Integer,Double>{
 
 	//once youve started a sequence at an index, WE CANT GO SMALLER! Yay!
 	//TODO: change?
+	//TODO: use size()
 	public Double get(Integer index) {
-		if (index==null||index>max || index<min)
+		if (index==null||max==null||min==null||index>max || index<min)
 			throw new IndexOutOfBoundsException("Attempting to access sequence with min/max of "+min+"/"+max+" at index "+index);
 	    Double result = super.get(index);
 	    if (result==null) {

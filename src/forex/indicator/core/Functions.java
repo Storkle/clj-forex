@@ -1,4 +1,4 @@
-package forex.indicator;
+package forex.indicator.core;
 
 public class Functions {
 	public static Double Summation(SeqVar seq,int from,int to) {

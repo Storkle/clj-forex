@@ -1,23 +1,28 @@
-package forex.tests;
-import forex.core.*;
+package forex.indicator.tests;
 import forex.indicator.*;
+import forex.indicator.core.*;
 
 //TODO: getting and setting take up a very significant time - why??? profile! or maybe its read locking....
-
-//TODO: fix bars() and somehow should we actually throw an error if there aren't enough bars to calculate the indicator?
-//or should it just be a null indicator?
-//TODO: cci doesnt work
-
+//TODO: and maybe update without locks?
+//TODO: add support for going from 0 upto limit?
+//TODO: this takes forever
+/*
+  for (int i=0;i<30;i++)
+			source.update();
+		while (source.empty()==false) {
+			source.update(); ind.update(); 
+		}  
+ */
 public class Test {
 	public static void main(String[] args) {
 		CsvSource source = new CsvSource("/home/seth/Desktop/eurusd.csv");
 		PriceStream stream = new PriceStream(source);
-		Indicator ind = new SMA(stream,stream.Close,10);  
 		while (source.empty()==false) {
 			source.update(); 
 		}  
+		Indicator ind = new CCI(stream,10);  
 		ind.update();
 		System.out.println("HI "+stream.size());
 		System.out.println("size: "+ind.size()+" val: "+ind.get());
-	}
+	} //1.3699220000000023
 }

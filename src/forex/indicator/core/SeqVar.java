@@ -1,11 +1,11 @@
-package forex.indicator;
+package forex.indicator.core;
 //A SeqVar allows one to reference an array in reverse order! Yay! Anyways.
 
 //TODO: allow prepending of data!??
 
 public class SeqVar extends Seq implements AbsoluteSequence {
-	private AbsoluteSequence Bars;
-	protected SeqVar () {};
+	protected AbsoluteSequence Bars;
+	protected SeqVar () {}; 
 	public SeqVar (Indicator ind) {
 		this.Bars = ind.Bars;
 	}
@@ -14,21 +14,19 @@ public class SeqVar extends Seq implements AbsoluteSequence {
 	}
 	
 	public Integer start () {
-		Integer bars = bars()-1;
+		Integer bars = Bars.size()-1;
 		if (super.start()==null || bars ==null) 
 			return null;
 		return bars-super.start();
 	}
 	
-	public int bars() {
-		return Bars.size();
-	}
+
 	//get functions...
 	public Double get() {
 		return get(0);
 	}
 	public Double get(Integer index) {
-		return super.get(bars()-1-index);
+		return super.get(Bars.size()-1-index);
 	}
 
 	//Set functions...
@@ -43,7 +41,7 @@ public class SeqVar extends Seq implements AbsoluteSequence {
 	}
 	//TODO: fix SeqArray?
 	public Double set(Integer index, Double obj) {
-        super.put(bars()-1-index, obj);
+        super.put(Bars.size()-1-index, obj);
 		return obj;
 	}
 }

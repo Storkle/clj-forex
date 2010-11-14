@@ -1,4 +1,4 @@
-package forex.indicator;
+package forex.indicator.core;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 

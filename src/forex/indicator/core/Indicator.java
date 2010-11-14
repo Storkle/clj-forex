@@ -1,4 +1,4 @@
-package forex.indicator;
+package forex.indicator.core;
 
 
 import java.lang.reflect.Field;
@@ -17,33 +17,53 @@ public abstract class Indicator extends SeqVar implements IndicatorInterface {
 		this.Bars = Bars;
 	}
 		
-	public static final int NOT = -22;
+	private static final int NOT = -22;
 	public static final int EXCEPTION = -2222;
 	protected PriceStream Bars;
 	ReadWriteLock lock = new ReentrantReadWriteLock();
 
+	public static class ReturnCodeException extends RuntimeException{
+		public int ret;
+		ReturnCodeException(int ret) {
+			this.ret = ret;
+		}
+		public String getMessage () {
+			return "return code "+ret+" received";
+		}
+		
+	}
+	public static class NotEnoughBarsException extends RuntimeException{
+		public int bars; public int amount;
+		NotEnoughBarsException(int bars,int amount) {
+			this.bars = bars; this.amount = amount;
+		}
+		public String getMessage () {
+			return ""+bars+" bars needed, only "+amount+" avaiable";
+		}
+		
+	}
+	protected void not (int bars_needed,int amount) {
+		throw new Indicator.NotEnoughBarsException(bars_needed,amount);
+	}
+	
 	//updating indicator
 	public int update() {
-		int ret = -1; Exception except = null;
+		int ret = -1;
+		if (stopped==true) {
+			throw new RuntimeException("indicator is deinitialized - cant use it!");
+		}
 		try {
 			lock();
 			ret = Execute();
-		} catch (Exception e) {
-			except = e;
-		} finally {
+		} 
+		finally {
+			if (ret!=0) {
+				_counted = 0;stopped=true;Destroy();
+			}
 			unlock();
 		}
-		if (ret == 0)
-			_counted = changed.size();
-		else {
-			_counted = 0;
-			if (except!=null) {
-				fail(EXCEPTION,"deinitializing indicator "+this.toString()+":: "+except.toString());
-			} else {
-			  fail(ret,"deinitialized indicator " + this.toString()
-					+ " due to error code " + ret + " ...");		  
-			}
-		}
+		if (ret!=0) 
+			fail(ret);
 		return ret;
 	}
 	
@@ -90,6 +110,9 @@ public abstract class Indicator extends SeqVar implements IndicatorInterface {
 		return counted()==0; 
 	}
 	
+	public int bars () {
+		return Bars.size();
+	}
 	public int limit () {
 		return bars()-1-counted();
 	}
@@ -105,18 +128,10 @@ public abstract class Indicator extends SeqVar implements IndicatorInterface {
 	}	
 	public boolean stopped = false;
 	public void fail (int error) {
-		fail(error,"");
+		throw new Indicator.ReturnCodeException(error);
 	}
 	public void warn(String msg) {
 		System.out.println("Warning: "+msg);
-	}
-	public void fail(int error,String s) {
-		if (error!=NOT) {
-           stopped = true; 
-		   throw new RuntimeException("fail: error "+parseError(error)+": "+s);
-		} else {
-			warn("not enough bars for indicator "+this.toString());
-		}
 	}
 
 	//more convenient interface with the price stream

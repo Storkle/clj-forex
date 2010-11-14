@@ -1,4 +1,4 @@
-package forex.indicator;
+package forex.indicator.core;
 
 public class Check {
 	public static void isNatural(int i) {
