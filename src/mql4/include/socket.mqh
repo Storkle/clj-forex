@@ -26,14 +26,14 @@ string sock_receive(int msgsock) {
    int retval = recv(msgsock, Buffer, ArraySize(Buffer)<<2, 0);
    if (retval == SOCKET_ERROR) {
        Print("Server: recv() failed: error "+ WSAGetLastError());
-       closesocket(msgsock);
+       //closesocket(msgsock);
        err(-1);
        return("");
    } else
        Print("Server: recv() is OK.");
    if (retval == 0) {
       Print("Server: Client closed connection.\n");
-      closesocket(msgsock);
+      //closesocket(msgsock);
       err(-1);
       return("");
    }
@@ -101,6 +101,7 @@ int open_socket(int port,string ip_address) {
     Print("sin_family:"+struct2int(local,sin_family)+" sin_port:"+struct2int(local,sin_port)+" sin_addr:"+struct2int(local,sin_addr));
     if (bind(listen_socket, local, ArraySize(local)<<2) == SOCKET_ERROR) {
         Print("Server: bind() failed with error "+WSAGetLastError());
+        closesocket(listen_socket);
         WSACleanup();
         err(-1);
         return(-1);
@@ -110,6 +111,7 @@ int open_socket(int port,string ip_address) {
     if (socket_type != SOCK_DGRAM) {
         if (listen(listen_socket,5) == SOCKET_ERROR) {
             Print("Server: listen() failed with error "+ WSAGetLastError());
+            closesocket(listen_socket);
             WSACleanup();
             err(-1);
             return(-1);
@@ -131,7 +133,7 @@ int sock_accept(int listen_socket) {
     if (msgsock == INVALID_SOCKET) {
         Print("Server: accept() error "+ WSAGetLastError());
         WSACleanup();
-        err(-1);
+        err(-1); 
         return(-1);
      } else {
         Print("Server: accept() is OK.\n");
