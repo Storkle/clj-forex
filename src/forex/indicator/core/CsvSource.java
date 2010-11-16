@@ -3,16 +3,13 @@ package forex.indicator.core;
 import java.util.ArrayList;
 
 public class CsvSource implements DataSource {
-	ArrayList<PriceStream> streams = new ArrayList<PriceStream>();
 	String fileName; 
 	TextFile file;
 	
 	public boolean empty() {
 		return file.iterator().hasNext()==false;
 	}
-	public void addStream(PriceStream stream) {
-		streams.add(stream);
-	}
+
 	public CsvSource(String fileName) {
 		this.fileName = fileName;
 		file = new TextFile(fileName);
@@ -34,17 +31,13 @@ public class CsvSource implements DataSource {
 		stream.add(high, low, open, close);
 		return this;
 	}
-	
-	public DataSource resetAll() {
-		for (PriceStream stream:streams)
-			stream.reset();
-		return this;
-	}
+
 	@Override
 	public DataSource update() {
 		// TODO Auto-generated method stub
-		for (PriceStream stream:streams) 
-			update(stream);
-		return this;
+		return null;
 	}
+	
+
+
 }

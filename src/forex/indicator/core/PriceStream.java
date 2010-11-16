@@ -4,19 +4,15 @@ import java.util.ArrayList;
 
 public class PriceStream implements AbsoluteSequence {
 	public SeqArray High, Open, Low, Close;
-	public DataSource source;
-	
 	//TODO: change id
 	public int id () {
 		return "".hashCode();
-	}
-	public PriceStream(DataSource s) {
-		source = s;
+	}	
+	public PriceStream() {
 		High = new SeqArray();
 		Open = new SeqArray();
 		Low = new SeqArray();
 		Close = new SeqArray();
-		s.addStream(this);
 	}
 
 	public PriceStream reset() {
@@ -35,12 +31,12 @@ public class PriceStream implements AbsoluteSequence {
 	public int size() {
 		return High.size();
 	}
-	public PriceStream set(int index, Double highVal, Double lowVal,
+	public PriceStream put(int index, Double highVal, Double lowVal,
 			Double openVal, Double closeVal) {
-		High.set(index, highVal);
-		Open.set(index, openVal);
-		Low.set(index, lowVal);
-		Close.set(index, closeVal);
+		High.put(index, highVal);
+		Open.put(index, openVal);
+		Low.put(index, lowVal);
+		Close.put(index, closeVal);
 		return this;
 	}
 
@@ -50,10 +46,10 @@ public class PriceStream implements AbsoluteSequence {
 		indicators.add(ind);return this;
 	}
 	
-	public PriceStream update() {
+/*	public PriceStream update() {
 		source.update(this);
 		return this;
-	}
+	}*/
 
 	public Double open(int index) {
 		return Open.get(index);

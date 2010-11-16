@@ -37,7 +37,8 @@ public class SeqVar extends Seq implements AbsoluteSequence {
 
 	//TODO: fix SeqArray?
 	public Double set(Integer index, Double obj) {
-        super.put(Bars.size()-1-index, obj);
+		super.put(Bars.size()-1-index, obj);
+	
 		return obj;
 	}
 }

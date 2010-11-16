@@ -1,8 +1,8 @@
 (ns forex.socket 
-   (:use forex.utils)
-   (:import  
-    java.net.Socket
-    (java.io PrintWriter InputStreamReader BufferedReader)))
+  (:use forex.utils)
+  (:import  
+   java.net.Socket
+   (java.io PrintWriter InputStreamReader BufferedReader)))
 
 (defn connect-socket [server]
   (let [socket (Socket. (:name server) (:port server))
@@ -14,13 +14,17 @@
 (defn write-stream [conn msg]
   (is conn "no connection provided")
   (doto (:out @conn)
-    (.println (str 2 " " msg "\r"))
+    (.println (str msg "\r"))
     (.flush))
   conn)
 (defn receive-stream [conn]
   (is conn)
   (let [result (.readLine (:in @conn))] 
-   (rest (split result #" +"))))
+    (rest (split result #" +"))))
+
+
+(defn wr [msg]
+  (write-stream (env :socket) msg))
 
 (defn Receive [msg]
   (write-stream (env :socket) msg)
@@ -42,16 +46,18 @@
 	   (env! {:socket socket})
 	   (swap! *connections* assoc port-id socket))))))
 
-
-
 (defn disconnect
   ([] (disconnect 2007))
   ([port-id]
      (let [port (get @*connections* port-id)]
        (when port 
-	     (.close (:socket @port)) (.close (:in @port)) (.close (:out @port))
-	     (swap! *connections* dissoc port-id)
-	     true))))
+	 (.close (:socket @port)) (.close (:in @port)) (.close (:out @port))
+	 (swap! *connections* dissoc port-id)
+	 true))))
+
+
+
+
 
 
 

@@ -25,14 +25,20 @@
 
 (def split s/split)
 
+
+(defmacro doseq* [[& args] & body]
+  (let [a (group args 2)
+	first-args (map first a)
+	second-args (map second a)]
+    `(doseq [[~@first-args] (map vector ~@second-args)]
+       ~@body)))
+;;TODO: make more efficient
 (defn group
   ([coll] (group coll 2))
-  ([the-coll by]
-     (loop [coll the-coll
-	    result nil]
-       (if (empty? coll)
-	 result
-	 (recur (drop by coll) (concat result (list (take by coll))))))))
+  ([coll by]
+     (lazy-seq
+       (when-let [s (seq coll)]
+	 (cons (take by coll) (group (drop by coll) by))))))
 
 (defmacro constants [& args]
   `(do ~@(map #(list 'def (first %) (second %)) (group args))))

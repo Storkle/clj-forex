@@ -34,20 +34,20 @@ import forex.indicator.core.*;
 public class Test {
 	public static void main(String[] args) throws FileNotFoundException {
 		CsvSource source = new CsvSource("/home/seth/Desktop/eurusd.csv");
-		PriceStream stream = new PriceStream(source);
-		///Indicator ind = new EMA(stream,stream.Close,10);
-		FantailVMA ind = new FantailVMA(stream,2,2,1);  
-		for (int i=0;i<=30;i++)
-			source.update();
+		ForexStream stream = new ForexStream("EURUSD",60);
+		//stream.put(0, 2.0, 3.0, 4.0, 8.0);
+		Indicator ind = new SMA(stream,stream.Close,10);
+		//FantailVMA ind = new FantailVMA(stream,2,2,1);  
+	
 		while (source.empty()==false) {
-			source.update(); 
+			source.update(stream);
 		}  		
 		
 		System.out.println("HI");
 		ind.update(); 
-		System.out.println("size: "+ind.average.size());
+		System.out.println("size: "+ind.get());
 		//output for plotting in metatrader
-		MPlotter.dir = "/home/seth/.wine/dosdevices/c:/Program Files/FXCM MT4 powered by BT/experts/files/";
-		MPlotter.out(ind.average);
+		////MPlotter.dir = "/home/seth/.wine/dosdevices/c:/Program Files/FXCM MT4 powered by BT/experts/files/";
+		//MPlotter.out(ind.average);
 	} 
 }
