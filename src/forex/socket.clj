@@ -1,62 +1,48 @@
-(ns forex.socket 
-  (:use forex.utils)
-  (:import  
-   java.net.Socket
-   (java.io PrintWriter InputStreamReader BufferedReader)))
-
-(defn connect-socket [server]
-  (let [socket (Socket. (:name server) (:port server))
-	in (BufferedReader. (InputStreamReader. (.getInputStream socket)))
-	out (PrintWriter. (.getOutputStream socket))
-	conn (ref {:in in :out out :socket socket})] 
-    conn))
-
-(defn write-stream [conn msg]
-  (is conn "no connection provided")
-  (doto (:out @conn)
-    (.println (str msg "\r"))
-    (.flush))
-  conn)
-(defn receive-stream [conn]
-  (is conn)
-  (let [result (.readLine (:in @conn))] 
-    (rest (split result #" +"))))
-
-
-(defn wr [msg]
-  (write-stream (env :socket) msg))
-
-(defn Receive [msg]
-  (write-stream (env :socket) msg)
-  (let [result (receive-stream (env :socket))] result))
+(ns forex.socket
+  (:require [org.zeromq.clojure :as z])
+  (:use forex.utils))
+ 
+(defonce- *ctx* (z/make-context 1))
+;;using socket
+(defn connect-socket [data]
+  (let [s (z/make-socket *ctx* z/+req+)]
+    (z/connect s (str "tcp://" (:host data) ":" (:port data)))
+    {:socket s :host (:host data) :port (:port data)}))
+(defn write-socket [conn msg]
+  (is conn "write-socket: no connection provided")
+  (z/send- (:socket conn) (.getBytes msg)))
+(defn receive-socket [conn]
+  (is conn "receive-socket: no connection provided")
+  (split (String. (z/recv (:socket conn))) #" +"))
+;;clj-forex receive
 (defn receive [msg]
-  (let [result  (Receive msg)]
-    (if (= (first result) "error")
-      (throwf (str "error" (second result)))
-      result)))
+  (write-socket (env :socket) msg)
+  (let [result (receive-socket (env :socket))] result))
+
+;;hash all connections
 (defonce- *connections* (atom {}))
+(defn get-connection [port]
+  (get @*connections* port))
+
 (defn connect
-  ([] (connect 2007))
+  ([] (connect 2027))
   ([port-id]
      (let [port (get  @*connections* port-id)]
-       (if (and (:socket port) (.isClosed (:socket port))) (swap! *connections* dissoc port-id))
        (if port
-	 (throw (Exception. "port already exists and is active - cannot connect!"))
-	 (let [socket (connect-socket {:name "localhost" :port port-id})]
+	 (throwf "port already exists and is active - cannot connect!")
+	 (let [socket (connect-socket {:host "localhost" :port port-id})]
 	   (env! {:socket socket})
 	   (swap! *connections* assoc port-id socket))))))
 
 (defn disconnect
-  ([] (disconnect 2007))
+  ([] (disconnect 2027))
   ([port-id]
-     (let [port (get @*connections* port-id)]
-       (when port 
-	 (.close (:socket @port)) (.close (:in @port)) (.close (:out @port))
+     (let [socket (get @*connections* port-id)]
+       (when socket 
+	 (.close (:socket socket))
 	 (swap! *connections* dissoc port-id)
+	 (env! {:socket nil})
 	 true))))
-
-
-
 
 
 

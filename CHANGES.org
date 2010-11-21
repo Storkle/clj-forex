@@ -1,0 +1,6 @@
+* <2010-11-21 Sun>
++ Changing to zeromq in mql4 server and clojure size - saving to repository just to
+  save changes. Stuff doesn't work 100% correctly yet. But zeromq - much better!
++ Also rearranged directory structures
++ TODO: zeromq now requires native dependencies for clojure and mql side - make leiningen build scripts
+

@@ -1,3 +1,8 @@
+int DEBUG_ON = 1;
+void trace(string s) {
+ if (DEBUG_ON==1) 
+   Print(s);
+}
 
 string error (int code) {
   return("error "+code);
