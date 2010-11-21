@@ -1,5 +1,5 @@
 (defproject clj-forex "0.0.1"
-  :description "communicate with metatrader to trade forex in clojure"
+  :description "non graphical library for automated trading for forex market with various backends like metatrader"
   :dependencies [[org.clojure/clojure "1.2.0"]
                  [org.clojure/clojure-contrib "1.2.0"]
                  ;;zeromq
@@ -11,7 +11,5 @@
                  ]
   :dev-dependencies [[native-deps "1.0.4"] [swank-clojure "1.2.1"]]
   :native-dependencies [[org.clojars.storkle/zmq-native "1.0.0"]]
- 
-  ;:main forex.binding
-  
+  ;:main forex.binding  
  )
