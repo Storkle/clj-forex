@@ -3,25 +3,36 @@
 #include <errno.h>
 
 //messages
+//todo: handle error if malloc dont work?
 zmq_msg_t* WINAPI wine_zmsg_new ()
 {
   void* ret =  malloc(sizeof(zmq_msg_t));  return ret;
-} 
+}  
 
 void WINAPI wine_zmq_version(int *major,int*minor,int*patch) {  
   zmq_version(major,minor,patch);  
 } 
 
-int WINAPI wine_zmq_msg_init_data (zmq_msg_t *msg, void *data, size_t size) {
-  int ret =  zmq_msg_init_data(msg,data,size,NULL,NULL);  return ret;
+void my_free(void*data,void*hint) {
+  free(data);
 }
+
+int WINAPI wine_zmq_msg_init_data (zmq_msg_t* msg,char *data, int size) {
+  char* new_data = strdup(data);
+  int ret =  zmq_msg_init_data(msg,new_data,size,my_free,NULL);  
+  //printf("HI");
+  return ret; 
+}
+
+
 
 int WINAPI wine_zmq_msg_size (zmq_msg_t *msg) {
   int ret = zmq_msg_size(msg);  return ret;
 }
 
-void* WINAPI wine_zmq_msg_data (zmq_msg_t *msg) {
-  return zmq_msg_data(msg);  
+char* WINAPI wine_zmq_msg_data (zmq_msg_t *msg) {
+  char* data = zmq_msg_data(msg);
+  return strdup(data);
 }
 
 int WINAPI wine_zmq_msg_close (zmq_msg_t *msg) {

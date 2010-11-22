@@ -1,7 +1,7 @@
 @ stdcall zmsg_new() wine_zmsg_new
 
 @ stdcall zmq_version(ptr ptr ptr) wine_zmq_version
-@ stdcall zmq_msg_init_data (ptr ptr long) wine_zmq_msg_init_data
+@ stdcall zmq_msg_init_data (ptr long) wine_zmq_msg_init_data
 @ stdcall zmq_msg_size (ptr) wine_zmq_msg_size 
 @ stdcall zmq_msg_close (ptr) wine_zmq_msg_close
 @ stdcall zmq_msg_data (ptr) wine_zmq_msg_data 

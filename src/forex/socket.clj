@@ -1,7 +1,9 @@
+;;Assertion failed: pending_term_acks (socket_base.cpp:690)
+
 (ns forex.socket
   (:require [org.zeromq.clojure :as z])
   (:use forex.utils))
- 
+;;todo: how to handle closing of server? 
 (defonce- *ctx* (z/make-context 1))
 ;;using socket
 (defn connect-socket [data]
