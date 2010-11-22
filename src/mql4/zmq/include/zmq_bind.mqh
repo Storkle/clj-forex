@@ -36,19 +36,18 @@ int z_msg_new (string data) {
 }
 
 string z_msg(int msg) { //TODO: catch error if zmq_msg_data doesnt work out?
-  z_trace("z_msg: "+msg); 
-  string ret=  zmq_msg_data(msg);
-  return(StringSubstr(ret,0,zmq_msg_size(msg))); //i thought for second that this crashed metatrader, i guess that was something else?
+  z_trace("z_msg"); 
+  return(zmq_msg_data(msg));
 }
 
 int z_msg_len(int msg) {
-  z_trace("z_msg_size: "+msg);
+  z_trace("z_msg_size");
   int ret = zmq_msg_size(msg); 
   return(ret);
 }
 
 int z_msg_close(int msg) {
-  z_trace("z_msg_close "+msg);
+  z_trace("z_msg_close");
   if (msg==0) 
    return(0);
   int ret = zmq_msg_close(msg); 
@@ -65,7 +64,7 @@ int z_socket(int context,int type) {
  return(ret);
 }
 int z_close(int socket) {
-  z_trace("z_close: "+socket);
+  z_trace("z_close");
   if (socket==0) {
    return(0);
   }
@@ -75,14 +74,14 @@ int z_close(int socket) {
   return(ret);
 }
 int z_bind (int socket,string endpoint) { //for the servers
-  z_trace("z_bind: "+socket+" "+endpoint); 
+  z_trace("z_bind: "+endpoint); 
   int ret = zmq_bind(socket,endpoint); 
   if (ret==-1)
    z_error();
   return(ret);
 }
 int z_connect(int socket,string endpoint) { //for the clients
- z_trace("z_connect: "+socket+" "+endpoint);
+ z_trace("z_connect: "+endpoint);
  int ret = zmq_connect(socket,endpoint); 
  if (ret==-1) 
    z_error();
@@ -90,16 +89,16 @@ int z_connect(int socket,string endpoint) { //for the clients
 }
 
 int z_send(int socket,int msg,int flags) {
- z_trace("z_send: "+socket+" "+msg+" "+flags); 
+ z_trace("z_send: "+msg+" "+flags); 
  int ret = zmq_send(socket,msg,flags); 
  if (ret==-1)
    z_error(); 
  return(ret);
 }
 int z_recv(int socket,int msg,int flags) {
- z_trace("z_recv: "+socket+" "+msg+" "+flags); 
+ z_trace("z_recv: "+msg+" "+flags); 
  int ret = zmq_recv(socket,msg,flags); 
- if (ret==1)
+ if (ret==-1)
    z_error();
  return(ret);
 }
@@ -116,7 +115,7 @@ int z_init(int io_threads) {
 }
 
 int z_term(int context) {
- z_trace("z_term: "+context);
+ z_trace("z_term");
  if(context==NULL) 
    return(0);
  int ret = zmq_term(context); 
