@@ -28,8 +28,8 @@ int z_msg_empty() {
 int z_msg_new (string data) {
   z_trace("z_msg_new: "+data);
 
-  int msg = zmsg_new(); 
-  int ret = zmq_msg_init_data(msg,data,StringLen(data));
+  int msg = _zmsg_new(); 
+  int ret = _zmq_msg_init_data(msg,data,StringLen(data));
   if (ret==-1) 
     z_error();
   return(msg);
@@ -37,7 +37,7 @@ int z_msg_new (string data) {
 
 string z_msg(int msg) { //TODO: catch error if zmq_msg_data doesnt work out?
   z_trace("z_msg"); 
-  return(zmq_msg_data(msg));
+  return(_zmq_msg_data(msg));
 }
 
 int z_msg_len(int msg) {

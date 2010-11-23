@@ -10,3 +10,4 @@ lib
 /hs_err_pid9514.log
 /src/mql4/zmq/linux-zmq-wine-wrap /zmq.dll.so
 /src/mql4/zmq/linux-zmq-wine-wrap /zmq.o
+/src/mql4/zmq/wrap/linux/zmq.o

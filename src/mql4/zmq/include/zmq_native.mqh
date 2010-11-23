@@ -1,13 +1,14 @@
+#import "zmq_bind.dll"
 
-#import "zmq.dll"
+//version
 void zmq_version(int &major[],int &minor[],int &patch[]);
-//messages
-int zmq_msg_init_data (int msg,string data,int size);//int zmq_msg_init_data (zmq_msg_t *msg, void *data, size_t size);
-int zmq_msg_size(int msg);//size_t zmq_msg_size (zmq_msg_t *msg);
-string zmq_msg_data(int msg);//void *zmq_msg_data (zmq_msg_t *msg);
-int zmq_msg_close (int msg);//int zmq_msg_close (zmq_msg_t *msg);
-int zmsg_new (); //zmq_msg_t* zmsg_new(void)
 
+//messages
+int _zmsg_new (); //zmq_msg_t* zmsg_new(void)
+string _zmq_msg_data(int msg);//void *zmq_msg_data (zmq_msg_t *msg);
+int _zmq_msg_init_data (int msg,string data,int size);
+int zmq_msg_size(int msg);//size_t zmq_msg_size (zmq_msg_t *msg);
+int zmq_msg_close (int msg);//int zmq_msg_close (zmq_msg_t *msg);
 //context
 int zmq_init(int io_threads); //void *zmq_init (int io_threads);
 int zmq_term(int context) ; //int zmq_term (void *context);

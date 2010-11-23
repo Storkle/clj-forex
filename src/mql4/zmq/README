@@ -1,38 +1,23 @@
-note: we are now binding to zeromq libraries - all of this will be automated before i release the code....
 
 LINUX users:
 download/install zeromq (in ubuntu its in repositorys)
-download wine-devel (in ubuntu thats what it is called) and call 'make' in the linux directory. then place zmq.dll.so in metatrader library folder
-(experts/libary). Rename this to zmq.dll!
+download wine-devel (in ubuntu thats what it is called) 
+type cmake. in this directory. 
 
+Then place zmq.dll.so in metatrader library folder (experts/libary). Rename this to zmq.dll!
+
+Place include/linux/zmq_native into include folder
 
 
 WINDOWS users:
-download/install/compile zeromq. place dll called zmq.dll in experts/libraries.
+download/install/compile zeromq. place dll called zmq.dll in experts/libraries. type cmake in this directory. place zmq_bind.dll into library folder. 
 
-you need to compile a dll witih the contents of windows.c . You could tecchnically create the structure in metatrader but unfortunately you would have to pass it by reference and it would then look ugly. Also the structure
-is implementation dependent, defined by
-
-typedef struct
-{
-    void *content;
-    unsigned char flags;
-    unsigned char vsm_size;
-    unsigned char vsm_data [ZMQ_MAX_VSM_SIZE];
-} zmq_msg_t;
-
-#define ZMQ_MAX_VSM_SIZE 30
-
-
-Next you need to comment out the zmsg_new in the #import section in zmq_native.mqh and then create a new import statement:
-
-#import "mydll.dll"
-int zmsg_new ();
-#import
+Place include/windows/zmq_native into include folder
 
 
 
-BOTH users:
-place include files and script files in appropriate place
+ALL USERS:
+Place include/zmq_bind into include folder
 
 
+NOTE: precompile libraries for zmq version 2.0.10 and for the wrappers are available in the libs folder for x86 architecture. I am not sure if the linux wrapper can be used with any wine version, hmm... 

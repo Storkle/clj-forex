@@ -3,9 +3,10 @@
 (ns forex.socket
   (:require [org.zeromq.clojure :as z])
   (:use forex.utils))
-;;todo: how to handle closing of server? 
+;;todo: how to handle closing of server?
+;;todo: store all historic price data in a database in order to quicken access!
 (defonce- *ctx* (z/make-context 1))
-;;using socket
+;;using socket:todo make bi and thread safe
 (defn connect-socket [data]
   (let [s (z/make-socket *ctx* z/+req+)]
     (z/connect s (str "tcp://" (:host data) ":" (:port data)))

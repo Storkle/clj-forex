@@ -34,6 +34,21 @@
 (init-stream stream)
 
 ;;todo: if we get an error! - do not update?
+;;update data until theres NO ERRORS!
+(let [dat (loop [prev-data {}
+		 streams nil retries 0]
+	    (if (> retries 3) (throwf "error! cannot update all data at once"))
+	    (let [d (map get-data streams)
+		  errors (map get-errors d)]
+	      (if errors
+		(recur (merge prev-data d)
+		       errors (+ retries 1))
+		(merge prev-data d))))]
+  (map #(place struct data) dat))
+
+
+
+
 (defn update-stream [stream]
   (let [data (get-abs-data (.symbol stream) (.timeframe stream) (.getHead stream) (abs-time (now)))]
     (pr (second (rest data)))
