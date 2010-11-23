@@ -1,6 +1,6 @@
 native
 classes
-lib
+./lib
 *~
 /clj-forex-0.1.jar
 /pom.xml
@@ -13,3 +13,10 @@ lib
 /src/mql4/zmq/wrap/linux/zmq.o
 /src/mql4/zmq/wrap/linux/zmq_bind.o
 /src/mql4/zmq/wrap/linux/zmq_bind.dll.so
+/lib/clojure-1.2.0.jar
+/lib/clojure-contrib-1.2.0.jar
+/lib/clojure-zmq-2.0.7-20100502.112537-1.jar
+/lib/dev/native-deps-1.0.4.jar
+/lib/dev/swank-clojure-1.2.1.jar
+/lib/jzmq-2.0.9.jar
+/lib/mmemail-1.0.1.jar
