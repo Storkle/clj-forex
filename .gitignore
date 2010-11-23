@@ -11,3 +11,5 @@ lib
 /src/mql4/zmq/linux-zmq-wine-wrap /zmq.dll.so
 /src/mql4/zmq/linux-zmq-wine-wrap /zmq.o
 /src/mql4/zmq/wrap/linux/zmq.o
+/src/mql4/zmq/wrap/linux/zmq_bind.o
+/src/mql4/zmq/wrap/linux/zmq_bind.dll.so

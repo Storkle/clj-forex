@@ -3,7 +3,7 @@
 
 SRCDIR                = .
 SUBDIRS               =
-DLLS                  = zmq.dll
+DLLS                  = zmq_bind.dll
 EXES                  =
 
 
@@ -14,17 +14,17 @@ CEXTRA                = -mno-cygwin -m32
 CXXEXTRA              = -mno-cygwin -m32
 RCEXTRA               =
 DEFINES               = 
-INCLUDE_PATH          = #-I/usr/local/cuda/include/
+INCLUDE_PATH          = 
 DLL_PATH              =
 DLL_IMPORTS           =
-LIBRARY_PATH          = #-L/usr/local/cuda/lib/
-LIBRARIES             = -lzmq #-lcudart
+LIBRARY_PATH          = 
+LIBRARIES             = -lzmq 
 
 
 ### cudart.dll sources and settings
 
-cudart_dll_MODULE     = zmq.dll
-cudart_dll_C_SRCS     = zmq.c
+cudart_dll_MODULE     = zmq_bind.dll
+cudart_dll_C_SRCS     = zmq_bind.c
 cudart_dll_CXX_SRCS   =
 cudart_dll_RC_SRCS    =
 cudart_dll_LDFLAGS    = -shared \

@@ -2,24 +2,37 @@
 #include <zmq.h>
 #include <errno.h>
 
+
+
+char *copy (void* s,zmq_msg_t* msg) {
+    int len = zmq_msg_size(msg);
+    char *d = (char *)(malloc (len + 1)); 
+    if (d == NULL) return NULL;               
+    memcpy (d,s,len);  
+    d[len] = '\0';                             
+    return d;                             
+}
+
+
 void my_free(void*data,void*hint) {
   free(data);
 }
 //messages: underscore before name denotes that it does something more than the actual original dll function, or that it is a function not in dll
 //todo: handle error if malloc dont work?
-zmq_msg_t* WINAPI _wine_zmsg_new ()
+zmq_msg_t* WINAPI wine_zmsg_new ()
 {
   void* ret =  malloc(sizeof(zmq_msg_t));  return ret;
 }  
 
-int WINAPI _wine_zmq_msg_init_data (zmq_msg_t* msg,char *data, int size) {
+int WINAPI wine_zmq_msg_init_data (zmq_msg_t* msg,char *data, int size) {
   char* new_data = strdup(data);
   int ret =  zmq_msg_init_data(msg,new_data,size,my_free,NULL);  
   return ret; 
 }
-char* WINAPI _wine_zmq_msg_data (zmq_msg_t *msg) {
-  char* data = zmq_msg_data(msg);
-  return strdup(data);
+
+char* WINAPI wine_zmq_msg_data (zmq_msg_t *msg) {
+  void* data = zmq_msg_data(msg);
+  return copy(data,msg);
 }
 
 
@@ -63,7 +76,7 @@ const char* WINAPI wine_zmq_strerror(int errnum) {
 int WINAPI wine_zmq_errno() {
  return zmq_errno();
 }
-
+ 
 //misc
 void WINAPI wine_zmq_version(int *major,int*minor,int*patch) {  
   zmq_version(major,minor,patch);  
