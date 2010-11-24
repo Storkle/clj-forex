@@ -1,6 +1,11 @@
-* <2010-11-21 Sun>
+* Changes
+** <2010-11-21 Sun>
 + Changing to zeromq in mql4 server and clojure size - saving to repository just to
   save changes. Stuff doesn't work 100% correctly yet. But zeromq - much better!
 + Also rearranged directory structures
 + TODO: zeromq now requires native dependencies for clojure and mql side - make leiningen build scripts
-
+** <2010-11-23 Tue>
++ Added support for windows and added precompiled binaries for both
++ TODO check if malloc returns null in binding code? if we try to pass in a null pointer, it will crash. sure its rare but still...
+* Scheduled
+** TODO check if malloc returns null in binding code? if we try to pass in a null pointer, it will crash. sure its rare but still...
