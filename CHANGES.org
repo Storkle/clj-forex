@@ -6,6 +6,5 @@
 + TODO: zeromq now requires native dependencies for clojure and mql side - make leiningen build scripts
 ** <2010-11-23 Tue>
 + Added support for windows and added precompiled binaries for both
-+ TODO check if malloc returns null in binding code? if we try to pass in a null pointer, it will crash. sure its rare but still...
 * Scheduled
 ** TODO check if malloc returns null in binding code? if we try to pass in a null pointer, it will crash. sure its rare but still...
