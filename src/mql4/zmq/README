@@ -13,7 +13,7 @@ Then place zmq_bind.dll.so in metatrader library folder (experts/libary). Rename
 
 WINDOWS users:
 download cmake, place it into your path (pick that option in installer)
-download/install/compile zeromq. place dll called libzmq.dll somewhere in path, like C:\WIndows\system32. type cmake in wrap/windows (note you need to be in microsoft
+download/install/compile zeromq. place dll called libzmq.dll somewhere in path, like C:\WIndows\system32. Move zeromq.lib or such over to wrap/windows. type cmake in wrap/windows (note you need to be in microsoft
 visual studio command prompt which has all environment variables properly set). Type nmake. place zmq_bind.dll into experts/library folder. 
 
 ALL USERS:

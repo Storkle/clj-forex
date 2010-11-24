@@ -20,4 +20,3 @@ public class ForexStream  extends PriceStream {
 	}	
 	
 }
-

@@ -12,7 +12,7 @@
   (let [prev (get @*ea* type)
 	thread (thread (wenv (:symbol symbol :timeframe timeframe) (function)))
 	ea-id {:id (gensym) :type type :thread thread :symbol symbol :timeframe timeframe}]
-    (swap! *ea* assoc type (concat prev (list ea-id)))
+    (= *ea* (assoc it type (concat prev (list ea-id))))
     ea-id))
 
 

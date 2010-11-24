@@ -5,10 +5,10 @@
 					;note: if one uses the script for daily timeframe, wont work!
 
 
-
 (ns forex.binding
-  (:use forex.socket forex.utils))
-
+  (:refer-clojure :exclude (=))
+  (:use forex.utils forex.socket)
+  (:import (org.joda.time Instant DateTime DateTimeZone Interval)))
 
 (constants
   +M1+ 1
@@ -49,111 +49,105 @@
   +BUYSTOP+ 4
   +SELLSTOP+ 5)
 
+(defn now [] (DateTime. DateTimeZone/UTC))
+ 
+(defn abs
+  ([] (int (/ (.getMillis (Instant. (now))) 1000)))
+  ([date] (int (/ (.getMillis (Instant. date)) 1000))))
 
-(defmacro wait-for-update [& body]
-  `(let [call# (fn [] ~@body)]
-     (loop [result# (call#)
-	    try# 0]
-       (if (and (= (first result#) "error") (= (second result#) "4066"))
-	 (do (Thread/sleep 250) (if (< try# 4) (recur (call#) (inc try#)) (throwf "mql4 error %s" (rest result#))))
-	 (if (= (first result#) "error") (throwf "mql4 error %s" (rest result#)) result#)))))
+(defn get-rel-data [^String symbol ^Integer timeframe ^Integer from ^Integer to]
+  (is?  (>= to from) "in get-data, from/to is wrong")
+  (loop [dat nil retries 0]
+    (if (> retries 3) (throwf "error %s" (second dat)))
+    (let [data (receive (format "bars_relative %s %s %s %s" symbol timeframe from to))]
+      (if (is (first data) "error") 
+	(do (Thread/sleep 400) (recur data (+ retries 1)))
+	data))))
 
-
-(defmacro iprocess [& body] `(Double/parseDouble (first (wait-for-update ~@body))))
-(defn iMA [symbol timeframe period mode price index]
-  (is (and (number? timeframe) (string? symbol)))
-  (Receive (format "iMA %s %s %s %s %s %s" symbol timeframe period mode price (+ (env :index) index))))
-(defn iVMA [symbol timeframe adx weight ma index]
-  (is (and (number? timeframe) (string? symbol))) 
-  (Receive (format "FantailVMA %s %s %s %s %s %s" symbol timeframe adx weight ma (+ (env :index) index))))
-(defn iATR [symbol timeframe period index]
-  (is (and (integer? timeframe) (integer? period) (string? symbol)))
-  (Receive (format "iATR %s %s %s %s" symbol timeframe period (+ (env :index) index))))
-
-(defn atr
-  ([period] (atr period 0))
-  ([period index]
-     (iprocess (iATR (env :symbol) (env :timeframe) period index))))
-
-(defn mva
-  ([period] (mva period 0))
-  ([period index & {mode :mode price :price}]
-     (iprocess (iMA (env :symbol) (env :timeframe) period (or mode +MODE_SMA+) (or price +CLOSE+) index))))
-
-(defn vma [params & index]
-  (is (and (number? (first params)) (number? (second params)) (number? (second (rest params)))))
-  (let [result (fn [index]
-		 (iprocess (iVMA (env :symbol) (env :timeframe) (first params) (second params) (second (rest params)) index)))]
-    (if index (result (first index)) result)))
+(defn get-abs-data [^String symbol ^Integer timeframe ^Integer from ^Integer to]
+  (is? (<= to from) "in get-data, from/to is wrong")
+  (loop [dat nil retries 0]
+    (if (> retries 3) (throwf "error %s" (second dat)))
+    (let [data (receive (format "bars_absolute %s %s %s %s" symbol timeframe from to))]
+      (if (is (first data) "error") 
+	(do (Thread/sleep 400) (recur data (+ retries 1)))
+	data))))
 
 
+(import 'forex.indicator.core.ForexStream)
+(import (forex.indicator SMA EMA CCI ATR FantailVMA RSI))
+(defonce- *streams* (atom {}))
+(defonce- *indicators* (atom {}))
+;;TODO: better memoizing and indicator creation; automatic thread which updates indicators and prices
+(defn isma [^Integer period ^Integer i symbol timeframe]
+  (let [indicator (get-in @*indicators* [symbol timeframe (str "sma " period)])]
+    (if indicator
+      (.get indicator i)
+      (let [stream (get-stream symbol timeframe) ind (SMA. stream (.Close stream) period)]
+	(.update ind)
+	(swap! *indicators* update-in [symbol timeframe (str "sma " period)] (fn [_] ind))
+	(.get ind i)))))
+
+(defn head [stream] (if (zero? (.getHead stream)) (abs (now)) (.getHead stream)))
+(defn out [s & args]
+  (println (apply format (str "[] " s) args)))
+
+(defn new-stream
+  ([symbol timeframe] (new-stream symbol timeframe 1000))
+  ([symbol timeframe max] 
+     (let [stream (ForexStream. symbol timeframe)]
+       (out "initializing price stream: %s %s " (.symbol stream)  (.timeframe stream))
+       (.reset stream)  
+       (let [dat (get-rel-data (.symbol stream) (.timeframe stream) 0 max)]
+	 (on [i (range 0 (+ max 1)) [high low open close] (reverse (group (map #(Double/parseDouble %) (rest dat)) 4))]
+	   (.put stream i high low open close))
+	 (.setHead stream (Integer/parseInt (first dat)))
+	 stream))))
+
+(defn get-stream [symbol timeframe]
+  (if (not (get-in @*streams* [symbol timeframe]))
+    (let [stream (new-stream symbol timeframe)]
+      (swap! *streams* update-in [symbol timeframe] (fn [a]  stream))
+      stream)
+    (get-in @*streams* [symbol timeframe])))
+
+(defonce *indicators* (atom {}))
+
+(defn ihigh [i symbol timeframe]
+  (let [s (get-stream symbol timeframe)]
+    (.high s i)))
+(defn iopen [i symbol timeframe]
+  (let [s (get-stream symbol timeframe)]
+    (is? s "no stream available for symbol %s and timeframe %s" symbol timeframe)
+    (.open s i)))
+(defn ilow [i symbol timeframe] 
+  (let [s (get-stream symbol timeframe)]
+   (is? s "no stream available for symbol %s and timeframe %s" symbol timeframe)
+    (.low s i)))
+(defn iclose [i symbol timeframe]
+  (let [s (get-stream symbol timeframe)]
+     (is? s "no stream available for symbol %s and timeframe %s" symbol timeframe)
+    (.close s i)))
+ 
+(defn update-streams [streams]
+  (let [all (apply concat (map vals (vals streams)))
+	ticks (map #(let [data (get-abs-data (.symbol %) (.timeframe %) (abs (now)) (head %))]
+		      (if (is (first data) "error")
+			(throwf "error in updating streams")
+			data)) all)]
+    (on [tick ticks stream all]
+      (mapc #(do
+	       (.put stream %2
+		     (Double/parseDouble (first %))	     ;high
+		     (Double/parseDouble (second %))	     ;low
+		     (Double/parseDouble (nth % 2))	     ;open
+		     (Double/parseDouble (nth % 3)))	     ;close
+	       (.setHead stream (Integer/parseInt (first tick))))
+	    (reverse (group (rest tick) 4)) 
+	    (iterate inc (- (let [size (.size stream)]
+			      (if (zero? size) 1 size)) 1))))))
 
 
-(defonce- *orders* (atom {}))
+;(def val (get-rel-data "EURUSD" 60 0 100))
 
-(defn record-order [order] 
-  (swap! *orders* assoc (:id order) order))
-
-(defn OrderSend [symbol cmd volume price slippage color sl tp]
-  (let [num (Double/parseDouble (first (receive (format "OrderSend %s %s %s %s %s %s" symbol cmd volume price slippage color))))
-	ticket {:id num :symbol symbol :cmd cmd :sl (or sl 0) :tp (or tp 0) :lots volume :price price :slippage slippage :color color}]
-    (record-order ticket)
-    ticket))
-
-
-(defn OrderModify [ticket price sl tp]
-  (is (and (number? ticket) (number? price) (number? sl) (number? tp)))
-  (receive (format "OrderModify %f %f %f %f" (double ticket) (double price) (double sl) (double tp))))
-
-(defn buy [{symbol :symbol lots :lots price :price slippage :slippage sl :sl tp :tp}]
-  (is (and (number? lots) (number? price)))
-  (let [ticket (OrderSend (or symbol (env :symbol) (throwf "no symbol passed to buy!")) +BUY+ lots price (or slippage 3) "Green" sl tp)]
-    (if (or sl tp) (OrderModify num price sl tp))
-    ticket))
-
-(defn sell [{symbol :symbol, lots :lots, price :price, slippage :slippage sl :sl tp :tp}]
-  (is (and (number? lots) (number? price)))
-  (let [ticket (OrderSend (or symbol (env :symbol) (throwf "no symbol passed to buy!")) +SELL+ lots price (or slippage 3) "Green" sl tp)]
-    (if (or sl tp) (OrderModify num price sl tp))
-    ticket))
-(defn modify [ticket]
-  (OrderModify (:id ticket) (:price ticket) (or (:sl ticket) 0) (or (:tp ticket) 0)))
-
-(defn remove-order [id] (swap! *orders*  dissoc  id))
-;todo: what? (float 3.5486207E7)
-
-(defn OrderClose [id lots price slippage]
-  (is (and (number? id) (number? lots) (number? price) (number? slippage)))
-  (receive (format "OrderClose %f %f %f %f RED" (double id) (double lots) (double price) (double slippage))) "true" (pr "HI")
-  (remove-order id) true)
-
-(defn close-order [order]
-  (OrderClose (:id order) (:lots order) (:price order) (:slippage order))
-  (remove-order (:id order)) true)
-
-(defn order [id] (get  @*orders* id))
-(defn order? [ticket] (if (order (:id ticket)) true false))
-
-;(sell {:volume 0.1 :price (close)})
-
-(defn account-equity [] (Double/parseDouble (first (receive "AccountEquity"))))
-
-(defn jpy? [] (re-find #"JPY" (env :symbol)))
-(defn point [] (if (jpy?) 0.01 0.0001))
-(defn dollar [p] (/ p (point)))
-(defn pips [p] (* p (point)))
-
-
-(defn close
-  ([] (close 0))
-  ([index] (mva 1 index :price +CLOSE+)))
-(defn open
-  ([] (open 0))
-  ([index] (mva 1 index :price +OPEN+)))
-(defn high
-  ([] (high 0))
-  ([index] (mva 1 index :price +HIGH+)))
-(defn low
-  ([] (low 0))
-  ([index] (mva 1 index :price +LOW+)))
-
+;;;;indicator test!!!!

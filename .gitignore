@@ -7,6 +7,7 @@ CMakeFiles
 /clj-forex-0.0.1.jar
 /README.pdf
 /README.tex
+*.class
 /hs_err_pid9514.log
 /src/mql4/zmq/linux-zmq-wine-wrap /zmq.dll.so
 /src/mql4/zmq/linux-zmq-wine-wrap /zmq.o
@@ -34,3 +35,4 @@ CMakeFiles
 /src/mql4/zmq/wrap/window/zmq_bind.ilk
 /src/mql4/zmq/wrap/window/zmq_bind.lib
 /src/mql4/zmq/wrap/window/zmq_bind.pdb
+/lib/joda-time-1.6.2.jar

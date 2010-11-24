@@ -1,6 +1,7 @@
 ;;Assertion failed: pending_term_acks (socket_base.cpp:690)
 
 (ns forex.socket
+   (:refer-clojure :exclude (=))
   (:require [org.zeromq.clojure :as z])
   (:use forex.utils))
 ;;todo: how to handle closing of server?
@@ -12,10 +13,10 @@
     (z/connect s (str "tcp://" (:host data) ":" (:port data)))
     {:socket s :host (:host data) :port (:port data)}))
 (defn write-socket [conn msg]
-  (is conn "write-socket: no connection provided")
+  (is? conn "write-socket: no connection provided")
   (z/send- (:socket conn) (.getBytes msg)))
 (defn receive-socket [conn]
-  (is conn "receive-socket: no connection provided")
+  (is? conn "receive-socket: no connection provided")
   (split (String. (z/recv (:socket conn))) #" +"))
 ;;clj-forex receive
 (defn receive [msg]

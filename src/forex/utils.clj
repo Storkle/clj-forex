@@ -1,7 +1,20 @@
-(ns forex.utils
+(ns forex.utils 
+  (:refer-clojure :exclude [=])
   (:import java.util.Calendar)
   (:require [clojure.contrib.def :as d]
 	    [clojure.contrib.str-utils2 :as s]))
+
+
+(defmacro constants [& args]
+  `(do ~@(map (fn [[name val]] `(def ~name ~val)) (group args 2))))
+
+(defmacro mapc [& args] `(dorun (map ~@args)))
+
+(def is clojure.core/=)
+(defmacro = [a b]
+  `(swap! ~a (fn [~'% _#]
+	      ~b) nil))
+(defn sleep [s] (Thread/sleep s))
 
 (defn log [e] (pr "ERROR!: " e))
 (defmacro wlog [& body]
@@ -17,10 +30,10 @@
   (if args
     `(throw (Exception. (format ~message ~@args)))
     `(throw (Exception. ~message))))
-(defmacro is [val & message]
+(defmacro is? [val & message]
   `(let [result# ~val]
      (if (not result#)
-       (throw (Exception. ~(or (first message) (format "assert: %s" (str val)))))
+       (throw (Exception. ~(or (and (first message) `(format ~@message)) (format "assert: %s" (str val)))))
        result#)))
 
 (def split s/split)
@@ -29,7 +42,7 @@
   ([coll] (group coll 2))
   ([coll by] (partition-all by coll)))
 
-(defmacro doseq* [[& args] & body]
+(defmacro on [[& args] & body]
   (let [a (group args 2)
 	first-args (map first a)
 	second-args (map second a)]
@@ -48,7 +61,7 @@
 (defonce *env* (atom {:timeframe 1440 :index 0})) ;default +D1+
 (defn env [key] (key @*env*))
 (defn env! [map]
-  (swap! *env* merge map))
+  (= *env* (merge % map)))
 
 ;;todo: fix private!
 ;;todo: ignores all nils?
