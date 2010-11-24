@@ -1,6 +1,6 @@
 native
 classes
-./lib
+CMakeFiles
 *~
 /clj-forex-0.1.jar
 /pom.xml
@@ -20,3 +20,18 @@ classes
 /lib/dev/swank-clojure-1.2.1.jar
 /lib/jzmq-2.0.9.jar
 /lib/mmemail-1.0.1.jar
+/src/mql4/zmq/wrap/window/CMakeCache.txt
+/src/mql4/zmq/wrap/window/Makefile
+/src/mql4/zmq/wrap/window/cmake_install.cmake
+/src/mql4/zmq/wrap/window/libzmq.lib
+/src/mql4/zmq/wrap/window/libzmq.pdb
+/src/mql4/zmq/wrap/window/zmq_bind.def
+/src/mql4/zmq/wrap/window/zmq_bind.dll
+/src/mql4/zmq/wrap/window/zmq_bind.dll.embed.manifest
+/src/mql4/zmq/wrap/window/zmq_bind.dll.embed.manifest.res
+/src/mql4/zmq/wrap/window/zmq_bind.dll.intermediate.manifest
+/src/mql4/zmq/wrap/window/zmq_bind.dll.resource.txt
+/src/mql4/zmq/wrap/window/zmq_bind.exp
+/src/mql4/zmq/wrap/window/zmq_bind.ilk
+/src/mql4/zmq/wrap/window/zmq_bind.lib
+/src/mql4/zmq/wrap/window/zmq_bind.pdb
