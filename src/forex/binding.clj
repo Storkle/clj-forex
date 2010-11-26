@@ -75,8 +75,8 @@
 
 
 (import 'forex.indicator.core.ForexStream)
-
-(defonce- *streams* (atom {}))
+ 
+(defonce *streams* (atom {}))
 
 
 (defn head [stream] (if (zero? (.getHead stream)) (abs (now)) (.getHead stream)))
@@ -106,21 +106,7 @@
 
 (defonce *indicators* (atom {}))
 
-(defn ihigh [i symbol timeframe]
-  (let [s (get-stream symbol timeframe)]
-    (.high s i)))
-(defn iopen [i symbol timeframe]
-  (let [s (get-stream symbol timeframe)]
-    (is? s "no stream available for symbol %s and timeframe %s" symbol timeframe)
-    (.open s i)))
-(defn ilow [i symbol timeframe] 
-  (let [s (get-stream symbol timeframe)]
-   (is? s "no stream available for symbol %s and timeframe %s" symbol timeframe)
-    (.low s i)))
-(defn iclose [i symbol timeframe]
-  (let [s (get-stream symbol timeframe)]
-     (is? s "no stream available for symbol %s and timeframe %s" symbol timeframe)
-    (.close s i)))
+
  
 (defn update-streams [streams]
   (let [all (apply concat (map vals (vals streams)))
@@ -141,6 +127,11 @@
 			      (if (zero? size) 1 size)) 1))))))
 
 
+
+
+
+
+ 
 ;(def val (get-rel-data "EURUSD" 60 0 100))
 
 ;;;;indicator test!!!!

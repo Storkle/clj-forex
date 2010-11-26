@@ -7,8 +7,12 @@
 					; below taken from http://kotka.de/blog/2010/03/memoize_done_right.html
 
 (defn update-all-indicators []
-  (on [ind (vals @*mem*)]
-    (.update (force ind)))
+  (on [ind (vals @*mem*) key (keys @*mem*)]
+    (try
+      (.update (force ind))
+      (catch Exception e
+	(print "removing indicator")
+	(= *mem* (dissoc % key)))))
   true)
  
 (defn memoi
@@ -44,8 +48,9 @@
     (env! {:stream stream})
     stream))
 
-
-;copy and pasted for various parameter situation - ya
+ 
+					;copy and pasted for various parameter situation - ya
+;;todo: make better and dont hash until you update it?
 (defn indicator
   ([id f] (indicator id f (fn [obj index] (.get obj index))))
   ([id f getfn]
@@ -111,11 +116,22 @@
 	    (getfn indicator index)))))))
 
 
-					;
-
-
-
-
-
- 
+;;TODO: remove from cache
+ 					
+(def *global-update-thread* nil)
+(defn stop-backend [] (.stop *global-update-thread*)
+  (def *global-update-thread* nil))
+(defn backend-alive? []
+  (.isAlive *global-update-thread*))
+(defn start-backend []
+  (def *global-update-thread*
+    (thread
+      (try
+       (loop [] 
+	 (update-streams @forex.binding/*streams*)
+	 (forex.indicator_core/update-all-indicators) 
+	 (sleep 1000)
+	 (recur))
+       (catch Exception e
+	 (log (str "CAUGHT GLOBAL UPDATE THREAD ERROR: " e))))))) 
 
