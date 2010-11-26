@@ -9,7 +9,9 @@
                  [mmemail "1.0.1"]
 
                  ]
-  :dev-dependencies [[native-deps "1.0.4"] [swank-clojure "1.2.1"]]
+  :java-source-path [["src/forex/indicator"]]
+  :dev-dependencies [[native-deps "1.0.4"] [swank-clojure "1.2.1"]
+                     [lein-javac "1.2.1-SNAPSHOT"]]
   :native-dependencies [[org.clojars.storkle/zmq-native "1.0.0"]]
   ;:main forex.binding  
  )

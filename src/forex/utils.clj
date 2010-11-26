@@ -4,6 +4,9 @@
   (:require [clojure.contrib.def :as d]
 	    [clojure.contrib.str-utils2 :as s]))
 
+(defn group
+  ([coll] (group coll 2))
+  ([coll by] (partition-all by coll)))
 
 (defmacro constants [& args]
   `(do ~@(map (fn [[name val]] `(def ~name ~val)) (group args 2))))
@@ -41,9 +44,6 @@
 
 (def split s/split)
  
-(defn group
-  ([coll] (group coll 2))
-  ([coll by] (partition-all by coll)))
 
 (defmacro on [[& args] & body]
   (let [a (group args 2)
