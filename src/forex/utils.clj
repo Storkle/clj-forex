@@ -7,7 +7,10 @@
 
 (defmacro constants [& args]
   `(do ~@(map (fn [[name val]] `(def ~name ~val)) (group args 2))))
-
+(defmacro do1 [a & body]
+  `(let [ret# ~a]
+     ~@body
+     ret#))
 (defmacro mapc [& args] `(dorun (map ~@args)))
 
 (def is clojure.core/=)
@@ -37,7 +40,7 @@
        result#)))
 
 (def split s/split)
-
+ 
 (defn group
   ([coll] (group coll 2))
   ([coll by] (partition-all by coll)))
@@ -65,9 +68,8 @@
 
 ;;todo: fix private!
 ;;todo: ignores all nils?
-(defmacro wenv [[ & {symbol :symbol socket :socket timeframe :timeframe index :index}] & body]
+(defmacro wenv [[& args] & body]
   `(binding [forex.utils/*env*
-	     (atom (merge-with #(or %2 %1) @@~#'*env*
-			       {:symbol ~symbol :socket ~socket :timeframe ~timeframe :index ~index}))]
+	     (atom (merge @@~#'*env* (hash-map ~@args)))]
      ~@body))
 

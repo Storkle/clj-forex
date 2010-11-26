@@ -3,7 +3,7 @@
 					;NOTE ALSO: one must compiler server.mq4, not just protocol.mq4, or it wont update itself!
 
 					;note: if one uses the script for daily timeframe, wont work!
-
+ 
 
 (ns forex.binding
   (:refer-clojure :exclude (=))
@@ -75,18 +75,9 @@
 
 
 (import 'forex.indicator.core.ForexStream)
-(import (forex.indicator SMA EMA CCI ATR FantailVMA RSI))
+
 (defonce- *streams* (atom {}))
-(defonce- *indicators* (atom {}))
-;;TODO: better memoizing and indicator creation; automatic thread which updates indicators and prices
-(defn isma [^Integer period ^Integer i symbol timeframe]
-  (let [indicator (get-in @*indicators* [symbol timeframe (str "sma " period)])]
-    (if indicator
-      (.get indicator i)
-      (let [stream (get-stream symbol timeframe) ind (SMA. stream (.Close stream) period)]
-	(.update ind)
-	(swap! *indicators* update-in [symbol timeframe (str "sma " period)] (fn [_] ind))
-	(.get ind i)))))
+
 
 (defn head [stream] (if (zero? (.getHead stream)) (abs (now)) (.getHead stream)))
 (defn out [s & args]
@@ -104,7 +95,9 @@
 	 (.setHead stream (Integer/parseInt (first dat)))
 	 stream))))
 
-(defn get-stream [symbol timeframe]
+(defn get-stream [^String symbol ^Integer timeframe]
+  (is? (and (string? symbol) (integer? timeframe))
+       "get-stream: invalid params (%s %s)" symbol timeframe)
   (if (not (get-in @*streams* [symbol timeframe]))
     (let [stream (new-stream symbol timeframe)]
       (swap! *streams* update-in [symbol timeframe] (fn [a]  stream))
