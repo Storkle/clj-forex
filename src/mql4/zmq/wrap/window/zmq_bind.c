@@ -70,6 +70,11 @@ EXPORT int API _zmq_send(void*socket,zmq_msg_t*msg,int flags) {
 EXPORT int API _zmq_recv(void*socket,zmq_msg_t* msg,int flags) {
  return zmq_recv(socket,msg,flags);  
 }
+
+EXPORT int API _zmq_setsockopt (void *socket, int option_name, const void *option_value, int option_len) {
+  return zmq_setsockopt(socket,option_name,option_value,option_len);
+}
+
 //error handling
 EXPORT const char* API _zmq_strerror(int errnum) {
   return zmq_strerror(errnum);

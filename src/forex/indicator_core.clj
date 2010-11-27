@@ -119,6 +119,7 @@
 ;;TODO: remove from cache
  					
 (def *global-update-thread* nil)
+;;TODO: request backend to stop after making thread safe!
 (defn stop-backend [] (.stop *global-update-thread*)
   (def *global-update-thread* nil))
 (defn backend-alive? []
@@ -126,12 +127,12 @@
 (defn start-backend []
   (def *global-update-thread*
     (thread
-      (try
-       (loop [] 
+      (loop []
+	(try    
 	 (update-streams @forex.binding/*streams*)
 	 (forex.indicator_core/update-all-indicators) 
-	 (sleep 1000)
-	 (recur))
-       (catch Exception e
-	 (log (str "CAUGHT GLOBAL UPDATE THREAD ERROR: " e))))))) 
-
+	 (sleep 1000)	 
+	 (catch Exception e
+	   (log (str "CAUGHT GLOBAL UPDATE THREAD ERROR: " e))
+	   (sleep 1000)))
+	(recur))))) 

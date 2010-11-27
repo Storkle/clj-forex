@@ -19,9 +19,6 @@
 	    (FantailVMA. stream adx-period weight period))
 	  (fn [obj index] (.get (.average obj) index))))
 
-
-
-
 (defn ihigh [i symbol timeframe]
   (let [s (get-stream symbol timeframe)]
     (.high s i)))

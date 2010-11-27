@@ -37,38 +37,43 @@ char* WINAPI wine_zmq_msg_data (zmq_msg_t *msg) {
 
 
 int WINAPI wine_zmq_msg_size (zmq_msg_t *msg) {
-  int ret = zmq_msg_size(msg);  return ret;
+  return zmq_msg_size(msg);
 }
 int WINAPI wine_zmq_msg_close (zmq_msg_t *msg) {
-  int ret = zmq_msg_close(msg); return ret;
+  return zmq_msg_close(msg); 
 }
 
 //context
 void* WINAPI wine_zmq_init (int io_threads) {
-  void* ret = zmq_init(io_threads);  return ret;
+  return zmq_init(io_threads); 
 }
 int WINAPI wine_zmq_term (void* context) {
-  int ret = zmq_term(context);  return ret;
+  return zmq_term(context);
 }
 //sockets
 void* WINAPI wine_zmq_socket (void* context, int type) {
-  void* ret= zmq_socket(context,type);  return ret;
+  return zmq_socket(context,type); 
 }
 int WINAPI wine_zmq_close(void* socket) {
- int ret = zmq_close(socket); return ret;
+  return zmq_close(socket); 
 }
 int WINAPI wine_zmq_bind(void*socket,const char* endpoint) {
-  int ret = zmq_bind(socket,endpoint);   return ret;
+  return zmq_bind(socket,endpoint);  
 }
 int WINAPI wine_zmq_connect(void*socket,const char*endpoint) {
-  int ret = zmq_connect(socket,endpoint);  return ret;
+  return zmq_connect(socket,endpoint);  
 }
 int WINAPI wine_zmq_send(void*socket,zmq_msg_t*msg,int flags) {
-  int ret = zmq_send(socket,msg,flags); return ret;
+  return zmq_send(socket,msg,flags);
 }
 int WINAPI wine_zmq_recv(void*socket,zmq_msg_t* msg,int flags) {
- int ret = zmq_recv(socket,msg,flags);  return ret;
+ return zmq_recv(socket,msg,flags);  
 }
+
+int WINAPI wine_zmq_setsockopt (void *socket, int option_name, const void *option_value, int option_len) {
+  return zmq_setsockopt(socket,option_name,option_value,option_len);
+}
+
 //error handling
 const char* WINAPI wine_zmq_strerror(int errnum) {
   return zmq_strerror(errnum);

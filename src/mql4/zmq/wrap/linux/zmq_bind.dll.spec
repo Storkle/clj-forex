@@ -17,7 +17,9 @@
 @ stdcall _zmq_bind(ptr ptr) wine_zmq_bind
 @ stdcall _zmq_connect(ptr ptr) wine_zmq_connect
 @ stdcall _zmq_send(ptr ptr long) wine_zmq_send
-@ stdcall _zmq_recv(ptr ptr long) wine_zmq_recv
+@ stdcall _zmq_recv(ptr ptr long) wine_zmq_recv  
+@ stdcall _zmq_setsockopt (ptr long ptr long) wine_zmq_setsockopt
+
 
 @ stdcall _zmq_strerror(long) wine_zmq_strerror
 @ stdcall _zmq_errno() wine_zmq_errno

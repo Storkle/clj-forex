@@ -1,13 +1,36 @@
 #include <zmq_bind.mqh>
 #include <utils.mqh>
 
+string bars_absolute(string &req[]) {
+  int i; 
+  string symbol = req[1]; string ret = "";
+  int timeframe = StrToInteger(req[2]);
+  int fr = StrToInteger(req[3]); 
+  int t = StrToInteger(req[4]); trace("from is "+fr+" and to is "+t);
+  int from = iBarShift(symbol,timeframe,fr);
+  int to = iBarShift(symbol,timeframe,t);
+  ret=""+iTime(symbol,timeframe,from)+" ";
+  for (i=from;i<=to;i++) {
+    double high = iHigh(symbol,timeframe,i); 
+    double low = iLow(symbol,timeframe,i);
+    double open  =iOpen(symbol,timeframe,i);
+    double close = iClose(symbol,timeframe,i); 
+    int err = GetLastError();
+    if (err!=0) 
+      return(error(err));
+    ret=ret+high+" "+low+" "+open+" "+close+" ";
+  }
+  return(ret);
+}
+
+
 string bars_relative(string &req[]) {
   int i; 
   string symbol = req[1]; string ret = "";
   int timeframe = StrToInteger(req[2]);
   int from = StrToInteger(req[3]);
   int to = StrToInteger(req[4]); trace("from is "+from+" and to is "+to);
-  for (i=from;i<to;i++) {
+  for (i=from;i<=to;i++) {
     double high = iHigh(symbol,timeframe,i); 
     double low = iLow(symbol,timeframe,i);
     double open  =iOpen(symbol,timeframe,i);
@@ -26,7 +49,10 @@ string protocol(string&request[]) {
   if (command=="bars_relative")
     {
       return(bars_relative(request));
-    } else
+    } else if (command=="bars_absolute")
+    {
+      return(bars_absolute(request));
+    } else 
     {
       return("error unknown");
     }
@@ -58,11 +84,11 @@ int start () {
     split(r,receive);
     trace("received "+receive);
     string ret = protocol(r);
-    trace("sending: length "+StringLen(ret)+" "+ret);
-    reply = z_msg_new(ret); Print("length is "+z_msg_len(reply)+" and the dat is "+z_msg(reply));
+    trace("sending: length "+StringLen(ret)+" ");
+    reply = z_msg_new(ret); 
     z_send(server,reply,0);
     z_msg_close(reply); reply=0;//TODO: copy them!
-    trace("sent response...");
+    trace("sent response..."); 
   }
   return(0);
 }

@@ -56,6 +56,24 @@ int z_msg_close(int msg) {
   return(ret);
 }
 //sockets
+int z_subscribe (int socket,string val) {
+  z_set_sockopt(socket,ZMQ_SUBSCRIBE,val);
+}
+int z_unsubscribe(int socket,string val) {
+  z_set_sockopt(socket,ZMQ_UNSUBSCRIBE,val);
+}
+
+int z_set_sockopt(int socket,int option_name,string option_value) {
+  if (socket==0) {
+    return(-1);
+  }
+  int ret = _zmq_setsockopt(socket,option_name,option_value,StringLen(option_value));
+  if (ret==-1)
+    z_error();
+  return(ret);
+}
+
+  
 int z_socket(int context,int type) {
  z_trace("z_socket: "+context+" "+type);
  int ret = _zmq_socket(context,type); 
@@ -66,7 +84,7 @@ int z_socket(int context,int type) {
 int z_close(int socket) {
   z_trace("z_close");
   if (socket==0) {
-   return(0);
+   return(-1);
   }
   int ret = _zmq_close(socket); 
   if (ret==-1)

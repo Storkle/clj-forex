@@ -12,6 +12,7 @@ int _zmq_msg_close (int msg);//int zmq_msg_close (zmq_msg_t *msg);
 int _zmq_init(int io_threads); //void *zmq_init (int io_threads);
 int _zmq_term(int context) ; //int zmq_term (void *context);
 //sockets
+int _zmq_setsockopt(int socket, int option_name, string option_value, int option_len);
 int _zmq_socket(int context,int type);//void *zmq_socket (void *context, int type);
 int _zmq_close(int socket); //int zmq_close (void *socket);
 int _zmq_bind(int socket,string endpoint); //int zmq_bind (void *socket, const char *endpoint);
