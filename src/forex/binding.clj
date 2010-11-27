@@ -6,7 +6,7 @@
  
 
 (ns forex.binding
-  (:refer-clojure :exclude (=))
+ 
   (:use forex.utils forex.socket)
   (:import (org.joda.time Instant DateTime DateTimeZone Interval)))
 
@@ -60,7 +60,7 @@
   (loop [dat nil retries 0]
     (if (> retries 3) (throwf "error %s" (second dat)))
     (let [data (receive (format "bars_relative %s %s %s %s" symbol timeframe from to))]
-      (if (is (first data) "error") 
+      (if (= (first data) "error") 
 	(do (Thread/sleep 400) (recur data (+ retries 1)))
 	data))))
 
@@ -69,7 +69,7 @@
   (loop [dat nil retries 0]
     (if (> retries 3) (throwf "error %s" (second dat)))
     (let [data (receive (format "bars_absolute %s %s %s %s" symbol timeframe from to))]
-      (if (is (first data) "error") 
+      (if (= (first data) "error") 
 	(do (Thread/sleep 400) (recur data (+ retries 1)))
 	data))))
 
@@ -111,7 +111,7 @@
 (defn update-streams [streams]
   (let [all (apply concat (map vals (vals streams)))
 	ticks (map #(let [data (get-abs-data (.symbol %) (.timeframe %) (abs (now)) (head %))]
-		      (if (is (first data) "error")
+		      (if (= (first data) "error")
 			(throwf "error in updating streams")
 			data)) all)]
     (on [tick ticks stream all]

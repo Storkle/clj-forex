@@ -1,5 +1,4 @@
 (ns forex.utils 
-  (:refer-clojure :exclude [=])
   (:import java.util.Calendar)
   (:require [clojure.contrib.def :as d]
 	    [clojure.contrib.str-utils2 :as s]))
@@ -15,11 +14,13 @@
      ~@body
      ret#))
 (defmacro mapc [& args] `(dorun (map ~@args)))
+ 
 
-(def is clojure.core/=)
-(defmacro = [a b]
-  `(swap! ~a (fn [~'% _#]
-	      ~b) nil))
+(defmacro ! [a b]
+  `(swap! ~a (fn [~'% b#]
+	      ~b)
+	  nil))
+
 (defn sleep [s] (Thread/sleep s))
 
 (defn log [e] (pr "ERROR!: " e))
@@ -64,7 +65,7 @@
 (defonce *env* (atom {:timeframe 1440 :index 0})) ;default +D1+
 (defn env [key] (key @*env*))
 (defn env! [map]
-  (= *env* (merge % map)))
+  (! *env* (merge % map)))
 
 ;;todo: fix private!
 ;;todo: ignores all nils?

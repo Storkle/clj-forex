@@ -1,5 +1,4 @@
 (ns forex.indicator_core
-  (:refer-clojure :exclude (=))
   (:use forex.utils forex.binding))
 
 				
@@ -12,7 +11,7 @@
       (.update (force ind))
       (catch Exception e
 	(print "removing indicator")
-	(= *mem* (dissoc % key)))))
+	(! *mem* (dissoc % key)))))
   true)
  
 (defn memoi
@@ -34,13 +33,13 @@
        (.update ind) ;TODO: this needs to lock indicator? write lock?
     ind))
 (def get-indicator (memoi _get-indicator))
- 
+  
 (defn substream [stream price]
   (cond
-    (is price :close) (.Close stream)
-    (is price :open) (.Open stream)
-    (is price :high) (.High stream)
-    (is price :low) (.Low stream)
+    (= price :close) (.Close stream)
+    (= price :open) (.Open stream)
+    (= price :high) (.High stream)
+    (= price :low) (.Low stream)
     true price))
 
 (defn env-stream []
@@ -63,7 +62,7 @@
 	      timeframe (env :timeframe)
 	      indicator (get-indicator f id symbol timeframe params)
 	      get-it (fn [index] (.get indicator index))] 
-	  (if (is index nil)
+	  (if (= index nil)
 	    (partial getfn indicator)
 	    (getfn indicator index)))))))
 
@@ -79,7 +78,7 @@
 	      timeframe (env :timeframe)
 	      indicator (get-indicator f id symbol timeframe params)
 	      get-it (fn [index] (.get indicator index))] 
-	  (if (is index nil)
+	  (if (= index nil)
 	    (partial getfn indicator)
 	    (getfn indicator index)))))))
 
@@ -95,7 +94,7 @@
 	      timeframe (env :timeframe)
 	      indicator (get-indicator f id symbol timeframe params)
 	      get-it (fn [index] (.get indicator index))] 
-	  (if (is index nil)
+	  (if (= index nil)
 	    (partial getfn indicator)
 	    (getfn indicator index)))))))
 
@@ -111,7 +110,7 @@
 	      timeframe (env :timeframe)
 	      indicator (get-indicator f id symbol timeframe params)
 	      get-it (fn [index] (.get indicator index))] 
-	  (if (is index nil)
+	  (if (= index nil)
 	    (partial getfn indicator)
 	    (getfn indicator index)))))))
 
@@ -136,3 +135,4 @@
 	   (log (str "CAUGHT GLOBAL UPDATE THREAD ERROR: " e))
 	   (sleep 1000)))
 	(recur))))) 
+ 
