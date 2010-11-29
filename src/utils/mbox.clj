@@ -1,34 +1,39 @@
 ;;take from 
 ;;https://github.com/jochu/swank-clojure/tree/master/src/swank/util/concurrent/
 
-(ns utils.mbox 
-  (:refer-clojure :exclude [send get]))
+(ns utils.mbox
+  ;(:refer-clojure :exclude [send get])
+  (:use utils.general))
 
 ;; Holds references to the mailboxes (message queues)
-(defonce *mailboxes* (ref {}))
-
-(defn get
+(defn- _get
   "Returns the mailbox for a given id. Creates one if one does not
    already exist."
-  ([id]
-     (dosync
-      (when-not (@*mailboxes* id)
-        (alter *mailboxes* assoc
+  ([p id]
+     (dosync 	     
+      (when-not (get @(:boxes p) id)
+        (alter (:boxes p) assoc
                id (java.util.concurrent.LinkedBlockingQueue.))))
-     (@*mailboxes* id))
+     (@(:boxes p) id))
   {:tag java.util.concurrent.LinkedBlockingQueue})
 
-(defn send
+(defn- _send
   "Sends a message to a given id."
-  ([id message]
-     (let [mbox (get id)]
+  ([p id message]
+     (let [mbox (_get p id)]
        (.put mbox message))))
 
-(defn receive
+;;mailbox is BAD - .take can occur if it is empty, and it seems somehow to stall!
+(defn- _receive
   "Blocking recieve for messages for the given id."
-  ([id] 
-     (let [mb (get id)] 
+  ([p id] 
+     (let [mb (_get p id)] 
        (.take mb))))
 
-(defn clean []
-  )
+(defprotocol #^{:private true} MAIL (ge [p id]) (pu [p id msg]))
+(defrecord+ mbox [[ boxes (ref {})]]
+  new-mbox
+  MAIL
+  (pu [p id msg] (_send p id msg))
+  (ge [p id] (_receive p id)))
+

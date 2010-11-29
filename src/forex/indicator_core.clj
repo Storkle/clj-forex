@@ -123,10 +123,11 @@
   (def *global-update-thread* nil))
 (defn backend-alive? []
   (.isAlive *global-update-thread*))
+;;todo: these are sort of like 'servers'/daemons - protocolize it! 
 (defn start-backend []
   (def *global-update-thread*
     (thread
-      (loop []
+      (loop [] 
 	(try    
 	 (update-streams @forex.binding/*streams*)
 	 (forex.indicator_core/update-all-indicators) 

@@ -7,6 +7,7 @@
 ;; in some cases - yes; others - no?
                                                                   
 (def sma (price-indicator1 'sma (fn [[stream price period]] (SMA. stream price period))))
+
 (def rsi (price-indicator1 'rsi (fn [[stream price period]] (RSI. stream price period))))
 (def ema (price-indicator1 'ema (fn [[stream price period]] (EMA. stream price period))))
 (def cci (indicator1 'cci (fn [[stream period]] (CCI. stream period))))
