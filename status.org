@@ -1,0 +1,30 @@
+* <2010-12-08 Wed>
+Currently, I have been focusing in clj-forex on getting something done, rather than the architecture. Now that I have explored a lot,
+I am ready to make this code much better (as it is, if i may say so, not very well structured!).
+
+** Programming Language
+I was exploring using scala as a programming language to create indicators. However, I feel now that java is a better choice - sure, it did 
+reduce some redundant code, but this redundant code doesn't take long to create, and scala is slower than java for the same effort, 
+so i feel more enclined to use java. In additioon, clojure is very nicely integrated with java, not scala! 
+For everything else, clojure will be used. Why not use clojure for indicators? I find it much easier to create efficient, imperative indicator 
+implementations in java than with clojure. But for everything else - clojure is great!
+
+** Indicators
+So, it will be in java. Well, there is a great library out there for indicators, called ta-lib. TA-lib takes in double arrays for high/low/open/close and price streams. It is very efficient. Contrast this with my current implementation, which is sort of slow. Anyways, since clj-forex is multithreaded, we have to deal with changing streams, etc, however streams are practically immutable except for the current index. There will be wrapper classes for the TA-lib
+indicators one would like to use.
+
+In terms of customizable user  indicator implementation, I have already created a test implementation (in repository). However, it doesn't take care
+of only keeping a certain amount of data in the buffer. This will be fixed, and a new interface implemented soon....
+
+** Services 
+There are many services that must be accomplished by clj-forex. A metatrader backend (using zeromq sockets) must be run constantly 
+which will update the price streams. The indicators then have to be updated. Erlang has a great model for this type of thing - 
+so does Termite (in gambit-c scheme). Thus i have created a separate repository called clj-forex-utils, in which lies a 
+file called spawn.clj which will allow this sort of 'service programming.' I have already redone the price updater using this 
+(haven't yet uploaded to github), and it is so much better than what I had done previously. 
+
+** Conclusion
+You probably shouldnt bother with looking at the code , as it will all be changing VERY soon (except the metatrader zeromq server). This should only be expected 
+at the beginning of this project (i.e. right now). Ill create a release soon when everything is stable and you 
+can make orders, get price/indicator data, and create customized indicators. Ill make it reallly easy to get started with -
+ until then, though....
