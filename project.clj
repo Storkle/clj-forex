@@ -7,11 +7,10 @@
                  [org.clojars.mikejs/clojure-zmq "2.0.7-SNAPSHOT"]
                  ;;mail
                  [mmemail "1.0.1"]
-
+                 ;;clj-forex 
+                 [clj-forex-utils "0.1"] [clj-forex-indicators "0.1"]
                  ]
-  :java-source-path [["src/forex/indicator"]]
-  :dev-dependencies [[native-deps "1.0.4"] [swank-clojure "1.2.1"]
-                     [lein-javac "1.2.1-SNAPSHOT"]]
+  :dev-dependencies [[native-deps "1.0.4"] [swank-clojure "1.3.0-SNAPSHOT"]]
   :native-dependencies [[org.clojars.storkle/zmq-native "1.0.0"]]
   ;:main forex.binding  
  )
