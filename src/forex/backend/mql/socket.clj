@@ -6,7 +6,7 @@
 ;; then persistent stream
 ;; then indicators + indicator service
 ;; then ea!
-  
+   
 (ns forex.backend.mql.socket
   (:require 
    [org.zeromq.clojure :as z]
@@ -90,13 +90,25 @@
 
 (defonce- index (atom 0))
 
-(defn send [server msg] 
+(defn send* [server msg] 
   (is (string? msg) "message must be a string!")
   (let [id (swap! index inc)]
     (! (:pid (:send server)) ["send" (.getBytes (str id " "  msg))])
     (str id))) 
 
-(defn receive
+(defn receive*
   ([server id timeout] (m/? (:mbox (:receive server)) id timeout))
-  ([server id] (receive server id 0)))
+  ([server id] (receive server id nil)))
 
+(defn start-mql []
+  (env! {:socket (start)}))
+(defn stop-mql []
+  (stop (env :socket))
+  (env! {:socket nil}))
+
+(defn receive
+  ([msg timeout]
+     (let [a (env :socket)
+	   id (send* a msg)]
+       (receive* a id timeout)))
+  ([msg] (receive msg nil)))

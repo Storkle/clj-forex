@@ -48,21 +48,24 @@
   +BUYSTOP+ 4
   +SELLSTOP+ 5)
   
+;(def d (get-rel-data "GBPUSD" +H1+ 0 10))
 
 (defn get-rel-data [^String symbol ^Integer timeframe ^Integer from ^Integer to]
-  (is?  (>= to from) "in get-data, from/to is wrong")
+  (is  (>= to from) "in get-data, from/to is invalid")
   (loop [dat nil retries 0]
     (if (> retries 3) (throwf "error %s" (second dat)))
-    (let [data (receive (format "bars_relative %s %s %s %s" symbol timeframe from to))]
+    (let [data (s/receive (format "bars_relative %s %s %s %s" symbol timeframe from to))]
       (if (= (first data) "error") 
 	(do (Thread/sleep 400) (recur data (+ retries 1)))
 	data))))
 
 (defn get-abs-data [^String symbol ^Integer timeframe ^Integer from ^Integer to]
-  (is? (<= to from) "in get-data, from/to is wrong")
+  (is (<= to from) "in get-data, from/to is invalid")
   (loop [dat nil retries 0]
     (if (> retries 3) (throwf "error %s" (second dat)))
-    (let [data (receive (format "bars_absolute %s %s %s %s" symbol timeframe from to))]
+    (let [data
+	  (s/receive (format "bars_absolute %s %s %s %s"
+			     symbol timeframe from to))]
       (if (= (first data) "error") 
 	(do (Thread/sleep 400) (recur data (+ retries 1)))
 	data))))
