@@ -1,4 +1,4 @@
-;;TODO: better printing of records!
+;;TODO: replace zeromq clojure library we use and replace with our own
 (ns forex.zmq
   (:require [org.zeromq.clojure :as z]
 	    [utils.fiber.mbox :as m])
@@ -33,7 +33,7 @@
 (def +pollin+ 1)
 (def +pollout+ 2)
 (def +pollerr+ 4)
-;;
+;; 
 (defonce- *ctx* (z/make-context 1))
 
 (defn socket-new-poller [socket]
