@@ -87,16 +87,16 @@
     (if (pid? (:pid send))
       (! (:pid send) "stop")
       (warn "send service is already stopped"))))
-
+ 
 (defonce- index (atom 0))
 
-(defn send* [server msg] 
+(defn- send* [server msg] 
   (is (string? msg) "message must be a string!")
   (let [id (swap! index inc)]
     (! (:pid (:send server)) ["send" (.getBytes (str id " "  msg))])
     (str id))) 
 
-(defn receive*
+(defn- receive*
   ([server id timeout] (m/? (:mbox (:receive server)) id timeout))
   ([server id] (receive server id nil)))
 
@@ -108,6 +108,7 @@
 
 (defn receive
   ([msg timeout]
+     (is (alive? (env :socket)) "mql socket isnt alive")
      (let [a (env :socket)
 	   id (send* a msg)]
        (receive* a id timeout)))

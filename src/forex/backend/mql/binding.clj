@@ -5,10 +5,11 @@
 
 (ns forex.backend.mql.binding
   (:require [forex.backend.mql.socket :as s])
-  (:use forex.utils utils.general)  
- ;(:import (org.joda.time Instant DateTime DateTimeZone Interval))
+  (:use forex.utils utils.general)
+  ;(:import (indicators.core ForexStream))
+  ;(:import (org.joda.time Instant DateTime DateTimeZone Interval))
   )  
- 
+
 (constants 
   +M1+ 1
   +M5+ 5
@@ -58,7 +59,7 @@
       (if (= (first data) "error") 
 	(do (Thread/sleep 400) (recur data (+ retries 1)))
 	data))))
-
+ 
 (defn get-abs-data [^String symbol ^Integer timeframe ^Integer from ^Integer to]
   (is (<= to from) "in get-data, from/to is invalid")
   (loop [dat nil retries 0]
@@ -70,14 +71,6 @@
 	(do (Thread/sleep 400) (recur data (+ retries 1)))
 	data))))
 
-
-
-
-
-
-
-
-
 (comment
   (defn now [] (DateTime. DateTimeZone/UTC))
  
@@ -85,7 +78,6 @@
     ([] (int (/ (.getMillis (Instant. (now))) 1000)))
     ([date] (int (/ (.getMillis (Instant. date)) 1000))))
 
-  (import 'forex.indicator.core.ForexStream)
  
   (defonce *streams* (atom {}))
 
@@ -117,8 +109,6 @@
       (get-in @*streams* [symbol timeframe])))
 
   (defonce *indicators* (atom {}))
-
-
  
   (defn update-streams [streams]
     (let [all (apply concat (map vals (vals streams)))
