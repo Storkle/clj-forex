@@ -4,6 +4,9 @@
    :constructors {[java.io.OutputStream] []}
    :post-init set-out
    :init init))
+;;auto get state
+
+
 (defn -init
   [stream]
   [[] nil])

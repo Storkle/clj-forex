@@ -1,4 +1,5 @@
-(defproject clj-forex "0.0.1"
+;;TODO: need to AOT compile 
+(defproject clj-forex "0.1"
   :description "non graphical library for automated trading for forex market with various backends like metatrader"
   :dependencies [[org.clojure/clojure "1.2.0"]
                  [org.clojure/clojure-contrib "1.2.0"]
