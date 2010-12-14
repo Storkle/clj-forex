@@ -16,6 +16,7 @@
        true (throwf "invalid backend %s" type))))
  
 (defn stop-backend []
+  (is *backend* "no backend current running...")
   (let [prev *backend*] 
    (mql/stop *backend* nil)
    (def *backend* nil)

@@ -19,7 +19,7 @@
   (is (<= to from) "in get-data, from/to is invalid")
   (loop [dat nil retries 0]
     (if (> retries 3) (throwf "error %s" (second dat)))
-    (let [data
+    (let [data 
 	  (s/receive (format "bars_absolute %s %s %s %s"
 			     symbol timeframe from to)
 		     )]
@@ -35,16 +35,16 @@
   ([symbol timeframe max] 
      (let [stream (ForexStream.)]
        (set! (.symbol stream) symbol) (set! (.timeframe stream) timeframe)
-       ;(info "trying to initialize price stream: %s %s " (.symbol stream)  (.timeframe stream))
+       (info "trying to initialize price stream: %s %s " (.symbol stream)  (.timeframe stream))
        (let [dat (get-rel-data (.symbol stream) (.timeframe stream) 0 max)]
         ; (info "... got data")
 	 (on [i (range 0 (+ max 1)) [high low open close]
 	        (reverse (group (map #(Double/parseDouble %) (rest dat)) 4))]
 	   (.add stream open high low close))
 	 (set! (.headTime stream) (Integer/parseInt (first dat)))
-	; (info "initialized price stream: %s %s " (.symbol stream)  (.timeframe stream))
+        (info "initialized price stream: %s %s " (.symbol stream)  (.timeframe stream))
 	 stream))))
-
+ 
 ;;TODO: fix BUG::: we cannot use (dosync (get-rel-data "EURUSD" 60 0 10))
 
 (defn get-price-stream [^String symbol ^Integer timeframe]
@@ -70,19 +70,19 @@
     (on [tick ticks stream all]
       (let [tt (reverse (group (rest tick) 4))
 	    head (first tt)] 
-	    (.setHead stream 
-		      (Double/parseDouble (nth head 2)) ;;open
-		      (Double/parseDouble (first head)) ;;high
-		      (Double/parseDouble (second head)) ;;low	
-		      (Double/parseDouble (nth head 3))) ;;open high low close
-	    (mapc #(do
-		     (.add stream ;;open high low close
-			   (Double/parseDouble (nth % 2)) ;;open
-			   (Double/parseDouble (first %)) ;;high
-			   (Double/parseDouble (second %)) ;;low	
-			   (Double/parseDouble (nth % 3))) ;;close
-		     (.setHead stream (Integer/parseInt (first tick))))
-		  (rest tt)) true))))
+	(.setHead stream 
+		  (Double/parseDouble (nth head 2))	 ;;open
+		  (Double/parseDouble (first head))	 ;;high
+		  (Double/parseDouble (second head))	 ;;low	
+		  (Double/parseDouble (nth head 3))) ;;open high low close
+	(mapc #(do
+		 (.add stream ;;open high low close
+		       (Double/parseDouble (nth % 2))	  ;;open
+		       (Double/parseDouble (first %))	  ;;high
+		       (Double/parseDouble (second %))	  ;;low	
+		       (Double/parseDouble (nth % 3)))	  ;;close
+		 (set! (.headTime stream) (Integer/parseInt (first tick))))
+	      (rest tt)) true))))
  
 (defn- price-stream-service  [mbox]
   "The stream service constantly upgrades (every 1 second) each price stream. It can receive requests to get open/high/low/close and will initialize and create
@@ -92,9 +92,10 @@ it if necessary. It will also 'throw an error' if it receives an error when tryi
     (when (recv-if "stop" nil ? true)
       
 	    (try
-	      (do (info "attmpeting to update all indicators")
+	      (do ;(info "attmpeting to update all indicators")
 		  (update-all-price-streams @*streams*)
-		  (info "... updated all"))
+		  ;(info "... updated all")
+		  )
 	      (catch Exception e (severe e)))
 	    (sleep 1)
 	    (recur)))
@@ -104,7 +105,7 @@ it if necessary. It will also 'throw an error' if it receives an error when tryi
   (let [mbox (m/new-mbox)]
    {:pid
     (debugging "MQL Price Stream:"
-	       (spawn (partial price-stream-service mbox)))
+	       (spawn-log (partial price-stream-service mbox)))
     :mbox mbox}))
 
 (defn stop-price-stream-service [a]
