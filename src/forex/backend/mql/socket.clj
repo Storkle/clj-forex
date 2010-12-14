@@ -6,7 +6,7 @@
 ;; then persistent stream
 ;; then indicators + indicator service
 ;; then ea!
-   
+    
 (ns forex.backend.mql.socket
   (:require 
    [org.zeromq.clojure :as z]
@@ -98,14 +98,15 @@
 
 (defn- receive*
   ([server id timeout] (m/? (:mbox (:receive server)) id timeout))
-  ([server id] (receive server id nil)))
+  ([server id] (receive* server id nil)))
 
 (defn start-mql []
   (env! {:socket (start)}))
 (defn stop-mql []
   (stop (env :socket))
   (env! {:socket nil}))
-
+ 
+;;TODO: throw an error on timeout?
 (defn receive
   ([msg timeout]
      (is (alive? (env :socket)) "mql socket isnt alive")

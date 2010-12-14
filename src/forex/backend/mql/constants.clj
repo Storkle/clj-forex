@@ -3,12 +3,8 @@
 ;;note: if one uses the script for daily timeframe, wont work!
 
 
-(ns forex.backend.mql.binding
-  (:require [forex.backend.mql.socket :as s])
-  (:use forex.utils utils.general)
-  ;(:import (indicators.core ForexStream))
-  ;(:import (org.joda.time Instant DateTime DateTimeZone Interval))
-  )  
+(ns forex.backend.mql.constants
+  (:use forex.utils utils.general))  
 
 (constants 
   +M1+ 1
@@ -49,27 +45,7 @@
   +BUYSTOP+ 4
   +SELLSTOP+ 5)
   
-;(def d (get-rel-data "GBPUSD" +H1+ 0 10))
-
-(defn get-rel-data [^String symbol ^Integer timeframe ^Integer from ^Integer to]
-  (is  (>= to from) "in get-data, from/to is invalid")
-  (loop [dat nil retries 0]
-    (if (> retries 3) (throwf "error %s" (second dat)))
-    (let [data (s/receive (format "bars_relative %s %s %s %s" symbol timeframe from to))]
-      (if (= (first data) "error") 
-	(do (Thread/sleep 400) (recur data (+ retries 1)))
-	data))))
- 
-(defn get-abs-data [^String symbol ^Integer timeframe ^Integer from ^Integer to]
-  (is (<= to from) "in get-data, from/to is invalid")
-  (loop [dat nil retries 0]
-    (if (> retries 3) (throwf "error %s" (second dat)))
-    (let [data
-	  (s/receive (format "bars_absolute %s %s %s %s"
-			     symbol timeframe from to))]
-      (if (= (first data) "error") 
-	(do (Thread/sleep 400) (recur data (+ retries 1)))
-	data))))
+;(def d (get-rel-data "GBPUSD" +H1+ 0 1000))
 
 (comment
   (defn now [] (DateTime. DateTimeZone/UTC))
@@ -80,8 +56,6 @@
 
  
   (defonce *streams* (atom {}))
-
-
   (defn head [stream] (if (zero? (.getHead stream)) (abs (now)) (.getHead stream)))
   (defn out [s & args]
     (println (apply format (str "[] " s) args)))
@@ -95,7 +69,7 @@
 	 (let [dat (get-rel-data (.symbol stream) (.timeframe stream) 0 max)]
 	   (on [i (range 0 (+ max 1)) [high low open close]
 		(reverse (group (map #(Double/parseDouble %) (rest dat)) 4))]
-	     (.put stream i high low open close))
+	     (.add stream i high low open close))
 	   (.setHead stream (Integer/parseInt (first dat)))
 	   stream))))
 

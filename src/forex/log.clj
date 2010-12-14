@@ -30,7 +30,7 @@
    (java.io.File. (format "%s/.forex/%s" (System/getProperty "user.home") file)))
   (let [l (java.util.logging.Logger/getLogger (str *ns*))]
     (mapc #(.removeHandler l %) (.getHandlers l))
-    (.addHandler l (doto (forex.console. System/out) (.setFormatter (formatter))) ;;(new-out-stream *out*) = to *out*, but sort of clutters everything
+    (.addHandler l (doto (ConsoleHandler.) (.setFormatter (formatter))) ;;(new-out-stream *out*) = to *out*, but sort of clutters everything
 		 )
     (.addHandler l (doto (FileHandler. (str "%h/.forex/" file))
 		     (.setFormatter (formatter))))

@@ -1,8 +1,32 @@
-(ns forex.backend.core)
-(defprotocol backend
-  (get-stream [symbol timeframe]) ;;return a PriceStream wrapper and start updating the PriceStream in the service
-  (start [params]) ;;start any required services, including price stream updating and in mql case, sockets to get all other data
-  (stop [params]) ;;stop services
-  ) ;;and later on, we will add other stuff required for a backend, like getting account balance and placing orders
+(ns forex.backend.core
+  (:use utils.general)
+  (:require [ forex.backend.mql :as mql]))
+
+(defonce- *backend* nil)
+(def *default-backend* :mql)
+
+;;TODO: somehow lock for mql we must pause????
+(defn start-backend
+  ([] (start-backend *default-backend*))
+  ([type]
+     ;;(init-logger) 
+     (cond
+       (= type :mql) (do (def *backend* (mql/new-mql))
+			 (mql/start *backend* nil))
+       true (throwf "invalid backend %s" type))))
+
+(defn stop-backend []
+  (let [prev *backend*] 
+   (mql/stop *backend* nil)
+   (def *backend* nil)
+   prev))  
+  
+(defn get-stream [symbol timeframe]
+  (is (and (string? symbol) (integer? timeframe))
+      "invalid params in get-price-stream: %s ,%s" symbol timeframe)
+  (mql/get-price-stream *backend* symbol timeframe))
+
+
+
 
  

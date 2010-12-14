@@ -1,6 +1,15 @@
-(ns forex.utils (:use utils.general utils.fiber.spawn forex.log))
+(ns forex.utils (:use utils.general utils.fiber.spawn forex.log)
+    (:import (org.joda.time DateTime DateTimeZone Instant)))
+
 (defmacro constants [& args]
   `(do ~@(map (fn [[name val]] `(def ~name ~val)) (group args 2))))
+
+(defn now [] (DateTime. DateTimeZone/UTC))
+ 
+(defn abs
+  ([] (int (/ (.getMillis (Instant. (now))) 1000)))
+  ([date] (int (/ (.getMillis (Instant. date)) 1000))))
+
 
 
 (defmacro spawn-log [func]

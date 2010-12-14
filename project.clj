@@ -6,6 +6,7 @@
                  ;;zeromq
                  [org.zeromq/jzmq "2.0.9"]
                  [org.clojars.mikejs/clojure-zmq "2.0.7-SNAPSHOT"]
+		 [clj-time "0.2.0-SNAPSHOT"]
                  ;;mail
                  [mmemail "1.0.1"]
                  ;;clj-forex 
