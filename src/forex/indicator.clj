@@ -1,5 +1,6 @@
-(ns forex.indicator (:use forex.backend.core utils.general forex.utils))
-
+(ns forex.indicator
+  (:use forex.backend.core utils.general forex.utils))
+ 
 (defn open
   ([] (open 0)) 
   ([i] (.open (get-stream (env :symbol) (env :timeframe)) i)))
@@ -16,5 +17,5 @@
   
 (defn close
   ([] (close 0)) 
-  ([i]
+  ([i] 
      (.close (get-stream (env :symbol) (env :timeframe)) i)))

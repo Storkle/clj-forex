@@ -1,24 +1,24 @@
-(ns forex.backend.mql.service
+(ns forex.backend.mql.price_stream_service
   (:use utils.general utils.fiber.spawn
 	forex.log forex.utils
 	forex.backend.mql.constants) 
-  (:import (indicators.collection ForexStream))
+  (:import (indicators.collection ForexStream)) 
   (:require [utils.fiber.mbox :as m] 
-	    [forex.backend.mql.socket :as s]))
+	    [forex.backend.mql.socket_service :as s]))
   
 (defn get-rel-data [^String symbol ^Integer timeframe ^Integer from ^Integer to]
   (is  (>= to from) "in get-data, from/to is invalid")
   (loop [dat nil retries 0]
-    (if (> retries 3) (throwf "error %s" (second dat)))
+    (if (> retries 3) (throwf "MQL error %s" (second dat)))
      (let [data (s/receive (format "bars_relative %s %s %s %s" symbol timeframe from to))]
       (if (= (first data) "error") 
 	(do (sleep 0.4) (recur data (+ retries 1)))
 	data))))
-  
+   
 (defn get-abs-data [^String symbol ^Integer timeframe ^Integer from ^Integer to]
   (is (<= to from) "in get-data, from/to is invalid")
   (loop [dat nil retries 0]
-    (if (> retries 3) (throwf "error %s" (second dat)))
+    (if (> retries 3) (throwf "MQL error %s" (second dat)))
     (let [data 
 	  (s/receive (format "bars_absolute %s %s %s %s"
 			     symbol timeframe from to)
@@ -57,7 +57,7 @@
       stream)
     (get-in @*streams* [symbol timeframe])))
 
-
+ 
 ;;TODO: catch errors
 (defmacro with-read-lock [l & body]
   `(let [obj# ~l]

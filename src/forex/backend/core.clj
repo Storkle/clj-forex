@@ -3,7 +3,7 @@
   (:require [ forex.backend.mql :as mql]))
 
 (defonce- *backend* nil) 
-(def *default-backend* :mql)
+(def- *default-backend* :mql)
 
 ;;TODO: somehow lock for mql we must pause????
 (defn start-backend
@@ -14,7 +14,7 @@
        (= type :mql) (do (def *backend* (mql/new-mql))
 			 (mql/start *backend* nil))
        true (throwf "invalid backend %s" type))))
- 
+  
 (defn stop-backend []
   (is *backend* "no backend current running...")
   (let [prev *backend*] 

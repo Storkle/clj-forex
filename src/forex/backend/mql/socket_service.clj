@@ -7,7 +7,7 @@
 ;; then indicators + indicator service
 ;; then ea!
     
-(ns forex.backend.mql.socket
+(ns forex.backend.mql.socket_service  
   (:require 
    [org.zeromq.clojure :as z]
    [utils.fiber.mbox :as m]
