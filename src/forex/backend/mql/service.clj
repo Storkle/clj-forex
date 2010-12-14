@@ -29,21 +29,20 @@
 
 (defonce- *streams* (ref {}))
 
+;;TODO: switch from info to finer, etc!@!!!
 (defn- new-price-stream
   ([symbol timeframe] (new-price-stream symbol timeframe 1000))
   ([symbol timeframe max] 
      (let [stream (ForexStream.)]
        (set! (.symbol stream) symbol) (set! (.timeframe stream) timeframe)
-       (info "trying to initialize price stream: %s %s "
-	     (.symbol stream)  (.timeframe stream))
+       ;(info "trying to initialize price stream: %s %s " (.symbol stream)  (.timeframe stream))
        (let [dat (get-rel-data (.symbol stream) (.timeframe stream) 0 max)]
-         (info "... got data")
+        ; (info "... got data")
 	 (on [i (range 0 (+ max 1)) [high low open close]
 	        (reverse (group (map #(Double/parseDouble %) (rest dat)) 4))]
 	   (.add stream open high low close))
 	 (set! (.headTime stream) (Integer/parseInt (first dat)))
-	 (info "initialized price stream: %s %s "
-	       (.symbol stream)  (.timeframe stream))
+	; (info "initialized price stream: %s %s " (.symbol stream)  (.timeframe stream))
 	 stream))))
 
 ;;TODO: fix BUG::: we cannot use (dosync (get-rel-data "EURUSD" 60 0 10))

@@ -1,7 +1,7 @@
 (ns forex.indicator (:use forex.backend.core utils.general forex.utils))
 
 (defn open
-  ([] (open 0))
+  ([] (open 0)) 
   ([i]
      (.open (get-stream (env :symbol) (env :timeframe)) i)))
 
@@ -11,7 +11,7 @@
      (.high (get-stream (env :symbol) (env :timeframe)) i)))
 
 (defn low
-  ([] (low 0))
+  ([] (low 0)) 
   ([i]
      (.low (get-stream (env :symbol) (env :timeframe)) i)))
 
