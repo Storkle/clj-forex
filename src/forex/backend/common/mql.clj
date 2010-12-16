@@ -1,14 +1,10 @@
-(ns forex.backend.mql
+(ns forex.backend.common.mql
   (:require [forex.backend.mql.socket_service :as s]
 	    [forex.backend.mql.price_stream_service :as p])
-  (:use utils.general utils.fiber.spawn forex.utils))
-(defprotocol BACKEND
-  "Backend Interface"
-  (get-price-stream [this symbol timeframe])
-  (alive? [this])
-  (start [this params])
-  (stop [this params]))
-
+  (:use forex.backend.common.core   
+	utils.general utils.fiber.spawn
+	forex.util.general))
+ 
 (defrecord+ mql [[socket-service (ref nil)] [price-service (ref nil)]] new-mql)
  
 ;;TODO: ability to start multiple mql services?
@@ -16,7 +12,7 @@
 ;;TODO: what if one of the services dies!? OH WELL (for now until we get more like erlang in utils.fiber.spawn)
 
 (extend-type mql
-  BACKEND
+  PBackend
   (alive? [this]
 	  (let [price @(:price-service this)]
 	    (and price
@@ -37,13 +33,12 @@
 	(is (alive? this) "mql service isn't alive!")
 	(let [socket-service (:socket-service this)
 	      price-service (:price-service this)]
-	  ;;(dosync (ref-set socket-service nil) (ref-set price-service nil))
+	  (dosync (ref-set socket-service nil) (ref-set price-service nil))
 	  ;;TODO: we really need a timeout on this! oh well, i want to get something working
-	    (p/stop-price-stream-service @price-service) (sleep 2)
-	     (s/stop-mql) 
-	)
-	(swap! amount dec)))
+	  (p/stop-price-stream-service @price-service) (sleep 2)
+	  (s/stop-mql))
+	(swap! amount dec))) 
  
-
+ 
 
 

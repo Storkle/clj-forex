@@ -12,8 +12,9 @@
    [org.zeromq.clojure :as z]
    [utils.fiber.mbox :as m]
    [clojure.contrib.logging :as l])
-  (:use forex.zmq forex.utils forex.log
-	utils.fiber.spawn utils.general))
+  (:use
+   forex.util.zmq forex.util.general forex.util.log
+   utils.fiber.spawn utils.general))
 
 ;;TODO handle functions with multiple param lengths
 ;;TODO: debugging by passing a function

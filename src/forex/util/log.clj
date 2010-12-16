@@ -1,8 +1,12 @@
-(ns forex.log
+(ns forex.util.log
   (:import [java.util.logging Logger Level LogManager Handler
 	    FileHandler SimpleFormatter ConsoleHandler])
   (:require [clojure.contrib.duck-streams :as f])
-  (:use utils.general))
+  (:use emacs utils.general))
+
+;;TODO: minor mode
+(defvar log-dir "%h/.forex"
+  "Directory of logging")
 
 (defn- formatter []
   (let [d (java.util.Date.)]
@@ -32,7 +36,7 @@
     (mapc #(.removeHandler l %) (.getHandlers l))
     (.addHandler l (doto (ConsoleHandler.) (.setFormatter (formatter))) ;;(new-out-stream *out*) = to *out*, but sort of clutters everything
 		 )
-    (.addHandler l (doto (FileHandler. (str "%h/.forex/" file))
+    (.addHandler l (doto (FileHandler. (str log-dir "/" file))
 		     (.setFormatter (formatter))))
     (.setUseParentHandlers l false)
     l))

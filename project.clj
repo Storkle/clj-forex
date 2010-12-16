@@ -1,4 +1,4 @@
-;;TODO: need to AOT compile 
+
 (defproject clj-forex "0.1"
   :description "non graphical library for automated trading for forex market with various backends like metatrader"
   :dependencies [[org.clojure/clojure "1.2.0"]
@@ -14,5 +14,6 @@
                  ]
   :dev-dependencies [[native-deps "1.0.4"] [swank-clojure "1.3.0-SNAPSHOT"]]
   :native-dependencies [[org.clojars.storkle/zmq-native "1.0.0"]]
-  ;:main forex.binding  
+					;:main forex.binding
+  ;;:aot :all
  )

@@ -1,8 +1,8 @@
 ;;TODO: replace zeromq clojure library we use and replace with our own
-(ns forex.zmq
+(ns forex.util.zmq
   (:require [org.zeromq.clojure :as z]
 	    [utils.fiber.mbox :as m])
-  (:use  forex.utils utils.general))
+  (:use  forex.util.general utils.general))
 
 ;; Constants 
 (def +noblock+ 1)
