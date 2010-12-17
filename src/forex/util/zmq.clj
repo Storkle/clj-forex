@@ -1,3 +1,5 @@
+;;forex.util.zmq - wrapper around clojure wrapper for zmq - used in mql backend for socket communication with metatrader
+
 ;;TODO: replace zeromq clojure library we use and replace with our own
 (ns forex.util.zmq
   (:require [org.zeromq.clojure :as z]

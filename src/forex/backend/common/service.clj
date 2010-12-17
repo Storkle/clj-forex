@@ -1,82 +1,63 @@
-;;This allows us to update our price stream and indicators by calling (refresh-rates). It also allows us to create 'contextes' from which we can update
-;;from our main price stream. Get-price-stream will get price stream. indicator-naive-cache-strategy will cache all of our indicators that we will create
-;;elsewhere.
+;;forex.backend.common.service - getting streams and updating streams in a context from a backend
 
-;;exporting get-stream,refresh-rates,context,indicator-naive-cache-strategy
 (ns forex.backend.common.service
-  (:use forex.backend.common.core 
+  (:use emacs forex.backend.common.core 
         utils.general utils.fiber.spawn
-	forex.util.general)
+	forex.util.general forex.util.log)
   (:require [forex.backend.common.core :as core])
   (:import (indicators.collection ForexStream))) 
 
-;;TODO: make into macro
-(deftype IndicatorNaiveStrategy [cache]
-  PCachingStrategy
-  (retrieve 
-   [_ item]
-   (get @cache item)) 
-  (cached?
-   [_ item]
-   (contains? @cache item))
-  (hit
-   [this _]
-   this)
-  (miss 
-   [_ item result]
-   (with-write-lock core/*indicator-lock* (.ex (force result)))
-   (swap! core/*indicators* assoc item result)
-   (IndicatorNaiveStrategy. core/*indicators*)))
-
-(defn indicator-naive-cache-strategy
-  "The naive safe-all cache strategy for memoize."
-  []
-  (IndicatorNaiveStrategy. core/*indicators*))  
-
-(deftype ^{:private true} PriceStreamNaiveStrategy [cache]
-  PCachingStrategy
-  (retrieve 
-   [_ item]
-   (first (get @cache item)))
-  (cached?
-   [_ item]
-   (contains? @cache item))
-  (hit
-   [this _]
-   this)
-  (miss 
-   [_ item result]
-   (swap! core/*streams* assoc item result)
-   (PriceStreamNaiveStrategy. core/*streams*)))
-
-(defn- price-stream-naive-cache-strategy
-  "The naive safe-all cache strategy for memoize."
-  []
-  (PriceStreamNaiveStrategy. core/*streams*))
-
-(def get-stream
-  (mem (fn [symbol timeframe] (ForexStream. (core/get-price-stream core/*backend* symbol timeframe)))
-       (price-stream-naive-cache-strategy)))
-
-(defn- update-all-price-streams []
-  (with-write-lock core/*main-stream-lock*
-    (with-read-lock core/*stream-lock*
-      (on [stream (vals @core/*streams*)]
-	(when-not (atom? stream)
-	  (.update (first stream) (second stream))))))) 
+(def- get-stream*
+  (mem (fn [symbol timeframe] (pr "HI")
+	 (let [core-stream (core/get-price-stream core/*backend*
+						  symbol timeframe)	   
+	       ret  (list (ForexStream. core-stream) core-stream)]
+	   (swap! core/*streams* assoc (str symbol " " timeframe) ret)
+	   ret))
+       (naive-var-local-cache-strategy core/*streams-cache*)))
  
+(defn get-stream [symbol timeframe] 
+  (first (get-stream* symbol timeframe)))
+ 
+(defn- update-all-price-streams [] 
+  (with-read-lock core/*main-stream-lock*
+    (with-write-lock core/*stream-lock*
+      (on [[local main]  (vals @core/*streams*)] 
+	(.update local main))))) 
+  
 (defn- update-all-indicators []
   (with-write-lock core/*stream-lock*
     (on [ind (vals @core/*indicators*)]
-      (.ex (force ind))))) 
+      (.ex ind)))) 
 
 (defn refresh-rates []
-  (update-all-price-streams)
-  (update-all-indicators))
+  (with-read-lock core/*main-stream-lock*
+    (with-write-lock core/*stream-lock*
+      (update-all-price-streams)
+      (update-all-indicators))))
  
 (defmacro context [& body]
   `(binding [core/*indicators* (atom {})
-	     core/*streams* (atom {}) 
-	     core/*stream-lock* (java.util.concurrent.locks.ReentrantReadWriteLock.)]
+	     core/*indicators-cache* (atom {})
+	     core/*streams* (atom {})
+	     core/*streams-cache* (atom {})
+	     core/*stream-lock*
+	     (java.util.concurrent.locks.ReentrantReadWriteLock.)]
      ~@body))
+
+
+;;TODO: synchronize this with the major, global price stream. In other words, if i update right before the global one updates, well, i will be behind 1 tick. We could just of course speed up the global one, but synchronization is nicer. This is only needed for scalping.
+;;TODO: SCALPING event driven, i.e. mql sends updates, instead of us polling? possible?
+(defvar  service-global-refresh-poll-interval 1.01
+  "refresh the global price stream every x seconds")
+
+(comment
+  (defn spawn-global-refresh-rates-service []
+    {:pid (debugging "Global Refresh Rates:"
+		     (spawn-log
+		      #(loop []
+			 (sleep service-global-refresh-poll-interval)
+			 (refresh-rates)
+			 (when (recv-if "stop" nil ? true)
+			   (recur)))))}))
 

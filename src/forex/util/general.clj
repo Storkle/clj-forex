@@ -1,7 +1,19 @@
+;; forex.util.general - general utilities for clj-forex
+
 (ns forex.util.general
   (:use utils.general utils.fiber.spawn forex.util.log)
   (:import (org.joda.time DateTime DateTimeZone Instant)))
 
+
+(defmacro naive-var-local-cache-strategy [var] 
+ `(let [cache# (atom {})]
+    (reify PCachingStrategy
+      (retrieve [_ item#] (get @cache# item#))
+      (cached? [_ item#] (contains? @cache# item#))
+      (hit [this# _] this#)
+      (miss [this# item# result#]
+	    (reset! cache# (swap! ~var assoc item# result#))
+	    this#))))
 
 (defmacro constants [& args]
   `(do ~@(map (fn [[name val]] `(def ~name ~val)) (group args 2))))
@@ -18,7 +30,8 @@
 (defonce *env* (atom {:timeframe 1440 :index 0})) ;default +D1+
 (defn env [key] (key @*env*))
 (defn env! [map]
-  (swap! *env* #(merge % map)))
+  (swap! *env* #(merge % map))
+  map)
 
 ;;todo: fix private!
 ;;todo: ignores all nils?

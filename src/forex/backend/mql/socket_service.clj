@@ -1,26 +1,18 @@
+;;forex.backend.mql.socket_service: provide background sockets which allow us to connect with metatrader. Provides functions to interact with the background sockets
+
 ;;TODO chage socket type to appropriate type?
 ;;TODO: general zeromq server types? and fix the type we use, it is wrong
-;;TODO: sometimes we get 'address already in use errors' - so, somehow we are forcably closing somethign
-
-;; then mql backend (i.e. stream updating + socket services)
-;; then persistent stream
-;; then indicators + indicator service
-;; then ea!
     
 (ns forex.backend.mql.socket_service  
   (:require 
    [org.zeromq.clojure :as z]
    [utils.fiber.mbox :as m]
    [clojure.contrib.logging :as l])
-  (:use
+  (:use emacs
    forex.util.zmq forex.util.general forex.util.log
    utils.fiber.spawn utils.general))
 
-;;TODO handle functions with multiple param lengths
-;;TODO: debugging by passing a function
-(defmacro- de [name arg & body]
-	   `(defn ~name ~arg
-	      (debugging "MQL socket:" ~@body)))
+;;TODO: ports as user defined variable??
 
 (defn mql-recv [mailbox msg]
   (let [data (split  msg #" +")]
@@ -73,14 +65,14 @@
     (and (pid? (:pid receive))
 	 (pid? (:pid send)))))
 
-(de start [] 
-  (let [id (gensym)]
-    {:id id 
-     :receive (spawn-mql-recv-service {:host "127.0.0.1" :port 2055})
-     :send  (spawn-mql-send-service {:host "127.0.0.1" :port 2045})})) ;;2045
+(defn start []
+  (debugging "MQL Socket:"
+   (let [id (gensym)]
+     {:id id 
+      :receive (spawn-mql-recv-service {:host "127.0.0.1" :port 2055})
+      :send  (spawn-mql-send-service {:host "127.0.0.1" :port 2045})}))) ;;2045
 
-;;TODO: use fine?
-(de stop [server]
+(defn stop [server]
   (let [{receive :receive send :send} server]
     (if (pid? (:pid receive))
       (! (:pid receive) "stop")
@@ -88,7 +80,9 @@
     (if (pid? (:pid send))
       (! (:pid send) "stop")
       (warn "send service is already stopped"))))
- 
+
+;;interact with sockets
+
 (defonce- index (atom 0))
 
 (defn- send* [server msg] 
@@ -103,6 +97,7 @@
 
 (defn start-mql []
   (env! {:socket (start)}))
+
 (defn stop-mql []
   (stop (env :socket))
   (env! {:socket nil}))

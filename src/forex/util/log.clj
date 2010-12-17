@@ -1,3 +1,5 @@
+;;forex.util.log - log to a log file and to *out* and System/out
+
 (ns forex.util.log
   (:import [java.util.logging Logger Level LogManager Handler
 	    FileHandler SimpleFormatter ConsoleHandler])

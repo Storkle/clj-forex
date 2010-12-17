@@ -6,11 +6,15 @@
 (defonce *main-stream-lock*  (java.util.concurrent.locks.ReentrantReadWriteLock.))
 
 (defonce *streams* (atom {}))
+(defonce *streams-cache* (atom {}))
+
 (defonce *indicators* (atom {}))
+(defonce *indicators-cache* (atom {}))
+
 (defonce *indicator-lock*  (java.util.concurrent.locks.ReentrantReadWriteLock.))
 (defonce *stream-lock* (java.util.concurrent.locks.ReentrantReadWriteLock.))
 
-(def *backend* nil)
+(defonce *backend* nil)
 (defprotocol PBackend
   "Backend Interface"
   (get-price-stream [this symbol timeframe])
