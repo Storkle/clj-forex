@@ -46,3 +46,6 @@ CMakeFiles
 /lib/matchure-0.9.1.jar
 /lib/clj-time-0.2.0-20101126.163600-3.jar
 /lib/joda-time-1.6.jar
+/lib/scala-2.8.1.jar
+/natives/linux/x86/libjzmq.so
+/natives/linux/x86/libzmq.so

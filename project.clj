@@ -11,9 +11,13 @@
                  [mmemail "1.0.1"]
                  ;;clj-forex 
                  [clj-forex-utils "0.1"] [clj-forex-indicators "0.1"]
-                 ]
-  :dev-dependencies [[native-deps "1.0.4"] [swank-clojure "1.3.0-SNAPSHOT"]]
-  :native-dependencies [[org.clojars.storkle/zmq-native "1.0.0"]]
-					;:main forex.binding
+                 ]  
+   :dev-dependencies [[native-deps "1.0.4"]
+		     [swank-clojure "1.3.0-SNAPSHOT"]]
+   :native-path "natives/linux/x86/"
+  ;;:native-dependencies [[org.clojars.storkle/zmq-native "1.0.0"]]
+  ;;:main forex.binding
   ;;:aot :all
- )
+   )
+
+

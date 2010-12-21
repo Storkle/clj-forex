@@ -1,4 +1,4 @@
-(ns forex.backend.common.mql
+(ns forex.backend.mql.common
   (:require [forex.backend.mql.socket_service :as s]
 	    [forex.backend.mql.price_stream_service :as p])
   (:use forex.backend.common.core   
@@ -11,18 +11,20 @@
 (def amount (atom 0))
 ;;TODO: what if one of the services dies!? OH WELL (for now until we get more like erlang in utils.fiber.spawn)
 
+;;TODO: if one service dies, alive? should return how many are alive?
 (extend-type mql
   PBackend
   (alive? [this]
 	  (let [price @(:price-service this)]
 	    (and price
-		 (s/alive? (env :socket))
-		 (pid? (:pid price)))))
+		 (or
+		  (s/alive? (env :socket))
+		  (pid? (:pid price))))))
   (get-price-stream [this symbol timeframe]
 		    (is (alive? this) "mql service isnt alive!")
 		    (p/get-price-stream symbol timeframe))
   (start [this params]
-	 (is (= @amount 0)
+	 (is (<= @amount 0)
 	     "number of mql services is limited to only one at this time!")
 	 (let [socket-service (s/start-mql)
 	       price-service (do (sleep 2) (p/spawn-price-stream-service)
@@ -30,7 +32,7 @@
 	   (dosync (ref-set (:socket-service this) socket-service)
 		   (ref-set (:price-service this) price-service)
 		   )
-	   (swap! amount inc)))
+	   (reset! amount 1)))
   (stop [this params]
 	(is (alive? this) "mql service isn't alive!")
 	(swap! amount dec)

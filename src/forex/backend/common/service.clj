@@ -5,13 +5,13 @@
         utils.general utils.fiber.spawn
 	forex.util.general forex.util.log)
   (:require [forex.backend.common.core :as core])
-  (:import (indicators.collection ForexStream))) 
+  (:import (indicators ForexStream))) 
 
 (def- get-stream*
-  (mem (fn [symbol timeframe] (pr "HI")
+  (mem (fn [symbol timeframe] 
 	 (let [core-stream (core/get-price-stream core/*backend*
 						  symbol timeframe)	   
-	       ret  (list (ForexStream. core-stream) core-stream)]
+	       ret  (list (ForexStream/create core-stream) core-stream)]
 	   (swap! core/*streams* assoc (str symbol " " timeframe) ret)
 	   ret))
        (naive-var-local-cache-strategy core/*streams-cache*)))
@@ -44,20 +44,3 @@
 	     core/*stream-lock*
 	     (java.util.concurrent.locks.ReentrantReadWriteLock.)]
      ~@body))
-
-
-;;TODO: synchronize this with the major, global price stream. In other words, if i update right before the global one updates, well, i will be behind 1 tick. We could just of course speed up the global one, but synchronization is nicer. This is only needed for scalping.
-;;TODO: SCALPING event driven, i.e. mql sends updates, instead of us polling? possible?
-(defvar  service-global-refresh-poll-interval 1.01
-  "refresh the global price stream every x seconds")
-
-(comment
-  (defn spawn-global-refresh-rates-service []
-    {:pid (debugging "Global Refresh Rates:"
-		     (spawn-log
-		      #(loop []
-			 (sleep service-global-refresh-poll-interval)
-			 (refresh-rates)
-			 (when (recv-if "stop" nil ? true)
-			   (recur)))))}))
-

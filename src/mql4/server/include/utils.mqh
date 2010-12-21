@@ -1,4 +1,4 @@
-int DEBUG_ON = 1;
+int DEBUG_ON = 0;
 void trace(string s) {
  if (DEBUG_ON==1) 
    Print(s);

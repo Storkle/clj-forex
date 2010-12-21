@@ -88,7 +88,7 @@ int start () {
   while (1==1) {
     if (IsStopped()) 
      return(0);
-    trace("waiting for receive...");
+    Print("waiting for receive...");
     z_recv(sub,recv,0); 
     RefreshRates(); 
     string r[]; string receive = z_msg(recv); Print("received "+receive);
@@ -98,7 +98,7 @@ int start () {
     trace("sending: length "+StringLen(ret)+" ");
     reply = z_msg_new(ret); 
     z_send(pub,reply,0);
-    trace("sent response..."); 
+    Print("sent response..."); 
   }
   return(0);
 }
