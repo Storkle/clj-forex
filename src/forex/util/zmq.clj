@@ -37,7 +37,7 @@
 (def +pollerr+ 4)
 ;; 
 (defonce- *ctx* (z/make-context 1))
-
+ 
 (defn socket-new-poller [socket]
   (let [p (z/make-poller *ctx* 1)]
     (z/register p socket) p))
