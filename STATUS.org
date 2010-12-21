@@ -1,3 +1,8 @@
+* <2010-12-21 Tue>
+code has somewhat stabilized - forex_user.clj is the customization file, placing server on metatrader and going (backend/start) and then (close) will allow
+one to access the close prices (they will be automatically updated every 0.5 or so seconds)
+
+Indicator implementation will officially now be in scala (because i dont like java verbosity)
 * <2010-12-08 Wed>
 Currently, I have been focusing in clj-forex on getting something done, rather than the architecture. Now that I have explored a lot,
 I am ready to make this code much better (as it is, if i may say so, not very well structured!).

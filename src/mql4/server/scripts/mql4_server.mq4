@@ -91,7 +91,7 @@ int start () {
     Print("waiting for receive...");
     z_recv(sub,recv,0); 
     RefreshRates(); 
-    string r[]; string receive = z_msg(recv); Print("received "+receive);
+    string r[]; string receive = z_msg(recv); 
     split(r,receive);
     trace("received "+receive);
     string ret = protocol(r);
