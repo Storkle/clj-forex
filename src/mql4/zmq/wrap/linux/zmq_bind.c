@@ -50,6 +50,27 @@ void* WINAPI wine_zmq_init (int io_threads) {
 int WINAPI wine_zmq_term (void* context) {
   return zmq_term(context);
 }
+
+//polling
+///used for freeing poller
+void wine_free (void*ptr) {
+  free(ptr);
+}
+
+//timeout in milliseconds
+int WINAPI wine_zmq_poll(zmq_pollitem_t*items,int nitems,int timeout) {
+  return zmq_poll(items,nitems,timeout*1000);
+} 
+//TODO: for some reason, if we pass any pointer other than void, it crashes. hmmm.....
+void* WINAPI wine_new_poll (void* socket) {
+  zmq_pollitem_t* ret =  (zmq_pollitem_t*)malloc(sizeof(zmq_pollitem_t)); 
+  ret[0].socket = socket; 
+  ret[0].fd = 0;
+  ret[0].events = ZMQ_POLLIN; 
+  return ret; 
+}    
+ 
+ 
 //sockets
 void* WINAPI wine_zmq_socket (void* context, int type) {
   return zmq_socket(context,type); 

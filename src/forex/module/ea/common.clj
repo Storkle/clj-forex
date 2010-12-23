@@ -1,4 +1,4 @@
-(ns forex.ea.common
+(ns forex.module.ea.common
   (:use forex.indicator.common
 	forex.util.general
 	utils.general))

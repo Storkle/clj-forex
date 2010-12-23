@@ -1,5 +1,5 @@
 ;;forex.backend.mql.socket_service: provide background sockets which allow us to connect with metatrader. Provides functions to interact with the background sockets
-
+ 
 ;;TODO chage socket type to appropriate type?
 ;;TODO: general zeromq server types? and fix the type we use, it is wrong
     
@@ -8,11 +8,13 @@
    [org.zeromq.clojure :as z]
    [utils.fiber.mbox :as m]
    [clojure.contrib.logging :as l])
-  (:use emacs
-   forex.util.zmq forex.util.general forex.util.log
-   utils.fiber.spawn utils.general))
+  (:use emacs 
+	forex.util.zmq forex.util.general forex.util.log
+	utils.fiber.spawn utils.general))
 
 ;;TODO: ports as user defined variable??
+(defvar receive-port 2070)
+(defvar send-port 2065)
 
 (defn mql-recv [mailbox msg]
   (let [data (split  msg #" +")]
@@ -65,12 +67,13 @@
     (and (pid? (:pid receive))
 	 (pid? (:pid send)))))
 
+
 (defn start []
   (debugging "MQL Socket:"
    (let [id (gensym)]
      {:id id 
-      :receive (spawn-mql-recv-service {:host "127.0.0.1" :port 2055})
-      :send  (spawn-mql-send-service {:host "127.0.0.1" :port 2045})}))) ;;2045
+      :receive (spawn-mql-recv-service {:host "127.0.0.1" :port receive-port})
+      :send  (spawn-mql-send-service {:host "127.0.0.1" :port send-port})}))) ;;2045
 
 (defn stop [server]
   (let [{receive :receive send :send} server]
@@ -103,10 +106,44 @@
   (env! {:socket nil}))
  
 ;;TODO: throw an error on timeout?
+;;TODO: throw an error if get an error!
+
+
 (defn receive
   ([msg timeout]
      (is (alive? (env :socket)) "mql socket isnt alive")
      (let [a (env :socket)
 	   id (send* a msg)]
        (receive* a id timeout)))
-  ([msg] (receive msg nil)))
+  ([msg] (receive msg nil))) 
+(defn receive-double
+  ([msg timeout] (Double/parseDouble (first (receive msg timeout))))
+  ([msg] (receive-double msg nil)))
+(defn receive-str
+  ([msg timeout] (first (receive msg timeout)))
+  ([msg] (receive-str msg nil)))
+
+
+
+
+
+(defn throw-mql [err]
+  (throwf "MQL error %s" err))
+
+(defn receive!
+  ([msg] (receive! msg nil))
+  ([msg timeout]
+     (receive! msg timeout nil))
+  ([msg timeout default]
+     (let [msg (receive msg timeout)
+	   head (first msg)] 
+       (cond
+	 (= msg default) default
+	 (= head "error") (throw-mql (apply str (rest msg)))
+	 true msg))))
+(defn receive-double! [msg]
+  (Double/parseDouble (first (receive! msg))))
+(defn receive-str! [msg]
+  (first (receive! msg)))
+
+

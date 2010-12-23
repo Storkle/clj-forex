@@ -1,5 +1,5 @@
 ;; forex.indicator.common - interfacing with java indicators and local caching of indicators
-(ns forex.indicator.common
+(ns forex.module.indicator.common
    (:use utils.general forex.util.general
 	 forex.backend.common)
    (:require [ forex.backend.common.core :as common]))

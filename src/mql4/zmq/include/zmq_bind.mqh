@@ -7,6 +7,21 @@ void z_trace(string str) {
  }
 }
 
+//timeout in milliseconds
+int z_poll(int poller,int timeout) {
+  int ret = _zmq_poll(poller,1,timeout);
+  if (ret==-1) 
+     z_error();
+  return(ret);
+}
+int z_new_poll (int socket)  {
+  return(_zmq_new_poll(socket));
+}
+void z_free_poller (int poller) {
+  if (poller!=0) 
+    _zmq_free(poller);
+}
+
 //version
 string z_version_string() {
   int version[3];
@@ -106,11 +121,14 @@ int z_connect(int socket,string endpoint) { //for the clients
  return(ret);
 }
 
-int z_send(int socket,int msg,int flags) {
+//TODO: z_send_raw
+int z_send(int socket,string msg,int flags) {
  z_trace("z_send: "+msg+" "+flags); 
- int ret = _zmq_send(socket,msg,flags); 
+ int message = z_msg_new(msg);
+ int ret = _zmq_send(socket,message,flags); 
+ z_msg_close(message);
  if (ret==-1)
-   z_error(); 
+   z_error();  
  return(ret);
 }
 int z_recv(int socket,int msg,int flags) {

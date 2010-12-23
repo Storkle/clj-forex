@@ -1,5 +1,11 @@
 
 #import "zmq_bind.dll"
+
+
+int _zmq_poll(int socket,int nitems,int timeout);
+void _zmq_free(int poller);
+int _zmq_new_poll (int socket);
+
 void _zmq_version(int &major[],int &minor[],int &patch[]);
 //messages
 int _zmsg_new (); //zmq_msg_t* zmsg_new(void)
