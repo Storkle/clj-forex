@@ -19,4 +19,4 @@
 ;;now in metatrader 5, we can take advantage of the 'on price changed' event, maybe???
 (setq price/mql-poll-interval 0.5) 
 
- 
+

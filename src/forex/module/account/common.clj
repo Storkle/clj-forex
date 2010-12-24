@@ -42,22 +42,28 @@
 
 ;;BUG: somehow, metatrader sometimes freezes when making an order. hmmm...... not good!
 ;;or wait, maybe this is the other bug?
-(defmulti close!
-  (fn [{type :type} & args]
-    (cond 
-      (or (= type :sell-limit) (= type :buy-limit)
-	  (= type :sell-stop) (= type :buy-stop))
-      :entry
-      (or (= type :sell) (= type :buy)) 
-      :market
-      true
-      :default)))
- 
-(defmethod close! :entry [{id :id :as order}] 
+(comment
+  (defmulti close!
+    (fn [{type :type} & args]
+      (cond 
+	(or (= type :sell-limit) (= type :buy-limit)
+	    (= type :sell-stop) (= type :buy-stop))
+	:entry
+	(or (= type :sell) (= type :buy)) 
+	:market
+	true
+	:default))))
+
+(defn delete! [{id :id :as order}]
   (core/order-delete id)
   order)
+
+(comment
+  (defmethod close! :entry [{id :id :as order}] 
+    (core/order-delete id)
+    order))
   
-(defmethod close! :market
+(defn close! 
   ([o] (close! o 0))
   ([{:keys [price lots slip id] :as order} new-lots]
      (is (and (string? id) (pos? price) (and (number? lots) (>= lots 0))))
