@@ -13,7 +13,7 @@
 		    :price 1.31133	  
 		    :type :sell-stop		 
 		    :lots 0.1}))))
- 
+  
 (def- value-to-order-type
   {0 :buy 1 :sell 2 :buy-limit
    3 :sell-limit 4 :buy-stop
@@ -25,7 +25,7 @@
 
 (defn open? [order]
   (= (order-close-time order) 0))
-
+ 
 (defn order-type
   "type of order, even if it is already closed"
   [o]
@@ -56,7 +56,7 @@
 (defmethod close! :entry [{id :id :as order}] 
   (core/order-delete id)
   order)
-
+ 
 (defmethod close! :market
   ([o] (oclose o 0))
   ([{:keys [price lots slip id] :as order} new-lots]
@@ -71,8 +71,10 @@
   [{:keys [id]} {:keys [sl tp price]}]
   (is (and (pos? sl) (pos? tp) (pos? price) (string? price)))
   (core/order-modify id price sl tp))
- 
-(defn- verify-order [{:keys [symbol type price tp sl lots] :or {sl 0 tp 0}}]
+
+;;TOOD: how do we get map with defaults?
+(defn- verify-order [{:keys [slip symbol type price tp sl lots] :or {slip 3 sl 0 tp 0}}]
+  (is (and (number? slip) (> slip 0) (integer? slip)) "invalid order slip %s" slip)
   (is (and (keyword? type) (number? lots) (number? tp) (number? sl) (number? price)))
   (is (and (string? symbol) (> lots 0) (>= tp 0) (>= sl 0) (>= price 0)))  
   (cond
@@ -91,12 +93,12 @@
     true (throwf "invalid %s order with sl/tp %s/%s with price of %s" type sl tp price)))
 
 
-(defn order! [{:keys [symbol type price tp sl lots] :as order :or {sl 0 tp 0}}]
+(defn order! [{:keys [symbol type price tp sl lots slip] :as order :or {slip 3 sl 0 tp 0}}]
   (verify-order order)
   (let [id (core/order-send symbol type lots price)]
     (when (or (and sl (not (zero? sl)))
 	      (and tp (not (zero? tp))))
       (core/order-modify id price sl tp))
-    (merge order {:id id :slip 3 :tp tp :sl sl})))
+    (merge order {:id id :slip slip :tp tp :sl sl})))
  
 
