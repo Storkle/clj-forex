@@ -1,5 +1,4 @@
 ;;forex.module.order.common - api for creating/modify orders
-
 ;;TODO: what happends when a metatrader error is thrown?
 (ns forex.module.account.common
   (:use utils.general emacs 
@@ -14,24 +13,32 @@
 		    :price 1.31133	  
 		    :type :sell-stop		 
 		    :lots 0.1}))))
-
+ 
 (def- value-to-order-type
   {0 :buy 1 :sell 2 :buy-limit
    3 :sell-limit 4 :buy-stop
    5 :sell-stop})
 
-(defn time-close [{id :id}]
+(defn order-close-time [{id :id}]
   (is (string? id))
   (core/order-close-time id))
 
 (defn open? [order]
-  (= (time-close order) 0))
- 
-(defn type-of
+  (= (order-close-time order) 0))
+
+(defn order-type
   "type of order, even if it is already closed"
   [o]
   (is (string? (:id o)))
   (value-to-order-type (int (core/order-type (:id o)))))
+
+(defn market?
+  "determine if order is market order"
+  [order]
+  (let [type (order-type order)]
+    (or (= type :sell) (= type :buy))))
+(defn entry? [order]
+  (not (market? order)))
 
 ;;BUG: somehow, metatrader sometimes freezes when making an order. hmmm...... not good!
 ;;or wait, maybe this is the other bug?
