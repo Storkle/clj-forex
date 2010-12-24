@@ -6,13 +6,12 @@
 	forex.backend.mql.socket_service)
   (:require  [forex.module.account.core :as core])
   (:require [forex.backend.common :as backend]))
-   
-(comment
-  (defn g []
-    (def o (order! {:symbol "EURUSD"
-		    :price 1.31133	  
-		    :type :sell-stop		 
-		    :lots 0.1}))))
+    
+(defn g []
+  (def o (order! {:symbol "EURUSD"
+		  :price 1.31133	  
+		  :type :sell-stop		 
+		  :lots 0.1})))
   
 (def- value-to-order-type
   {0 :buy 1 :sell 2 :buy-limit
@@ -48,17 +47,17 @@
       (or (= type :sell-limit) (= type :buy-limit)
 	  (= type :sell-stop) (= type :buy-stop))
       :entry
-      (or (= type :sell) (= type :buy))
+      (or (= type :sell) (= type :buy)) 
       :market
       true
       :default)))
-
+ 
 (defmethod close! :entry [{id :id :as order}] 
   (core/order-delete id)
   order)
- 
+  
 (defmethod close! :market
-  ([o] (oclose o 0))
+  ([o] (close! o 0))
   ([{:keys [price lots slip id] :as order} new-lots]
      (is (and (string? id) (pos? price) (and (number? lots) (>= lots 0))))
      (is (>= (- lots new-lots) 0))
@@ -92,7 +91,6 @@
 	"invalid %s order with sl/tp %s/%s with price of %s" type sl tp price)
     true (throwf "invalid %s order with sl/tp %s/%s with price of %s" type sl tp price)))
 
-
 (defn order! [{:keys [symbol type price tp sl lots slip] :as order :or {slip 3 sl 0 tp 0}}]
   (verify-order order)
   (let [id (core/order-send symbol type lots price)]
@@ -101,4 +99,26 @@
       (core/order-modify id price sl tp))
     (merge order {:id id :slip slip :tp tp :sl sl})))
  
+(defn- immigrate [& syms]
+  (let [core-ns (find-ns 'forex.module.account.core)
+	publics (ns-publics 'forex.module.account.core)]
+    (on [s syms]
+      (let [sym  (symbol (camel-to-dash s))]
+	(intern *ns* sym (var-get (intern core-ns sym)))))))
 
+;;account common
+(immigrate 
+ "AccountCurrency"
+ "AccountCompany"
+ "AccountServer" 
+ "AccountName"
+ "AccountNumber"
+
+ "AccountCredit"
+ "AccountBalance"
+ "AccountEquity"
+ "AccountFreeMargin"
+ "AccountLeverage"
+ "AccountMargin"
+ "AccountProfit"
+ "OrdersTotal")

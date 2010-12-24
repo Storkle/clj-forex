@@ -9,7 +9,7 @@
  
 ;;(defn str-to-big [^String s] (java.math.BigDecimal. s))
 
-(defn sym [a] (symbol (camel-to-dashed a)))
+(defn sym [a] (symbol (camel-to-dash a)))
 (defmacro- single [name] `(defn ~(sym name) [] (receive-str! ~name)))
 (defmacro- double-single [name] `(defn ~(sym name) [] (receive-double! ~name)))
 (defmacro- singles [& names] `(do ~@(map (fn [a] `(single ~a)) names)))
