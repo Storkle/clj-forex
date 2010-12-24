@@ -1,8 +1,9 @@
 #include <zmq_bind.mqh>
 #include <utils.mqh>
 #include <GUI.mqh>
+#include <ACCOUNT.mqh>
 
-int receive_port = 2070;
+int receive_port = 2070; 
 int send_port = 2065;
 string process_bars_absolute(string &req[]) {
   int i; 
@@ -44,10 +45,6 @@ string process_bars_relative(string &req[]) {
     ret=ret+high+" "+low+" "+open+" "+close+" ";
   }
   return(iTime(symbol,timeframe,from)+" "+ret);
-}
-
-string process_AccountBalance() {
-  return(DoubleToStr(AccountBalance(),5));
 }
 
 #include <WinUser32.mqh>
@@ -148,10 +145,6 @@ string protocol(string&request[]) {
     } else if (command=="bars_absolute") {
       ret = process_bars_absolute(request);
     } 
-    //PROCESS ACCOUNT
-      else if (command=="AccountBalance") {
-      ret = process_AccountBalance();
-    }  
     //CHANGE GUI
       else if (command=="ChangeTimeframe") {
       ret = process_ChangeTimeframe(request);
@@ -175,7 +168,54 @@ string protocol(string&request[]) {
       ret = process_ObjectName(request);
     } else if (command=="DeleteAll") {
       ret = process_ObjectsDeleteAll(request); 
-    } 
+    } else if (command=="ChartWindow") {
+      ret = ChartWindow(request[2]);
+    }
+    //ACCOUNT
+     else if (command=="AccountProfit") {
+	   ret = process_AccountProfit(request);
+	}
+     else if (command=="AccountBalance") {
+	   ret = process_AccountBalance(request);
+	} else if (command=="AccountCredit") {
+	   ret = process_AccountCredit(request);
+	} else if (command=="AccountCompany") {
+	   ret = process_AccountCompany(request);
+	} else if (command=="AccountCurrency") {
+	   ret = process_AccountCurrency(request);
+	} else if (command=="AccountEquity") {
+	   ret = process_AccountEquity(request);
+	} else if (command=="AccountFreeMargin") {
+	   ret = process_AccountFreeMargin(request);
+	} else if (command=="AccountLeverage") {
+	   ret = process_AccountLeverage(request);
+	} else if (command=="AccountMargin") {
+	   ret = process_AccountMargin(request);
+	} else if (command=="AccountName") {
+	   ret = process_AccountName(request);
+	} else if (command=="AccountNumber") {
+	   ret = process_AccountNumber(request);
+	} else if (command=="AccountServer") {
+	   ret = process_AccountServer(request);
+	} else if (command=="OrderLots") {
+	   ret = process_OrderLots(request);
+	} else if (command=="OrderDelete") {
+	   ret = process_OrderDelete(request);
+	} else if (command=="OrderCloseTime") {
+	   ret = process_OrderCloseTime(request);
+	} else if (command=="OrderType") {
+	   ret = process_OrderType(request);
+	} else if (command=="OrdersTotal") {
+	   ret = process_OrdersTotal(request);
+	} else if (command=="OrderSend") {
+	   ret = process_OrderSend(request);
+	} else if (command=="MarketInfo") {
+	   ret = process_MarketInfo(request);
+	} else if (command=="OrderClose") {
+	   ret = process_OrderClose(request);
+	} else if (command=="OrderModify") {
+	   ret = process_OrderModify(request);
+	}
     //Unknown Command
     else  {
       ret = "error unknown";
