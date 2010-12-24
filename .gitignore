@@ -49,3 +49,4 @@ CMakeFiles
 /lib/scala-2.8.1.jar
 /natives/linux/x86/libjzmq.so
 /natives/linux/x86/libzmq.so
+/lib/dev/swank-clojure-1.3.0-20101217.045604-17.jar

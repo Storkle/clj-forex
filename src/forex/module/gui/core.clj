@@ -70,8 +70,8 @@
 (defn change-timeframe [symbol timeframe]
   (receive! (format "ChangeTimeframe %s %s" timeframe symbol)))
 (defn switch-to-symbol [symbol timeframe]
-  (change-timeframe symbol timeframe)
-  (set-focus symbol timeframe))
+  (change-timeframe symbol timeframe) 
+  (set-focus symbol timeframe)) 
 (defn post [symbol num]
   (receive! (format "Post %s %s" symbol num)))
 (defn toggle-grid [sym] (post sym 33021))
