@@ -7,11 +7,12 @@
   (:require  [forex.module.account.core :as core])
   (:require [forex.backend.common :as backend]))
     
-(defn g []
-  (def o (order! {:symbol "EURUSD"
-		  :price 1.31133	  
-		  :type :sell-stop		 
-		  :lots 0.1})))
+(comment
+  (defn g []
+    (def o (order! {:symbol "EURUSD"
+		    :price 1.31133	  
+		    :type :sell-stop		 
+		    :lots 0.1}))))
   
 (def- value-to-order-type
   {0 :buy 1 :sell 2 :buy-limit
