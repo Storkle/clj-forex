@@ -1,4 +1,6 @@
 (in-ns 'forex_user)
+;;TODO: debugging services!
+
 ;;timeout - cancel an entry order after a certain time period
 (require '[clj-time.core :as t])
 (use 'forex.util.log)
@@ -10,10 +12,10 @@
 	(delete! o)
 	(warn "done"))
     (do (warn "Not closing order"))))
- 
+  
 (defn recv-stop [timeout]
   (recv- (? timeout) "stop" nil ? true))
-
+ 
 (defn order-timeout [o timeout]
   (is (entry? o))
   {:pid
@@ -27,10 +29,18 @@
   [timeout]
   (defonce tt
     (order! {:symbol "EURUSD"
-	     :type :sell-stop
+	     :type :sell-stop 
 	     :lots 0.1
 	     :tp 1.30872 :sl  1.31167
 	     :price 1.31033}))
   (def pid (order-timeout tt timeout)))
 (defn ex? [] (pid? (:pid pid)))
 (defn stop! [] (! (:pid pid) "stop"))
+(spawn-node {:id "id" :symbol "EURUSD" :timeframe +h1+ :type :gui})
+(respawn node {:timeframe h4})
+(send-node node "DrawObject")
+(query {:type :gui :symbol "EURUSD" :timeframe +h1+})
+(query {:type :work}) 
+
+
+
