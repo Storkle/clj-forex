@@ -80,7 +80,7 @@ int z_unsubscribe(int socket,string val) {
 
 int z_set_sockopt(int socket,int option_name,string option_value) {
   if (socket==0) {
-    return(-1);
+    return(0);
   }
   int ret = _zmq_setsockopt(socket,option_name,option_value,StringLen(option_value));
   if (ret==-1)
@@ -120,9 +120,9 @@ int z_connect(int socket,string endpoint) { //for the clients
    z_error();
  return(ret);
 }
-
+ 
 //TODO: z_send_raw
-int z_send(int socket,string msg,int flags) {
+int z_send(int socket,string msg,int flags=0) {
  z_trace("z_send: "+msg+" "+flags); 
  int message = z_msg_new(msg);
  int ret = _zmq_send(socket,message,flags); 
@@ -131,7 +131,7 @@ int z_send(int socket,string msg,int flags) {
    z_error();  
  return(ret);
 }
-int z_recv(int socket,int msg,int flags) {
+int z_recv(int socket,int msg,int flags=0) {
  z_trace("z_recv: "+msg+" "+flags); 
  int ret = _zmq_recv(socket,msg,flags); 
  if (ret==-1)

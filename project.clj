@@ -13,7 +13,7 @@
 		 [org.clojars.starry/clj-forex-indicators "0.1"]]   
    :dev-dependencies [[native-deps "1.0.5"]
 		      [swank-clojure "1.3.0-SNAPSHOT"]]
-   :native-dependencies [[org.clojars.starry/jzmq-native-deps "2.0.9.0"]]
+   :native-dependencies [[org.clojars.starry/jzmq-native-deps "2.0.9.1"]]
   ;;:main forex.binding
   ;;:aot :all
    )  
