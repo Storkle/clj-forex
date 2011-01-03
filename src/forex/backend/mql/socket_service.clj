@@ -57,7 +57,9 @@
 	 (swap! ids assoc id askin))))  
    [receive ?msg] (mql-recv ids msg) 
    ?msg (warn "Ignoring invalid message %s" msg)))
-  
+
+;;TODO: weird bugwhen stopping everything with an ea.
+
 (defn spawn-mql-socket-service
   []  
   (debugging

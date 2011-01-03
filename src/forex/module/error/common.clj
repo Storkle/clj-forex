@@ -58,7 +58,7 @@
 	 (if (= default *er*)
 	   (MqlErr. (Integer/parseInt (second spl)))
 	   (if (fn? default) (default (MqlErr. (Integer/parseInt (second spl)))) default))
-	 0))))
+	 (join "" spl)))))
 
 (defn receive-double
   ([msg] (receive-double msg *default*))

@@ -18,7 +18,17 @@
 		    :price 1.31133	  
 		    :type :sell-stop		 
 		    :lots 0.1}))))
-   
+
+(defn oo []
+  (def o
+    (order! {:type :sell-stop
+	     :lots 0.1
+	     :symbol "USDCHF"
+	     :price 0.9332
+	     :sl 0.9388
+	     :tp 0.9275
+	     })))
+
 (def- value-to-order-type
   {0 :buy 1 :sell 2 :buy-limit
    3 :sell-limit 4 :buy-stop
@@ -34,11 +44,11 @@
    
 (defn order-type
   "type of order, even if it is already closed"
-  [o]
-  (is (string? (:id o)))
+  [order]
+  (is (string? (:id order)))
   (default
-    (iff (core/order-type (:id 0))
-	 (value-to-order-type (int type)))))
+    (iff (core/order-type (:id order))
+	 (value-to-order-type (int it)))))
  
 (defn order? [order]
   (not (nil? (order-type order))))
@@ -68,13 +78,16 @@
        (iff (core/order-close id (- lots new-lots) price slip :blue)
 	    (merge order {:lots new-lots})
 	    it))))
-    
+ 
 (defn modify!
   "modify sl and tp"
-  [{:keys [id]} {:keys [sl tp price]}]
-  (is (and sl tp price
-	   (pos? sl) (pos? tp) (pos? price)))
-  (core/order-modify id price sl tp))
+  [order {:keys [sl tp price]}]
+  (let [sl (or sl (:sl order))
+	tp (or tp (:tp order))
+	price (or price (:price order))]
+    (is (and sl tp price
+	     (pos? sl) (pos? tp) (pos? price)))
+    (core/order-modify (:id order) price sl tp)))
 
 ;;TOOD: how do we get map with defaults?
 (defn- verify-order [{:keys [slip symbol type price tp sl lots]
@@ -99,19 +112,29 @@
 	    (and (> tp sl) (> tp price) (< sl price)))
 	"invalid %s order with sl/tp %s/%s with price of %s" type sl tp price)
     true (throwf "invalid %s order with sl/tp %s/%s with price of %s"
-		 type sl tp price)))
+		 type sl tp price))) 
 
-;;TODO: change to make reliable
+;;TODO: change to make reliable and to work for ECN brokers and such
 (defn order! [{:keys [symbol type price tp sl lots slip]
 	       :as order :or {slip 3 sl 0 tp 0}}]
-  (verify-order order) 
-  (iff-let [id (core/order-send symbol type lots price)]
-	   (when (or (and sl (not (zero? sl)))
-		     (and tp (not (zero? tp))))
-	     (iff (core/order-modify id price sl tp)
-		  (merge order {:id id :slip slip :tp tp :sl sl})
-		  order))
-	   id)) 
+  (verify-order order)
+  (iff (core/order-send symbol type lots price sl tp slip)
+       (merge {:sl sl :tp tp :slip slip} (merge order {:id it }))
+       it))
+
+(comment
+  (defn order! [{:keys [symbol type price tp sl lots slip]
+		 :as order :or {slip 3 sl 0 tp 0}}]
+    (verify-order order) 
+    (iff-let [id (core/order-send symbol type lots price)]
+	     (do 
+	       (if (or (and sl (not (zero? sl)))
+		       (and tp (not (zero? tp))))
+		 (iff (core/order-modify id price sl tp)
+		      (merge order {:id id :slip slip :tp tp :sl sl})
+		      (merge order {:id id :e it :sl 0 :tp 0}))
+		 (merge order {:id id :sl 0 :tp 0})))
+	     id))) 
  
 (defn- immigrate [& syms]
   (let [core-ns (find-ns 'forex.module.account.core)

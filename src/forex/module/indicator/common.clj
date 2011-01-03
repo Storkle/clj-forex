@@ -6,7 +6,7 @@
    forex.module.account.common
    forex.module.error.common)
   (:require [forex.module.error.common :as s]))
-
+ 
 ;;high low open close
 (defn get-rel-data [^String symbol ^Integer timeframe ^Integer from ^Integer to]
   (is  (>= to from) "in get-data, from/to is invalid")
@@ -17,7 +17,7 @@
       (if (= (first data) "error") 
 	(do (sleep 0.4) (recur data (+ retries 1)))
 	data)))) 
-    
+     
 (defn- rel [i]
   (let [sym (env :symbol)
 	time (env :timeframe)]
@@ -37,7 +37,6 @@
   ([] (close 0))
   ([i] (Double/parseDouble (nth (rel i) 4))))
 
-
 (comment
   (defn open
    ([] (open 0))  
@@ -55,10 +54,11 @@
 (defn ask
   ([] (ask 0))
   ([i] (iff (mode-ask (env :symbol)) it (throwf "MQL error %s" (:e it)))))
+;;bid==close 
 (defn bid
   ([] (bid 0))
   ([i] (iff (mode-bid (env :symbol)) it (throwf "MQL error %s" (:e it)))))
-
+ 
 (comment
   (ns forex.indicator.common
     (:use utils.general forex.util.general

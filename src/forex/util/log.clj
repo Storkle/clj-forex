@@ -45,8 +45,10 @@
 
 (defonce- log (java.util.logging.Logger/getLogger (str *ns*)))
 
+;;TODO: only use one log file!!! eh?
 (defn init-logger []
-  (def- log (new-logger "log")))
+  (if-not log
+   (def- log (new-logger "log"))))
 (init-logger)
 ;;TODO: set filtering levels
 ;;fine,finer,finest wont log
