@@ -12,22 +12,6 @@
      ~@body))
   
 ;;TODO: do we need all of these assertions?
-(comment
-  (defn g []
-    (def o (order! {:symbol "EURUSD"
-		    :price 1.31133	  
-		    :type :sell-stop		 
-		    :lots 0.1}))))
-
-(defn oo []
-  (def o
-    (order! {:type :sell-stop
-	     :lots 0.1
-	     :symbol "USDCHF"
-	     :price 0.9332
-	     :sl 0.9388
-	     :tp 0.9275
-	     })))
 
 (def- value-to-order-type
   {0 :buy 1 :sell 2 :buy-limit
