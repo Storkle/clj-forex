@@ -2,6 +2,7 @@
 
   (:use utils.general emacs))
  
+(comment
 ;;common global vars
 (defonce *main-streams* (atom {}))
 (defonce *main-stream-lock*  (java.util.concurrent.locks.ReentrantReadWriteLock.))
@@ -23,3 +24,4 @@
   (start [this params])
   (stop [this params]))
 ;; 
+)

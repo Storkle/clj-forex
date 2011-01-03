@@ -5,6 +5,8 @@
 ;;TODO: if we let streams not update, then when we update next one, it will be up to date - we dont really want this, so its a bug
 ;;TODO: clear/update price stream hashing and main stuff after stop backend
  
+(comment
+
 (ns forex_user 
   (:use utils.general emacs utils.fiber.spawn
 	forex.util.general
@@ -21,4 +23,5 @@
 (setq price/mql-poll-interval 0.5) 
 
 
+)
 

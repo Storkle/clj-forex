@@ -1,10 +1,11 @@
 (ns forex.backend.mql.common
-  (:require [forex.backend.mql.socket_service :as s]
-	    [forex.backend.mql.price_stream_service :as p])
+  (:require [forex.backend.mql.socket-service :as s]) 
   (:use forex.backend.common.core   
 	utils.general utils.fiber.spawn
 	forex.util.general))
  
+(comment
+
 (defrecord+ mql [[socket-service (ref nil)] [price-service (ref nil)]] new-mql)
  
 ;;TODO: ability to start multiple mql services?
@@ -26,9 +27,9 @@
   (start [this params]
 	 (is (<= @amount 0)
 	     "number of mql services is limited to only one at this time!")
-	 (let [socket-service (s/start-mql)
-	       price-service (do (sleep 2) (p/spawn-price-stream-service)
-				 )]
+	 (let [socket-service (s/start)
+	       price-service (do (sleep 2)
+				 (p/spawn-price-stream-service))]
 	   (dosync (ref-set (:socket-service this) socket-service)
 		   (ref-set (:price-service this) price-service)
 		   )
@@ -43,8 +44,8 @@
 	  ;;oh well, i want to get something working
 	  (p/stop-price-stream-service price-service)
 	  (sleep 2)
-	  (s/stop-mql)))) 
+	  (s/stop)))) 
  
+ )
+
  
-
-

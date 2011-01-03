@@ -1,149 +1,108 @@
-;;forex.backend.mql.socket_service: provide background sockets which allow us to connect with metatrader. Provides functions to interact with the background sockets
- 
-;;TODO chage socket type to appropriate type?
-;;TODO: general zeromq server types? and fix the type we use, it is wrong
+;;forex.backend.mql.socket-service: provide background sockets which allow us to connect with metatrader. Provides functions to interact with the background socket
     
-(ns forex.backend.mql.socket_service  
+(ns forex.backend.mql.socket-service   
   (:require 
    [org.zeromq.clojure :as z]
    [utils.fiber.mbox :as m]
    [clojure.contrib.logging :as l])
-  (:use emacs 
-	forex.util.zmq forex.util.general forex.util.log
-	utils.fiber.spawn utils.general))
-
-;;TODO: ports as user defined variable??
-(defvar receive-port 2070)
-(defvar send-port 2065)
-
-(defn mql-recv [mailbox msg]
-  (let [data (split  msg #" +")]
-    (m/! mailbox (first data) (rest data)))) 
-
-(defn spawn-mql-recv-service [{host :host port :port timeout :timeout}]
-  (let [mbox (m/new-mbox)] 
-    {:pid (spawn-log
-	   #(let [receive (socket-new {:host host :port port} z/+sub+)
-		  poller (socket-new-poller receive)]
-	      (try
-		(do 
-		  (.subscribe receive (.getBytes ""))		
-		  (z/connect receive (str "tcp://" host ":" port))
-		  (info "starting receive service")
-		  (loop []
-		    (when-not (recv-if "stop"
-				       (do
-					 (info "stopping receive service")
-					 true))
-		      (when-let [data (socket-receive receive poller timeout)]
-			(mql-recv mbox data)) 
-		      (recur))))
-		(catch Exception e (severe "receive service error - %s" e))
-		(finally (.close receive))))) 
-     :mbox mbox}))
-
-
-(defn spawn-mql-send-service [args]
-  {:pid (spawn-log
-	 #(let [send (socket-new args z/+pub+)]
-	    (try
-	      (do 
-		(z/bind send (str "tcp://" (:host args) ":" (:port args)))
-		(info "starting send service")
-		(loop []
-		  (when-not
-		      (recv
-			"stop"
-			(do (info "stopping send service") true)
-			["send" ?data]
-			(do (z/send- send data)
-			    nil)) 
-		    (recur))))
-	      (catch Exception e (severe "send service error - %s" e))
-	      (finally (.close send)))))})
-
-(defn alive? [a]
-  (let [{receive :receive send :send} a]
-    (and (pid? (:pid receive))
-	 (pid? (:pid send)))))
-
-
-(defn start []
-  (debugging "MQL Socket:"
-   (let [id (gensym)]
-     {:id id 
-      :receive (spawn-mql-recv-service {:host "127.0.0.1" :port receive-port})
-      :send  (spawn-mql-send-service {:host "127.0.0.1" :port send-port})}))) ;;2045
-
-(defn stop [server]
-  (let [{receive :receive send :send} server]
-    (if (pid? (:pid receive))
-      (! (:pid receive) "stop")
-      (warn "receive service is already stopped"))
-    (if (pid? (:pid send))
-      (! (:pid send) "stop")
-      (warn "send service is already stopped"))))
-
-;;interact with sockets
-
-(defonce- index (atom 0))
-
-(defn- send* [server msg] 
-  (is (string? msg) "message must be a string!")
-  (let [id (swap! index inc)]
-    (! (:pid (:send server)) ["send" (.getBytes (str id " "  msg))])
-    (str id))) 
-
-(defn- receive*
-  ([server id timeout] (m/? (:mbox (:receive server)) id timeout))
-  ([server id] (receive* server id nil)))
-
-(defn start-mql []
-  (env! {:socket (start)}))
-
-(defn stop-mql []
-  (stop (env :socket))
-  (env! {:socket nil}))
+  (:use
+   emacs 
+   forex.util.general forex.util.zmq forex.util.log
+   forex.util.spawn utils.general))
  
-;;TODO: throw an error on timeout?
-;;TODO: throw an error if get an error!
+;;TODO: 3ms or so per request, a little slow...
+;;also, unfortunately, if we add more servers, speed doesn't increase linearly. so the bottleneck is in the clojure code ... a better designed socket service should really be made.
+;; in addition, if servers drop out, we will be waiting forever for them. this is bad.
 
+(defvar mql-socket-recv-address "tcp://127.0.0.1:3000")
+(defvar mql-socket-send-address "tcp://127.0.0.1:3005")
+(defvar mql-socket-pub-address "tcp://127.0.0.1:3010")
 
+;;utils
+(defonce- *msg-id* (atom 0))
+(defn- msg-id []
+  (str (swap! *msg-id* inc)))
+(defmacro catch-unexpected [& body]
+  `(try (do ~@body)
+	(catch Exception e# (.printStackTrace e#) (warn e#))))
+
+;;socket service
+;;TODO: send id then message
+(defn- mql-recv [ids msg] 
+  (catch-unexpected   
+   (let [key (first msg)
+	 msg-ask (@ids key)]
+     (if-not (satisfies? PWait msg-ask)
+       (warn "Ignoring invalid msg: %s" msg)
+       (do 
+	 (give msg-ask (second msg))
+	 (swap! ids dissoc key))))))
+   
+(defn- socket-service-match [events ids send receive]
+  (match  
+   (first events)
+   [local "STOP"] (do (info "closing ...") "stop")  
+   [local ["REQUEST" ?msg ?askin]]  
+   (if-not (satisfies?  PWait askin)
+     (warn "Ignoring invalid REQUEST which does not contain a PWait argument %s %s"
+	   msg askin) 
+     (let [id (msg-id)  
+	   result  (.snd send (str id " " msg) +noblock+)]
+       (if-not result  
+	 (do  
+	   (warn "failed to queue request %s: are any metatrader scripts alive?"
+		 msg)
+	   (catch-unexpected
+	    (give askin (Exception. "socket service down"))))
+	 (swap! ids assoc id askin))))  
+   [receive ?msg] (mql-recv ids msg) 
+   ?msg (warn "Ignoring invalid message %s" msg)))
+  
+(defn spawn-mql-socket-service
+  []  
+  (debugging
+   "MQL Socket Service: " 
+   (let [ids (atom {})]
+     {:pid 
+      (spawn-log  
+       #(with-open [send (doto (new-socket +push+)
+			   (.bind mql-socket-send-address))
+		    receive (doto (new-socket +pull+)
+			      (.bind mql-socket-recv-address))]
+	  (loop [events (event-seq [receive local])]
+	    (when-not (= "stop" (socket-service-match events ids send receive))
+	      (recur (rest events))))))}))) 
+ 
+;;global socket service
+(defonce- *s* (atom nil))
+(defn alive? []
+  (pid? (:pid @*s*))) 
+(defn start []
+  (if (alive?)
+    (warn "mql socket is already alive!")
+    (reset! *s* (spawn-mql-socket-service))))
+(defn stop []
+  (if (alive?)
+    (! (:pid @*s*) "STOP")
+    (warn "mql socket service is already stopped")))
+      
+;;interact with mql 
+(defn request [askin msg]
+  (io!
+   (if (pid? (:pid @*s*)) 
+     (! (:pid @*s*) ["REQUEST" msg askin])
+     (throwf "mql socket service is not alive"))))
+         
 (defn receive
+  ([msg] (receive msg nil))
   ([msg timeout]
-     (is (alive? (env :socket)) "mql socket isnt alive")
-     (let [a (env :socket)
-	   id (send* a msg)]
-       (receive* a id timeout)))
-  ([msg] (receive msg nil))) 
-(defn receive-double
-  ([msg timeout] (Double/parseDouble (first (receive msg timeout))))
-  ([msg] (receive-double msg nil)))
-(defn receive-str
-  ([msg timeout] (first (receive msg timeout)))
-  ([msg] (receive-str msg nil)))
+     (let [askin (beg)]
+       (request askin msg)
+       (let [result (if (wait-for askin timeout) @askin)]
+	 (cond
+	  (instance? Exception result) (throw result)
+	  result result
+	  true (throwf "invalid result received %s" result)))))) 
 
-
-
-
-
-(defn throw-mql [err]
-  (throwf "MQL error %s" err))
-
-(defn receive!
-  ([msg] (receive! msg nil))
-  ([msg timeout]
-     (receive! msg timeout nil))
-  ([msg timeout default]
-     (let [msg (receive msg timeout)
-	   head (first msg)] 
-       (cond
-	 (= msg default) default
-	 (= head "error") (throw-mql (apply str (rest msg)))
-	 true msg))))
-(defn receive-double! [msg]
-  (Double/parseDouble (first (receive! msg))))
-(defn receive-str! [msg]
-  (first (receive! msg)))
-
-
+ 
+ 

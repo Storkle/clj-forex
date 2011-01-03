@@ -131,12 +131,17 @@ int z_send(int socket,string msg,int flags=0) {
    z_error();  
  return(ret);
 }
-int z_recv(int socket,int msg,int flags=0) {
- z_trace("z_recv: "+msg+" "+flags); 
- int ret = _zmq_recv(socket,msg,flags); 
+string z_recv(int socket,int flags=0) {
+ z_trace("z_recv: "+" "+flags);
+ int message = z_msg_new(""); 
+ int ret = _zmq_recv(socket,message,flags);
+ string msg = ""; 
  if (ret==-1)
    z_error();
- return(ret);
+ else
+   msg = z_msg(message);
+ z_msg_close(message);
+ return(msg);
 }
 
 //contextes

@@ -7,6 +7,8 @@
   (:require [forex.backend.common.core :as core])
   (:import (indicators ForexStream))) 
 
+(comment
+
 (def- get-stream*
   (mem (fn [symbol timeframe] 
 	 (let [core-stream (core/get-price-stream core/*backend*
@@ -44,3 +46,5 @@
 	     core/*stream-lock*
 	     (java.util.concurrent.locks.ReentrantReadWriteLock.)]
      ~@body))
+
+)

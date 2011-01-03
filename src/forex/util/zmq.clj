@@ -1,12 +1,8 @@
-;;forex.util.zmq - wrapper around clojure wrapper for zmq - used in mql backend for socket communication with metatrader
-
-;;TODO: replace zeromq clojure library we use and replace with our own
 (ns forex.util.zmq
-  (:require [org.zeromq.clojure :as z]
-	    [utils.fiber.mbox :as m])
-  (:use  forex.util.general utils.general))
+  (:import (org.zeromq ZMQ))
+  (:use utils.general))
 
-;; Constants 
+					; Constants
 (def +noblock+ 1)
 
 (def +p2p+ 0)
@@ -16,8 +12,8 @@
 (def +rep+ 4)
 (def +xreq+ 5)
 (def +xrep+ 6)
-(def +upstream+ 7)
-(def +downstream+ 8)
+(def +pull+ 7)
+(def +push+ 8)
 
 (def +hwm+ 1)
 (def +lwm+ 2)
@@ -35,32 +31,78 @@
 (def +pollin+ 1)
 (def +pollout+ 2)
 (def +pollerr+ 4)
-;; 
-(defonce- *ctx* (z/make-context 1))
+(def +more+ 2)
+
+;;Context
+(defn new-context [io-threads]
+  (ZMQ/context io-threads))
+(defonce *context* (new-context 1))
+
+(defprotocol PSocket
+  (raw [this])
+  (recv [this flags] [this])
+  (bind [this address])
+  (connect [this address])
+  (hasReceiveMore [this])
+  (close [this])
+  (snd [this msg flags]))
+(defprotocol PPoller
+  (setTimeout [this timeout])
+  (poll [this])
+  (register [this socket])
+  (getSocket [this i])
+  (getSize [this])
+  (pollin [this i])) 
+(defrecord Poller [poll sockets]
+  PPoller 
+  (getSize [this] (.getSize (:poll this)))
+  (pollin [this i] (.pollin (:poll this) i))
+  (setTimeout [this timeout] (.setTimeout (:poll this) timeout))
+  (poll [this] (.poll (:poll this)))
+  (register [this socket]
+	    (.register (:poll this)
+		       (if (extends? PSocket (class socket))
+			 (.raw socket)
+			 socket))
+	    (swap! (:sockets this) conj socket))
+  (getSocket [this i] (nth @(:sockets this) i)))
+
+(defn new-poller
+  ([sockets] (new-poller *context* sockets))
+  ([context sockets]
+     (let [p (Poller. (.poller context (count sockets)) (atom []))]
+       (.setTimeout p -1)
+       (on [sock sockets]
+	   (.register p sock))
+       p)))
+
+(defrecord Socket [socket]
+  PSocket
+  (raw [this] (:socket this))
+  (snd [this msg flags] (.send socket (.getBytes msg) flags))
+  (recv [this flags] (String. (.recv socket flags)))
+  (recv [this] (recv this 0)) 
+  (close [this] (.close socket))
+  (bind [this address] (.bind socket address))
+  (connect [this address] (.connect socket address))
+  (hasReceiveMore [this] (.hasReceiveMore socket)))
  
-(defn socket-new-poller [socket]
-  (let [p (z/make-poller *ctx* 1)]
-    (z/register p socket) p))
+(defn new-socket
+  ([type] (new-socket *context* type))
+  ([context type] (Socket. (.socket context type))))
 
-(defn socket-new [info type]
-  (let [{port :port host :host timeout :timeout} info]
-    (is (and port type) "invalid params (port temp) (%s %s)" port
-	type)
-    (let [socket (z/make-socket *ctx* type)]
-      ;(z/connect socket (str "tcp://" host ":" port))
-      socket)))
+(comment
+  (defn new-poll
+    ([sockets] (new-poll *context* sockets))
+    ([context sockets]
+       (let [p (.poller context (count sockets))]
+	 (.setTimeout p -1)
+	 (on [sock sockets]
+	     (.register p (.socket sock)))
+	 p)))
 
-(defn socket-receive
-  ([sock poll] (socket-receive sock poll 0))
-  ([sock poll timeout] 
-     (if (= timeout 0)
-       (if-let [dat (z/recv sock z/+noblock+)]
-	 (String. dat)) 
-       (do  
-	 (.setTimeout poll (* 1000 (or timeout 100)))
-	 (when (not (zero? (z/poll poll))) 
-	       (String. (z/recv sock z/+noblock+)))))))
-
-
- 
- 
+  (defn new-socket
+    ([socket-type]
+       (new-socket *context* socket-type))
+    ([context socket-type ]
+       (.socket context socket-type))))

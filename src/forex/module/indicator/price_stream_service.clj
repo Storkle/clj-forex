@@ -1,5 +1,5 @@
-;;forex.module.indicator.price-stream-service - initialize/update core/*main-streams* with price data and retrieve the resulting ForexStream. Provides a background update service.    
-  
+;;forex.module.indicator.price-stream-service - initialize/update core/*main-streams* with price data and retrieve the resulting ForexStream. Provides a background update service.
+ 
 (ns forex.module.indicator.price-stream-service
   (:use emacs utils.general utils.fiber.spawn emacs
 	forex.util.log forex.util.general) 
@@ -37,8 +37,7 @@
 	data)))) 
 
 (defvar price-stream-capacity 1000)
- 
-;;hacks to set fields of scala objects -should just add set method in scala code
+
 (defn set-field
   "Access to private or protected field."
   [class-name field-name obj val]
@@ -53,7 +52,6 @@
   (-> ForexStream (.getDeclaredField (name "headTime"))
       (doto (.setAccessible true))
       (.get o)))
-;;
 
 (defn- new-price-stream
   ([symbol timeframe] (new-price-stream symbol timeframe 1000))
@@ -71,7 +69,7 @@
 	 (info "initialized price stream: %s %s "
 	       (.symbol stream)  (.timeframe stream))
 	 stream))))
-     
+   
 (def get-price-stream
   (mem (fn [symbol timeframe]
 	 (let [new-stream (new-price-stream symbol timeframe)]	   
@@ -107,7 +105,7 @@
 (defn- price-stream-service
   "The stream service upgrades each price stream every mql-poll-interval."
   [mbox]  
-  (info "starting ...")
+  (info "starting price stream service")
   (loop []
     (when (recv-if "stop" nil ? true)  
       (try	      
@@ -116,16 +114,17 @@
       (run-hooks mql-price-stream-update-hook)  
       (sleep mql-poll-interval) 
       (recur)))
-  (info "stopping ..."))
- 
-(defn start-price-stream-service []
+  (info "stopping price stream service"))
+
+(defn spawn-price-stream-service [] 
   (let [mbox (m/new-mbox)]
-    {:pid
-     (debugging "MQL Price Stream:"
-		(spawn-log (partial price-stream-service mbox)))
-     :mbox mbox}))
+   {:pid
+    (debugging "MQL Price Stream:"
+	       (spawn-log (partial price-stream-service mbox)))
+    :mbox mbox}))
  
 (defn stop-price-stream-service [a]
-  (if (pid? (:pid a))
-    (! (:pid a) "stop")
-    (warn "stream service %s already stopped" a))) 
+  (debugging "MQL Price Stream:"
+	     (if (pid? (:pid a))
+	       (! (:pid a) "stop")
+	       (warn "stream service already stopped")))) 

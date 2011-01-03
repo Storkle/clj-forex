@@ -2,11 +2,13 @@
  
 (ns forex.backend.common
   (:use utils.general emacs forex.util.log)
-  (:require
+  (:require 
    [forex.backend.common.core :as core]
    [forex.backend.common.service :as service]
    [forex.backend.mql.common :as mql]))
    
+(comment
+
 (defvar backend-type :mql 
   "Default backend used")
 (defvar backend-start-after-hook '()
@@ -44,6 +46,6 @@
 (def refresh-rates service/refresh-rates)
 (defmacro context [& body] `(service/context ~@body))
 
-
+)
 
 
