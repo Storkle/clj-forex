@@ -1,6 +1,7 @@
 native
 classes
 CMakeFiles
+/src/forex/
 *~
 /clj-forex-0.1.jar
 /pom.xml
@@ -55,3 +56,4 @@ CMakeFiles
 /lib/scala-library-2.8.1.jar
 /lib/zmq.jar
 /lib/clj-forex-utils-0.2.jar
+/lib/clojureql-1.0.0-beta2-20101217.045604-5.jar

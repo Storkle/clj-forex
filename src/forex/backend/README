@@ -1,2 +1,0 @@
-This directory contains backends. This takes care of updating indicators and price streams. It also provides low level access to backends (like the stream used to communicate witih metatrader). It does not directly implement anything else (like placing orders, getting account balance, etc.)
-

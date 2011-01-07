@@ -1,0 +1,1229 @@
+#+TITLE: CLJ-FOREX
+#+Author: Seth Burleigh
+* Introduction
+** What is forex?
+Forex is a currency trading market. But you probably know all about forex, since you're here! If not, read up on it! \\
++ [[http://en.wikipedia.org/wiki/Foreign_exchange_market][Wiki article - OK]]
++ [[http://www.fxcm.com/metatrader.jsp][FXCM Retail Broker Free Metatarder Terminal -  get demo account and see what forex trading is first hand!]]
+** What is clj-forex?
+Clj-forex is an in progress effort to create a non-graphical backend to various forex trading backends. Right now Metatrader is the focus. 
+The ultimate goal of clj-forex is to create a robust library to allow the creation of EA (expert advisors) in the scripting language clojure. Expert advisors
+are programs which automatically trade the market, performing sell/buy orderes, changing stoplosses, using technical indicators, etc. They are useful for
+both automating parts of manual trading systems (performing trailing stops, expiration of market orders) and also for full out automated trading.
+
+Indicators will be calculated java side using price bars retrieved from the backends. Integration of indicator data to various gui backends (i.e. at this time,
+Metatrader) will be supported. The only purpose of the forex backend is to allow access to spreads, current price, ability to buy/sell, etc. 
+** The Difference
+Im not sure why noone has done this before, but integration of a scripting language to create eas is, in my opinion, vital. 
+Integration of a lisp-like dialect, like clojure, will allow much more rapid creation and prototyping of eas. 
+This combined with easy access to any java library (clojure is implemented on the java virtual machine) makes for a winning combination! 
+Things like neural networks, database, and other such ‘advanced’ concepts can now be much more easily integrated than if we had used [[http://book.mql4.com/][mql4]].
+
+Its like an artist! Give an artist more efficient tools in the toolbox and who knows what can be created! [And clojure is fun to learn anyways!]
+* From Ideas to Implementation - Metatrader Backend
+* Code
+** Backend
+*** MQL Service
+#+srcname:mql-socket-service
+#+begin_src clojure :tangle src/forex/backend/mql/socket_service.clj
+;;forex.backend.mql.socket-service: provide background sockets which allow us to connect with metatrader. Provides functions to interact with the background socket
+
+;;todo: bug with stopping all and then stopping again! so bug with stop..
+(ns forex.backend.mql.socket-service   
+  (:require
+   [utils.fiber.mbox :as m]
+   [clojure.contrib.logging :as l])
+  (:use
+   emacs 
+   forex.util.general forex.util.zmq forex.util.log
+   forex.util.spawn utils.general))
+ 
+;;TODO: 3ms or so per request, a little slow...
+;;also, unfortunately, if we add more servers, speed doesn't increase linearly. so the bottleneck is in the clojure code ... a better designed socket service should really be made.
+;; in addition, if servers drop out, we will be waiting forever for them. this is bad.
+
+(defvar mql-socket-recv-address "tcp://127.0.0.1:3000")
+(defvar mql-socket-send-address "tcp://127.0.0.1:3005")
+(defvar mql-socket-pub-address "tcp://127.0.0.1:3010")
+
+;;utils
+(defonce- *msg-id* (atom 0))
+(defn- msg-id []
+  (str (swap! *msg-id* inc)))
+(defmacro catch-unexpected [& body]
+  `(try (do ~@body)
+	(catch Exception e# (.printStackTrace e#) (warn e#))))
+
+;;socket service
+;;TODO: send id then message
+(defn- mql-recv [ids msg] 
+  (catch-unexpected   
+   (let [key (first msg)
+	 msg-ask (@ids key)]
+     (if-not (satisfies? PWait msg-ask)
+       (warn "Ignoring invalid msg: %s" msg)
+       (do 
+	 (give msg-ask (second msg))
+	 (swap! ids dissoc key))))))
+   
+(defn- socket-service-match [events ids send receive]
+  (match  
+   (first events)
+   [local "STOP"] (do (info "closing ...") "stop")  
+   [local ["REQUEST" ?msg ?askin]]  
+   (if-not (satisfies?  PWait askin)
+     (warn "Ignoring invalid REQUEST which does not contain a PWait argument %s %s" 
+	   msg askin) 
+     (let [id (msg-id)  
+	   result  (.snd send (str id " " msg) +noblock+)]
+       (if-not result  
+	 (do  
+	   (warn "failed to queue request %s: are any metatrader scripts alive?"
+		 msg)
+	   (catch-unexpected
+	    (give askin (Exception. "socket service down"))))
+	 (swap! ids assoc id askin))))  
+   [receive ?msg] (mql-recv ids msg) 
+   ?msg (warn "Ignoring invalid message %s" msg)))
+
+;;TODO: weird bugwhen stopping everything with an ea.
+
+(defn spawn-mql-socket-service
+  []  
+  (debugging
+   "MQL Socket Service: " 
+   (let [ids (atom {})]
+     {:pid 
+      (spawn-log  
+       #(with-open [send (doto (new-socket +push+)
+			   (.bind mql-socket-send-address))
+		    receive (doto (new-socket +pull+)
+			      (.bind mql-socket-recv-address))]
+	  (loop [events (event-seq [receive local])]
+	    (when-not (= "stop" (socket-service-match events ids send receive))
+	      (recur (rest events))))))}))) 
+ 
+;;global socket service
+(defonce- *s* (atom nil))
+(defn alive? []
+  (pid? (:pid @*s*))) 
+(defn start []
+  (if (alive?)
+    (warn "mql socket is already alive!")
+    (reset! *s* (spawn-mql-socket-service))))
+(defn stop []
+  (if (alive?)
+    (! (:pid @*s*) "STOP")
+    (warn "mql socket service is already stopped")))
+      
+;;interact with mql 
+(defn request [askin msg]
+  (io!
+   (if (pid? (:pid @*s*)) 
+     (! (:pid @*s*) ["REQUEST" msg askin])
+     (throwf "mql socket service is not alive"))))
+         
+(defn receive
+  ([msg] (receive msg nil))
+  ([msg timeout]
+     (let [askin (beg)]
+       (request askin msg)
+       (let [result (if (wait-for askin timeout) @askin)]
+	 (cond
+	  (instance? Exception result) (throw result)
+	  result result
+	  true (throwf "invalid result received %s" result)))))) 
+#+end_src
+** Module
+*** Account
+#+srcname:account-core
+#+begin_src clojure :tangle src/forex/module/account/core.clj
+;;forex.module.order.core - interface with mql backend
+  
+(ns forex.module.account.core
+  (:use utils.general emacs utils.fiber.spawn
+	forex.util.general
+	forex.module.error.common))
+ 
+(def- order
+  {:buy 0 :sell 1 :buy-limit 2 :sell-limit 3 :buy-stop 4 :sell-stop 5})
+
+(def- color
+  {:red 230 :yellow 65535 :green 65280 :blue 13749760
+   :purple  16711935 :white 16777215 :black 0})
+ 
+(defn- get! [hash key]
+  (if-let [it (hash key)]
+    it
+    (throwf "invalid key %s in hash %s" key hash)))
+ 
+;;the below can throw errors - how to handle this? 
+(defn order-modify
+  ([ticket price sl tp]
+     (order-modify ticket price sl tp :blue))
+  ([ticket price sl tp color_of]
+     (receive
+      (format "OrderModify %s %s %s %s %s"
+	      ticket price sl tp (get! color color_of)))
+     ;;{:id ticket :price price :sl sl :tp tp :color color_of}
+     ))
+
+(defn order-send
+  ([symbol cmd volume price] (order-send symbol cmd volume price 0 0))
+  ([symbol cmd volume price sl tp] (order-send symbol cmd volume price sl tp 3))
+  ([symbol cmd volume price sl tp slip]
+     (receive
+      (format "OrderSend %s %s %s %s %s %s %s"
+	      symbol (get! order cmd)
+	      volume price slip sl tp))))
+  
+(defn order-close-time [ticket]
+  (receive-int (format "OrderCloseTime %s" ticket)))
+  
+(defn order-close [ticket lots price slippage color_of]
+  (receive  
+   (format "OrderClose %s %s %s %s %s"
+	   ticket lots price slippage (get! color color_of))))
+(defn order-delete [ticket]
+  (receive (format "OrderDelete %s" ticket)))
+ 
+(defn market-info [symbol type]
+  (receive-double (format "MarketInfo %s %s" symbol type)))
+
+(defn order-close-time [ticket]
+  (receive-double (format "OrderCloseTime %s" ticket)))
+
+(defn order-type [ticket]
+  (receive-double (format "OrderType %s" ticket)))
+ 
+(defn order-lots [ticket]
+  (receive-double (format "OrderLots %s" ticket)))
+#+end_src
+#+srcname:account-common
+#+begin_src clojure :tangle src/forex/module/account/common.clj
+(ns forex.module.account.common
+  (:use utils.general emacs  
+	forex.util.general
+	forex.module.error.common)
+  (:require [forex.module.error.common :as err])
+  (:require  [forex.module.account.core :as core]))
+
+(defmacro- default [& body] 
+  `(binding [*default* @~#'err/*er*]
+     ~@body))
+  
+;;TODO: do we need all of these assertions?
+
+(def- value-to-order-type
+  {0 :buy 1 :sell 2 :buy-limit
+   3 :sell-limit 4 :buy-stop
+   5 :sell-stop}) 
+ 
+(defn order-close-time [{id :id}]
+  (is (string? id))
+  ;;we dont need to know mql4 error codes for order close time
+  (iff (core/order-close-time id) it -1))
+
+(defn open? [order]
+  (default (= (order-close-time order) 0)))
+   
+(defn order-type
+  "type of order, even if it is already closed"
+  [order]
+  (is (string? (:id order)))
+  (default
+    (iff (core/order-type (:id order))
+	 (value-to-order-type (int it)))))
+ 
+(defn order? [order]
+  (not (nil? (order-type order))))
+   
+(defn market?
+  "determine if order is market order"
+  [order]
+  (let [type (order-type order)]
+    (or (= type :sell) (= type :buy))))
+ 
+(defn entry?
+  "determine if order is entry order"
+  [order]
+  (let [type (order-type order)]
+    (and type (not (or (= type :sell) (= type :buy))))))
+
+(defn delete! [{id :id}]
+  (core/order-delete id))
+
+(defn close!  
+  ([o] (close! o 0))
+  ([{:keys [price lots slip id] :as order} new-lots]
+     (is (and (string? id) (and price (pos? price))
+	      (and (number? lots) (>= lots 0))))
+     (is (>= (- lots new-lots) 0))
+     (when (> (- lots new-lots) 0)
+       (iff (core/order-close id (- lots new-lots) price slip :blue)
+	    (merge order {:lots new-lots})
+	    it))))
+ 
+(defn modify!
+  "modify sl and tp"
+  [order {:keys [sl tp price]}]
+  (let [sl (or sl (:sl order))
+	tp (or tp (:tp order))
+	price (or price (:price order))]
+    (is (and sl tp price
+	     (pos? sl) (pos? tp) (pos? price)))
+    (core/order-modify (:id order) price sl tp)))
+
+;;TOOD: how do we get map with defaults?
+(defn- verify-order [{:keys [slip symbol type price tp sl lots]
+		      :or {slip 3 sl 0 tp 0}}]
+  (is (and (number? slip) (> slip 0) (integer? slip))
+      "invalid order slip %s" slip)
+  (is (and (keyword? type) (number? lots)
+	   (number? tp) (number? sl) (number? price))) 
+  (is (and (string? symbol) (> lots 0)
+	   (>= tp 0) (>= sl 0) (>= price 0)))  
+  (cond
+    (or (= type :sell) (= type :sell-limit) (= type :sell-stop))
+    (is (or (and (zero? sl) (zero? tp))
+	    (and (zero? sl) tp (< tp price))
+	    (and (zero? tp) sl (> sl price))
+	    (and (< tp sl) (< tp price) (> sl price)))
+	"invalid %s order with sl/tp %s/%s with price of %s" type sl tp price)
+    (or (= type :buy) (= type :buy-limit) (= type :buy-stop))
+    (is (or (and (zero? sl) (zero? tp))
+	    (and (zero? sl) tp (> tp price))
+	    (and (zero? tp) sl (< sl price))
+	    (and (> tp sl) (> tp price) (< sl price)))
+	"invalid %s order with sl/tp %s/%s with price of %s" type sl tp price)
+    true (throwf "invalid %s order with sl/tp %s/%s with price of %s"
+		 type sl tp price))) 
+
+;;TODO: change to make reliable and to work for ECN brokers and such
+(defn order! [{:keys [symbol type price tp sl lots slip]
+	       :as order :or {slip 3 sl 0 tp 0}}]
+  (verify-order order)
+  (iff (core/order-send symbol type lots price sl tp slip)
+       (merge {:sl sl :tp tp :slip slip} (merge order {:id it }))
+       it))
+
+(comment
+  (defn order! [{:keys [symbol type price tp sl lots slip]
+		 :as order :or {slip 3 sl 0 tp 0}}]
+    (verify-order order) 
+    (iff-let [id (core/order-send symbol type lots price)]
+	     (do 
+	       (if (or (and sl (not (zero? sl)))
+		       (and tp (not (zero? tp))))
+		 (iff (core/order-modify id price sl tp)
+		      (merge order {:id id :slip slip :tp tp :sl sl})
+		      (merge order {:id id :e it :sl 0 :tp 0}))
+		 (merge order {:id id :sl 0 :tp 0})))
+	     id))) 
+ 
+(defn- immigrate [& syms]
+  (let [core-ns (find-ns 'forex.module.account.core)
+	publics (ns-publics 'forex.module.account.core)]
+    (on [s syms]
+      (let [sym  (symbol (camel-to-dash s))]
+	(intern *ns* sym (var-get (intern core-ns sym)))))))
+
+ 
+;;account common
+
+
+(defn- sym [a] (symbol (camel-to-dash a)))
+(defmacro- single [name] `(defn ~(sym name) [] (receive! ~name)))
+(defmacro- double-single [name] `(defn ~(sym name) [] (receive-double! ~name)))
+(defmacro- singles [& names] `(do ~@(map (fn [a] `(single ~a)) names)))
+(defmacro- double-singles [& names] `(do ~@(map (fn [a] `(double-single ~a)) names)))
+
+;;none of the below singles or double-singles should throw a mql error - therefore, it is a bug if they do
+(singles 
+ "AccountCurrency"
+ "AccountCompany"
+ "AccountServer" 
+ "AccountName"
+ "AccountNumber")
+
+(double-singles
+ "AccountCredit"
+ "AccountBalance"
+ "AccountEquity"
+ "AccountFreeMargin"
+ "AccountLeverage"
+ "AccountMargin"
+ "AccountProfit"
+ "OrdersTotal")
+;;
+
+(defmacro- define-market-info [& args]
+  `(do ~@(map (fn [[name num]]
+		`(defn ~(symbolicate "mode-" name)
+		   ([] (~(symbolicate "mode-" name) (env :symbol)))
+		   ([symbol#]
+		      (core/market-info symbol# ~num))))
+	      (group args))))
+
+(define-market-info
+  low 1
+  high 2
+  time 5
+  bid 9
+  ask 10
+  point 11
+  digits 12
+  spread 13
+  stoplevel 14
+  lotsize 15
+  tickvalue 16
+  ticksize 17
+  swaplong 18
+  swapshort 19
+  starting 20
+  expiration 21
+  trade-allowed 22
+  minlot 23
+  lotstep 24
+  maxlot 25
+  swaptype 26
+  profitcalcmode 27
+  margincalcmode 28
+  margininit 29
+  marginmaintenance 30
+  marginhedged 31
+  marginrequired 32
+  freezelevel 33)
+
+(defn demo? []
+  (if (re-find #"(?i)demo" (account-server))
+    true
+    false))
+#+end_src
+*** Ea
+#+srcname:ea-common
+#+begin_src clojure :tangle src/forex/module/ea/common.clj
+(ns forex.module.ea.common
+  (:use utils.general forex.util.general
+	utils.fiber.spawn clojure.contrib.core)
+  (:require [clj-time.core :as t])
+  (:use
+   forex.util.log
+   forex.module.error.common
+   forex.module.indicator.common
+   forex.module.account.common))
+  
+;;##ea implementation
+(defonce *ea* (atom []))
+(defn every [pred coll]
+  (if (empty? coll)
+    false
+    (loop [a coll]
+      (if (empty? a)
+	true
+	(if (not (pred (first a)))
+	  false
+	  (recur (rest a)))))))
+
+(defn query [m]
+  (filter
+   (fn [ea]
+     (if (every (fn [[key val]]
+		  (= val (ea key)))
+		m)
+       ea))
+   @*ea*))
+(defn alive? [ea] (pid? (:pid ea)))
+
+(defmacro catch-unexpected [prefix & body]
+  `(try (do ~@body)
+	(catch Exception e# (severe "%s - caught unexpected error %s" ~prefix e#))))
+ 
+(defn run-by-tick [{:keys [symbol timeframe name deinit init start] :as ea}]
+  (debugging
+   (format "%s_%s %s: " symbol timeframe name)
+   (wenv (:symbol symbol :timeframe timeframe)
+	 (try
+	   (init)
+	   (loop [prev-close nil]
+	     (sleep 1)
+	     (when-not (match (? 0) "stop" true) 
+	       (let [new-close (close)]
+		 (when-not (= new-close prev-close)
+		   (start ea))
+		 (recur new-close)))) 
+	   (catch Exception e 
+	     (severe "caught exception %s ... stopping ea" e)
+	     (.printStackTrace e))
+	   (finally
+	    (warn "stopping ea ...")
+	    (catch-unexpected "deinit" (deinit)))))))
+
+(defn new-ea [ea]
+  (let [default {:symbol (env :symbol)
+		 :timeframe (env :timeframe) :id (gensym)
+		 :deinit (constantly true)
+		 :init (constantly true)}
+	m (merge default ea)
+	{:keys [symbol timeframe run name start init deinit]} m
+	m (merge {:run (partial run-by-tick m)} m)]
+    (is (and name start symbol timeframe))
+    (is (and (fn? start) (fn? init) (or (nil? run) (fn? run)) (fn? deinit)))
+    m))
+
+;;TODO: pid without spawn!!
+(defn run [ea]
+  (let [new-ea (merge ea {:pid (spawn #((:run ea)))})]
+    (swap! *ea* conj new-ea)
+    new-ea))
+(defn run-ea [ea] (run (new-ea ea))) 
+;;TODO: wait till it stops and delete
+(defn stop [ea]
+  (let [stop-it (fn [e]
+		  (if (pid? (:pid e))
+		    (do (! (:pid e) "stop")
+			(reset! *ea* (remove #{e} @*ea*))
+			true)
+		    (do (reset! *ea* (remove #{e} @*ea*)) nil)))]
+    (if (map? ea)
+      (stop-it ea)
+      (map stop-it ea))))
+#+end_src
+*** Error
+#+srcname:error-common 
+#+begin_src clojure :tangle src/forex/module/error/common.clj
+;;forex.module.error.common - utilities for handling mql errors
+ 
+(ns forex.module.error.common
+  (:require [forex.backend.mql.socket-service :as s])
+  (:use utils.general emacs 
+	forex.util.general))
+ 
+;;raw receive
+(defn raw-receive [msg]
+  (s/receive msg))
+(defn raw-receive-lst [msg]
+  (split (raw-receive msg) #" +"))
+
+
+;;receive with errors
+(defn receive! [msg]
+  (let [spl (raw-receive-lst msg)]
+    (if (= (first spl) "error")
+      (throwf "MQL error %s" (second spl))
+      (join " "  spl))))
+
+(defn receive-lst! [msg]
+  (let [spl (raw-receive-lst msg)]
+    (if (= (first spl) "error")
+      (throwf "MQL error %s" (second spl))
+      spl)))
+
+(defn receive-double! [msg]
+  (Double/parseDouble (receive! msg)))
+
+;;receive with default instead of errors, returns error object for errors
+;;is customizable to default to errors!
+(defrecord MqlErr [e])
+(defonce- *er* (gensym)) 
+(def *default* *er*)
+
+(defn e? [a] (instance? MqlErr a))
+
+(defmacro iff-let
+  ([test then] `(iff-let ~test ~then nil))
+  ([[var test] then else]
+     `(let [~var ~test]
+	(if (and test (not (e? ~var)))
+	  ~then
+	  ~else))))
+
+(defmacro iff
+  ([test then] `(iff ~test ~then nil))
+  ([test then else]
+     `(iff-let [~'it ~test]
+	       ~then ~else)))
+ 
+(defn receive
+  ([msg] (receive msg *default*))
+  ([msg default]
+     (let [spl (raw-receive-lst msg)]
+       (if (= (first spl) "error")
+	 (if (= default *er*)
+	   (MqlErr. (Integer/parseInt (second spl)))
+	   (if (fn? default) (default (MqlErr. (Integer/parseInt (second spl)))) default))
+	 (join "" spl)))))
+
+(defn receive-double
+  ([msg] (receive-double msg *default*))
+  ([msg default]
+     (let [spl (raw-receive-lst msg)]
+       (if (= (first spl) "error")
+	 (if (= default *er*)
+	   (MqlErr. (Integer/parseInt (second spl)))
+	   (if (fn? default) (default (MqlErr. (Integer/parseInt (second spl)))) default))
+	 (Double/parseDouble (join " "  spl))))))
+  
+(defn receive-int [s]
+  (iff (receive-double s)
+       (int it)
+       it))
+#+end_src
+*** Indicator
+#+srcname:indicator-common
+#+begin_src clojure :tangle src/forex/module/indicator/common.clj
+;; forex.indicator.common - interfacing with java indicators and local caching of indicators
+(ns forex.module.indicator.common
+  (:use
+   utils.general 
+   forex.util.general
+   forex.module.account.common
+   forex.module.error.common)
+  (:require [forex.module.error.common :as s]))
+ 
+;;high low open close
+(defn get-rel-data [^String symbol ^Integer timeframe ^Integer from ^Integer to]
+  (is  (>= to from) "in get-data, from/to is invalid")
+  (loop [dat nil retries 0]
+    (if (> retries 3) (throwf "MQL error %s" (second dat)))
+    (let [data (s/raw-receive-lst (format "bars_relative %s %s %s %s"
+				      symbol timeframe from to))]
+      (if (= (first data) "error") 
+	(do (sleep 0.4) (recur data (+ retries 1)))
+	data)))) 
+     
+(defn- rel [i]
+  (let [sym (env :symbol)
+	time (env :timeframe)]
+    (is (and (string? sym) (integer? time)))
+    (get-rel-data sym time i i)))
+  
+(defn high
+  ([] (high 0)) 
+  ([i] (Double/parseDouble (nth (rel i) 1))))
+(defn open 
+  ([] (open 0))
+  ([i] (Double/parseDouble (nth (rel i) 3))))
+(defn low
+  ([] (low 0))
+  ([i] (Double/parseDouble (nth (rel i) 2))))
+(defn close
+  ([] (close 0))
+  ([i] (Double/parseDouble (nth (rel i) 4))))
+
+(comment
+  (defn open
+   ([] (open 0))  
+   ([i] (.open (get-stream (env :symbol) (env :timeframe)) i)))
+  (defn high
+    ([] (high 0))
+    ([i] (.high (get-stream (env :symbol) (env :timeframe)) i))) 
+  (defn low
+    ([] (low 0)) 
+    ([i] (.low (get-stream (env :symbol) (env :timeframe)) i))) 
+  (defn close
+    ([] (close 0)) 
+    ([i] (.close (get-stream (env :symbol) (env :timeframe)) i))))
+;;TODO: change
+(defn ask
+  ([] (ask 0))
+  ([i] (iff (mode-ask (env :symbol)) it (throwf "MQL error %s" (:e it)))))
+;;bid==close 
+(defn bid
+  ([] (bid 0))
+  ([i] (iff (mode-bid (env :symbol)) it (throwf "MQL error %s" (:e it)))))
+ 
+(comment
+  (ns forex.indicator.common
+    (:use utils.general forex.util.general
+	  forex.backend.common)
+    (:require [ forex.backend.common.core :as common])
+    (:import (indicators SMA RSI CCI ATR VMA EMA)))
+
+  ;;Indicator Cache Strategy - if indicator is deinitialized, then we must get rid of it! ???
+
+  (defmacro mem-local-indicator [function cache-var results-var]
+    `(mem (fn [indicator-name# & args#]
+	    (let [result# (apply ~function args#)]
+	      (swap! ~results-var assoc (list indicator-name# args#) result#)
+	      (.ex result#)
+	      result#))
+	  (naive-var-local-cache-strategy ~cache-var)))
+  
+  (defn def-indicator [name create]
+    (let [memoize-create (mem-local-indicator
+			  create common/*indicators-cache*
+			  common/*indicators*)]
+      (fn indicator
+	([params] (indicator params 0))
+	([params index]
+	   (let [price-stream (get-stream (env :symbol) (env :timeframe))
+		 stream (memoize-create name price-stream params)] 
+	     (if index
+	       (with-read-lock common/*indicator-lock* (.get stream index)) 
+	       (fn ind ([] (ind 0))
+		 ([index] (with-read-lock common/*indicator-lock*
+			    (.get stream index))))))))))
+
+  (defn def-price-indicator [name create]
+    (let [memoize-create
+	  (mem-local-indicator
+	   create
+	   common/*indicators-cache*
+	   common/*indicators*)]
+      (fn indicator
+	([params] (indicator params 0))
+	([params index]
+	   (let [price-stream (get-stream (env :symbol) (env :timeframe))
+		 stream (memoize-create name price-stream
+					(.Close price-stream) params)]
+	     (if index
+	       (with-read-lock common/*indicator-lock* (.get stream index))
+	       (fn ind ([] (ind 0))
+		 ([index] (with-read-lock common/*indicator-lock*
+			    (.get stream index))))))))))
+
+  (defn open
+    ([] (open 0))  
+    ([i] (.open (get-stream (env :symbol) (env :timeframe)) i)))
+  (defn high
+    ([] (high 0))
+    ([i]
+       (.high (get-stream (env :symbol) (env :timeframe)) i))) 
+  (defn low
+    ([] (low 0)) 
+    ([i]
+       (.low (get-stream (env :symbol) (env :timeframe)) i))) 
+  (defn close
+    ([] (close 0)) 
+    ([i] 
+       (.close (get-stream (env :symbol) (env :timeframe)) i)))
+
+  ;;TODO: if indicator is 'deinitialized' - clear from cache!
+
+  (def sma (def-price-indicator 'sma
+	     (fn [price stream period] (SMA. price stream period))))
+  (def ema (def-price-indicator 'ema
+	     (fn [price stream period] (EMA. price stream period))))
+  (def rsi (def-price-indicator 'rsi
+	     (fn [price stream period] (RSI. price  stream period))))
+  (def atr (def-indicator 'atr
+	     (fn [price period] (ATR. price period))))
+  (def cci (def-indicator 'cci
+	     (fn [price period] (CCI. price period))))
+  (def vma (def-indicator 'vma
+	     (fn [price [adx_period weight period]]
+	       (VMA. price adx_period weight period))))
+  
+  ;;BUG IN VMA - paramaters [2 2 1]
+
+
+  )
+#+end_src
+
+** Util
+*** General
+#+srcname:forex-util-general
+#+begin_src clojure :tangle src/forex/util/general.clj
+  ;; forex.util.general - general utilities for clj-forex
+  
+  (ns forex.util.general
+    (:use utils.general forex.util.spawn forex.util.log)
+    (:import (org.joda.time DateTime DateTimeZone Instant)))
+  
+  (defn symbolicate
+    "symbolicate symbols together. ignores things like whitespaces, just drops them!"
+    [& args]
+    (symbol (apply str args)))
+  
+  
+  ;;TODO: add support for waiting on multiple objects, including sockets!
+  (defprotocol PWait
+    (wait-for [this timeout units] [this timeout]))
+  ;;copied from clojure source, but adding timeout wait-for
+  (defn beg
+    "Alpha - subject to change.
+    Returns a promise object that can be read with deref/@, and set,
+    once only, with deliver. Calls to deref/@ prior to delivery will
+    block. All subsequent derefs will return the same delivered value
+    without blocking."
+    {:added "1.1"}
+    []
+    (let [d (java.util.concurrent.CountDownLatch. 1)
+          v (atom nil)]
+      (reify 
+        clojure.lang.IDeref
+        (deref [_] (.await d) @v)
+        PWait
+        (wait-for [this timeout]
+                  (wait-for this timeout
+                            java.util.concurrent.TimeUnit/MILLISECONDS))
+        (wait-for [this timeout units]
+                  (if timeout
+                    (.await d timeout units)
+                    (do (.await d) true)))
+        clojure.lang.IFn
+        (invoke [this x] 
+                (locking d
+                  (if (pos? (.getCount d))
+                    (do (reset! v x)
+                        (.countDown d)
+                        x)
+                    (throw
+                     (IllegalStateException.
+                      "Multiple deliver calls to a promise"))))))))
+  
+  (defn give
+    "Alpha - subject to change.
+    Delivers the supplied value to the promise, releasing any pending
+    derefs. A subsequent call to deliver on a promise will throw an exception."
+    {:added "1.1"}
+    [promise val]
+    (promise val))
+  
+  
+  
+  (defmacro awhen [test & body]
+    `(when-let [~'it ~test]
+       ~@body))
+   
+  (defmacro naive-var-local-cache-strategy [var] 
+   `(let [cache# (atom {})]
+      (reify PCachingStrategy
+        (retrieve [_ item#] (get @cache# item#))
+        (cached? [_ item#] (contains? @cache# item#))
+        (hit [this# _] this#)
+        (miss [this# item# result#]
+              (reset! cache# (swap! ~var assoc item# result#))
+              this#))))
+  
+  (defmacro constants [& args]
+    `(do ~@(map (fn [[name val]] `(def ~name ~val)) (group args 2))))
+  
+  (defn now [] (DateTime. DateTimeZone/UTC))
+   
+  (defn abs
+    ([] (int (/ (.getMillis (Instant. (now))) 1000)))
+    ([date] (int (/ (.getMillis (Instant. date)) 1000))))
+  
+  (defmacro spawn-log [func]
+    `(spawn (fn [] (try (~func) (catch Exception e#
+                                  (.printStackTrace e#) (severe e#))))))
+  
+  (defonce *env* (atom {:timeframe 1440 :index 0})) ;default +D1+
+  (defn env [key] (key @*env*))
+  (defn env! [map]
+    (swap! *env* #(merge % map))
+    map)
+  
+  ;;todo: fix private!
+  ;;todo: ignores all nils?
+  (defmacro wenv [[& args] & body]
+    `(binding [forex.util.general/*env*
+               (atom (merge @@~#'*env* (hash-map ~@args)))]
+       ~@body))
+  
+  (defmacro with-write-lock [l & body]
+    `(let [obj# ~l]
+       (try (do (.lock (.writeLock obj#)) ~@body)
+            (finally (.unlock (.writeLock obj#))))))
+  
+  (defmacro with-read-lock [l & body]
+    `(let [obj# ~l]
+       (try (do (.lock (.readLock obj#)) ~@body)
+            (finally (.unlock (.readLock obj#))))))
+#+end_src
+*** Log
+#+srcname:forex-util-log 
+#+begin_src clojure :tangle src/forex/util/log.clj
+;;forex.util.log - log to a log file and to *out* and System/out
+
+(ns forex.util.log
+  (:import [java.util.logging Logger Level LogManager Handler
+	    FileHandler SimpleFormatter ConsoleHandler])
+  (:require [clojure.contrib.duck-streams :as f])
+  (:use emacs utils.general))
+
+;;TODO: minor mode
+(defvar log-dir "%h/.forex"
+  "Directory of logging")
+
+(defn- formatter []
+  (let [d (java.util.Date.)]
+    (proxy [java.util.logging.Formatter] []
+      (format [r] 
+	      (clojure.core/format "%s%n%s: %s%n%n"
+				   (do (.setTime d (.getMillis r)) d)
+				   (.getLevel r)
+				   (.getMessage r))))))
+
+;;wrap the PrintWriter *out* in an OutputStream to be used in ConsoleHandler
+(defn- new-out-stream [out]
+  (proxy [java.io.OutputStream] []
+    (close [] (.close out))
+    (flush [] (.flush out))
+    (write ([b] (.print out (String. b)))
+	   ([b off len] (.print out (String. b off len))))))
+
+;;TODO: if user deletes log file, it will not be recreated
+;;this will create a logger which logs to /home/dir/.forex/log.log and will output to System/out (in emacs+slime, this is in the *inferior-lisp* buffer
+;;or in the *shell* if you do lein swank
+
+(defn- new-logger [file]
+  (f/make-parents
+   (java.io.File. (format "%s/.forex/%s" (System/getProperty "user.home") file)))
+  (let [l (java.util.logging.Logger/getLogger (str *ns*))]
+    (mapc #(.removeHandler l %) (.getHandlers l))
+    (.addHandler l (doto (ConsoleHandler.) (.setFormatter (formatter))) ;;(new-out-stream *out*) = to *out*, but sort of clutters everything
+		 )
+    (.addHandler l (doto (FileHandler. (str log-dir "/" file))
+		     (.setFormatter (formatter))))
+    (.setUseParentHandlers l false)
+    l))
+
+(defonce- log (java.util.logging.Logger/getLogger (str *ns*)))
+
+;;TODO: only use one log file!!! eh?
+(defn init-logger []
+  (if-not log
+   (def- log (new-logger "log"))))
+(init-logger)
+;;TODO: set filtering levels
+;;fine,finer,finest wont log
+
+(def- *debug-info* "")
+(defmacro debugging [str & args] `(binding [*debug-info* ~str] ~@args))
+
+(defn info [msg & args]
+   (.info log (apply format (str *debug-info* " " msg) args)))
+ (defn fine [msg & args]
+   (.fine log (apply format  (str *debug-info* " " msg) args)))
+ (defn finer [msg & args]
+   (.finer log (apply format (str *debug-info* " " msg) args)))
+ (defn finest [msg & args]
+   (.finest log (apply format (str *debug-info* " " msg) args)))
+(defn severe [msg & args]
+  (let [s (apply format (str *debug-info* " " msg) args)]
+    (.severe log s)
+    (print (format "SEVERE: %s%n" s))))
+(defn warn [msg & args]
+  (let [s (apply format (str *debug-info* " " msg) args)]
+    (.warning log s)
+    (print (format "WARNING: %s%n" s)))) 
+#+end_src
+*** Spawn
+#+srcname:forex-util-spawn
+#+begin_src clojure :tangle src/forex/util/spawn.clj
+;;this is a generalization of util.fiber.spawn and will eventually replace it. it allows us to poll on not only local mailbox but also on sockets
+(ns forex.util.spawn
+  (:use utils.general forex.util.zmq)
+  (:require [utils.fiber.spawn :as s]))
+ 
+(def- *pid* (atom []))
+
+(defalias pid? s/pid?)
+(defalias self s/self)
+(def kill-all s/kill-all)
+(defalias spawn-in-repl s/spawn-in-repl) ;;TODO: add socket for this one
+ 
+(defalias ? s/?)
+
+(defalias make-tag s/make-tag)
+(defn ! [pid msg]
+  (with-open [local (doto (new-socket +push+)
+		      (.connect (format "inproc://%s" pid)))]
+    (s/! pid msg)
+    (.snd local "REQUEST" +noblock+)))
+(defn  stop-all []
+  (swap! *pid*
+	 (fn [old]
+	   (map #(if (pid? %)
+		   (! % "STOP")) @*pid*))))
+
+ 
+(defrecord LocalSocket [socket]
+  PSocket
+  (raw [this] (.raw socket)) 
+  (recv [this flags] 
+	(let [r (.recv socket flags)]
+	  (s/?)))
+  (recv [this] (recv this 0))
+  (close [this] (.close socket))
+  (hasReceiveMore [this] false))
+
+
+(comment
+  (defn te []
+   (def pid (spawn #(do (pr "BEFORE") (pr local)
+			(pformat "local %s%n" (first (event-seq [local])))
+			(pr "AFTER"))))))
+
+
+(defonce- *local* (ThreadLocal.))
+(defn- self-get [key]
+  (let [map (.get *local*)]
+    (when map 
+      (map key))))
+(defn- self-assoc [key obj]
+  (let [map (.get *local*)]
+    (if map 
+     (.set *local* (assoc map key obj)))))
+(def local nil)
+(defn spawn [thunk]
+  (let [pid (s/spawn (fn [] 
+		       (.set *local* {})
+		       (with-open
+			   [local-socket (LocalSocket. 
+				   (doto
+				       (new-socket +pull+)
+				     (.bind  (str "inproc://" (self)))))]	 
+			 (binding [local local-socket]
+			   (thunk)))))]
+    (swap! *pid* concat [pid])
+    pid))
+
+(defmulti event-seq class)
+(defmethod event-seq clojure.lang.IPersistentVector [v]
+  (event-seq (new-poller v)))
+(defmethod event-seq forex.util.zmq.Poller [p]
+  ((fn the-seq [p] 
+     (lazy-seq
+      (let [amount (.poll p)] 
+	(concat (for [i (range 0 (.getSize p)) :when (.pollin p i)]
+		  (let [sock (.getSocket p i)
+			msg 
+			(loop [msg [(.recv sock 0)]]			
+			  (if (.hasReceiveMore sock)
+			    (recur (cons (String. (.recv sock 0)) msg))
+			    msg))]
+		    [sock (if (= (count msg) 1) (first msg) (vec msg))]))
+		(the-seq p)))))
+   p)) 
+
+;;? with multiple sources or change to poll
+;;!? (timeout)
+;;?? (filter)
+
+
+#+end_src
+*** ZMQ
+#+srcname:forex-util-zmq
+#+begin_src clojure :tangle src/forex/util/zmq.clj
+(ns forex.util.zmq
+  (:import (org.zeromq ZMQ))
+  (:use utils.general))
+
+					; Constants
+(def +noblock+ 1)
+
+(def +p2p+ 0)
+(def +pub+ 1)
+(def +sub+ 2)
+(def +req+ 3)
+(def +rep+ 4)
+(def +xreq+ 5)
+(def +xrep+ 6)
+(def +pull+ 7)
+(def +push+ 8)
+
+(def +hwm+ 1)
+(def +lwm+ 2)
+(def +swap+ 3)
+(def +affinity+ 4)
+(def +identity+ 5)
+(def +subscribe+ 6)
+(def +unsubscribe+ 7)
+(def +rate+ 8)
+(def +recovery-ivl+ 9)
+(def +mcast-loop+ 10)
+(def +sndbuf+ 11)
+(def +rcvbuf+ 12)
+
+(def +pollin+ 1)
+(def +pollout+ 2)
+(def +pollerr+ 4)
+(def +more+ 2)
+
+;;Context
+(defn new-context [io-threads]
+  (ZMQ/context io-threads))
+(defonce *context* (new-context 1))
+
+(defprotocol PSocket
+  (raw [this])
+  (recv [this flags] [this])
+  (bind [this address])
+  (connect [this address])
+  (hasReceiveMore [this])
+  (close [this])
+  (snd [this msg flags]))
+(defprotocol PPoller
+  (setTimeout [this timeout])
+  (poll [this])
+  (register [this socket])
+  (getSocket [this i])
+  (getSize [this])
+  (pollin [this i])) 
+(defrecord Poller [poll sockets]
+  PPoller 
+  (getSize [this] (.getSize (:poll this)))
+  (pollin [this i] (.pollin (:poll this) i))
+  (setTimeout [this timeout] (.setTimeout (:poll this) timeout))
+  (poll [this] (.poll (:poll this)))
+  (register [this socket]
+	    (.register (:poll this)
+		       (if (extends? PSocket (class socket))
+			 (.raw socket)
+			 socket))
+	    (swap! (:sockets this) conj socket))
+  (getSocket [this i] (nth @(:sockets this) i)))
+
+(defn new-poller
+  ([sockets] (new-poller *context* sockets))
+  ([context sockets]
+     (let [p (Poller. (.poller context (count sockets)) (atom []))]
+       (.setTimeout p -1)
+       (on [sock sockets]
+	   (.register p sock))
+       p)))
+
+(defrecord Socket [socket]
+  PSocket
+  (raw [this] (:socket this))
+  (snd [this msg flags] (.send socket (.getBytes msg) flags))
+  (recv [this flags] (String. (.recv socket flags)))
+  (recv [this] (recv this 0)) 
+  (close [this] (.close socket))
+  (bind [this address] (.bind socket address))
+  (connect [this address] (.connect socket address))
+  (hasReceiveMore [this] (.hasReceiveMore socket)))
+ 
+(defn new-socket
+  ([type] (new-socket *context* type))
+  ([context type] (Socket. (.socket context type))))
+
+(comment
+  (defn new-poll
+    ([sockets] (new-poll *context* sockets))
+    ([context sockets]
+       (let [p (.poller context (count sockets))]
+	 (.setTimeout p -1)
+	 (on [sock sockets]
+	     (.register p (.socket sock)))
+	 p)))
+
+  (defn new-socket
+    ([socket-type]
+       (new-socket *context* socket-type))
+    ([context socket-type ]
+       (.socket context socket-type))))
+#+end_src
+*** Devel
+#+srcname:forex-util-mql-devel
+#+begin_src clojure :tangle src/forex/util/mql_devel.clj
+(ns forex.utils.mql-devel
+  (:use utils.general))
+
+
+(defmacro cond-out [& args]
+  (apply str (map (fn [a]
+		    (let [name (str a)]
+		      (format " else if (command==\"%s\") {\n\t   ret = process_%s(request);\n\t}" name name)))
+		  args)))
+ 
+(cond-out
+ AccountBalance
+ AccountCredit
+ AccountCompany
+ AccountCurrency
+ AccountEquity
+ AccountFreeMargin
+ AccountLeverage
+ AccountMargin
+ AccountName
+ AccountNumber
+ AccountServer
+ AccountProfit
+ OrderLots
+ OrderDelete
+ OrderCloseTime
+ OrderType
+ OrdersTotal
+ OrderSend
+ MarketInfo
+ OrderClose
+ OrderModify)
+#+end_src
+
+** User
+#+srcname:forex_user
+#+begin_src clojure :tangle src/forex_user.clj
+(ns forex-user
+  (:use forex.util.general utils.general forex.util.log)
+  (:use forex.module.error.common
+	forex.module.ea.common
+	forex.module.indicator.common
+	forex.module.account.common)
+  (:require [forex.backend.mql.socket-service :as backend]
+	    [clj-time.core :as t]))
+
+;;utils
+(defn pip-price
+  ([] (pip-price (env :symbol)))
+  ([symbol] (mode-tickvalue symbol)))
+;;TODO: mql err on point? no way! we should throw an error
+(defn point
+  ([] (point (env :symbol)))
+  ([symbol]
+     (* 10 (mode-point symbol))))
+(defn pips
+  ([price] (pips price (env :symbol)))
+  ([price symbol]
+     (/ price (point symbol)))) 
+(defn price-of
+  ([val] (price-of val (env :symbol)))
+  ([val symbol]
+     (* (pip-price symbol) (pips val))))
+(defn exit []
+  (throwf "stopping ea"))
+;;
+
+(defn timeout-ea [order timeout self]
+  (cond
+   (not (open? order))
+   (do (warn "order is closed ... exiting") (exit))
+   (t/after? (t/now) timeout)
+   (do
+     (iff (delete! order) 
+	  (warn "entry order timed out ...")
+	  (warn "order is now a market order!"))
+     (exit)) 
+   (market? order)
+   (do
+     (warn "order is now a market order")
+     (exit))))
+
+(defn timeout [order]
+  (partial timeout-ea order (t/plus (t/now) (t/hours 12))))
+
+(defn order-it [percent {:keys [type symbol price sl tp1 tp2]}]
+  (wenv (:symbol symbol)
+	(let [two-percent (* (/ percent 100) (account-balance))
+	      lots (int (/ two-percent (price-of (Math/abs (- sl price)))))]
+	  (condp = lots 
+	      0 (warn "cannot make order with risk")
+	      (iff (order! {:type type :symbol symbol :price price :sl sl
+			    :tp (if (= lots 1) tp1 tp1)
+			    :lots (* (mode-minlot) lots)}) 
+		   {:ea (run-ea {:name "timeout"
+				 :start (timeout it)})
+		    :order it}
+		   it)))))
+
+(defn do-it []
+  (def ea
+    (order-it 3 {:type :sell-stop :symbol "USDCAD" :price 0.995 :sl 1.0028
+		 :tp1 0.9924 :tp2 0.9898}))) 
+#+end_src
+
+
