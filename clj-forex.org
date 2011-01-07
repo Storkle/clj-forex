@@ -20,6 +20,11 @@ This combined with easy access to any java library (clojure is implemented on th
 Things like neural networks, database, and other such ‘advanced’ concepts can now be much more easily integrated than if we had used [[http://book.mql4.com/][mql4]].
 
 Its like an artist! Give an artist more efficient tools in the toolbox and who knows what can be created! [And clojure is fun to learn anyways!]
+** Where's the code??
+This file is the code (clojure, anyways). The code is untangled using the
+keystroke C-c C-v t in emacs when this file is open. While currently most
+of the code is simply in the Code section, it will all eventually be explained
+in the [[http://groups.google.com/group/clojure/browse_thread/thread/664a1d305f32ab90][literate programming]] manner.
 * From Ideas to Implementation - Metatrader Backend
 * Code
 ** Backend

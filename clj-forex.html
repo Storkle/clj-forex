@@ -1,0 +1,1562 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+               "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"
+lang="en" xml:lang="en">
+<head>
+<title>CLJ-FOREX</title>
+<meta http-equiv="Content-Type" content="text/html;charset=utf-8"/>
+<meta name="generator" content="Org-mode"/>
+<meta name="generated" content="2011-01-07 16:42:15 CST"/>
+<meta name="author" content="Seth Burleigh"/>
+<meta name="description" content=""/>
+<meta name="keywords" content=""/>
+<style type="text/css">
+ <!--/*--><![CDATA[/*><!--*/
+  html { font-family: Times, serif; font-size: 12pt; }
+  .title  { text-align: center; }
+  .todo   { color: red; }
+  .done   { color: green; }
+  .tag    { background-color: #add8e6; font-weight:normal }
+  .target { }
+  .timestamp { color: #bebebe; }
+  .timestamp-kwd { color: #5f9ea0; }
+  p.verse { margin-left: 3% }
+  pre {
+	border: 1pt solid #AEBDCC;
+	background-color: #F3F5F7;
+	padding: 5pt;
+	font-family: courier, monospace;
+        font-size: 90%;
+        overflow:auto;
+  }
+  table { border-collapse: collapse; }
+  td, th { vertical-align: top; }
+  dt { font-weight: bold; }
+  div.figure { padding: 0.5em; }
+  div.figure p { text-align: center; }
+  textarea { overflow-x: auto; }
+  .linenr { font-size:smaller }
+  .code-highlighted {background-color:#ffff00;}
+  .org-info-js_info-navigation { border-style:none; }
+  #org-info-js_console-label { font-size:10px; font-weight:bold;
+                               white-space:nowrap; }
+  .org-info-js_search-highlight {background-color:#ffff00; color:#000000;
+                                 font-weight:bold; }
+  /*]]>*/-->
+</style>
+<script type="text/javascript">
+<!--/*--><![CDATA[/*><!--*/
+ function CodeHighlightOn(elem, id)
+ {
+   var target = document.getElementById(id);
+   if(null != target) {
+     elem.cacheClassElem = elem.className;
+     elem.cacheClassTarget = target.className;
+     target.className = "code-highlighted";
+     elem.className   = "code-highlighted";
+   }
+ }
+ function CodeHighlightOff(elem, id)
+ {
+   var target = document.getElementById(id);
+   if(elem.cacheClassElem)
+     elem.className = elem.cacheClassElem;
+   if(elem.cacheClassTarget)
+     target.className = elem.cacheClassTarget;
+ }
+/*]]>*///-->
+</script>
+
+</head>
+<body>
+<div id="content">
+
+<h1 class="title">CLJ-FOREX</h1>
+
+
+<div id="table-of-contents">
+<h2>Table of Contents</h2>
+<div id="text-table-of-contents">
+<ul>
+<li><a href="#sec-1">1 Introduction </a>
+<ul>
+<li><a href="#sec-1_1">1.1 What is forex? </a></li>
+<li><a href="#sec-1_2">1.2 What is clj-forex? </a></li>
+<li><a href="#sec-1_3">1.3 The Difference </a></li>
+<li><a href="#sec-1_4">1.4 Where's the code?? </a></li>
+</ul>
+</li>
+<li><a href="#sec-2">2 From Ideas to Implementation - Metatrader Backend </a></li>
+<li><a href="#sec-3">3 Code </a>
+<ul>
+<li><a href="#sec-3_1">3.1 Backend </a>
+<ul>
+<li><a href="#sec-3_1_1">3.1.1 MQL Service </a></li>
+</ul>
+</li>
+<li><a href="#sec-3_2">3.2 Module </a>
+<ul>
+<li><a href="#sec-3_2_1">3.2.1 Account </a></li>
+<li><a href="#sec-3_2_2">3.2.2 Ea </a></li>
+<li><a href="#sec-3_2_3">3.2.3 Error </a></li>
+<li><a href="#sec-3_2_4">3.2.4 Indicator </a></li>
+</ul>
+</li>
+<li><a href="#sec-3_3">3.3 Util </a>
+<ul>
+<li><a href="#sec-3_3_1">3.3.1 General </a></li>
+<li><a href="#sec-3_3_2">3.3.2 Log </a></li>
+<li><a href="#sec-3_3_3">3.3.3 Spawn </a></li>
+<li><a href="#sec-3_3_4">3.3.4 ZMQ </a></li>
+<li><a href="#sec-3_3_5">3.3.5 Devel </a></li>
+</ul>
+</li>
+<li><a href="#sec-3_4">3.4 User </a></li>
+</ul>
+</li>
+</ul>
+</div>
+</div>
+
+<div id="outline-container-1" class="outline-2">
+<h2 id="sec-1"><span class="section-number-2">1</span> Introduction </h2>
+<div class="outline-text-2" id="text-1">
+
+
+</div>
+
+<div id="outline-container-1_1" class="outline-3">
+<h3 id="sec-1_1"><span class="section-number-3">1.1</span> What is forex? </h3>
+<div class="outline-text-3" id="text-1_1">
+
+<p>Forex is a currency trading market. But you probably know all about forex, since you're here! If not, read up on it! <br/>
+</p><ul>
+<li>
+<a href="http://en.wikipedia.org/wiki/Foreign_exchange_market">Wiki article - OK</a>
+</li>
+<li>
+<a href="http://www.fxcm.com/metatrader.jsp">FXCM Retail Broker Free Metatarder Terminal -  get demo account and see what forex trading is first hand!</a>
+</li>
+</ul>
+
+</div>
+
+</div>
+
+<div id="outline-container-1_2" class="outline-3">
+<h3 id="sec-1_2"><span class="section-number-3">1.2</span> What is clj-forex? </h3>
+<div class="outline-text-3" id="text-1_2">
+
+<p>Clj-forex is an in progress effort to create a non-graphical backend to various forex trading backends. Right now Metatrader is the focus. 
+The ultimate goal of clj-forex is to create a robust library to allow the creation of EA (expert advisors) in the scripting language clojure. Expert advisors
+are programs which automatically trade the market, performing sell/buy orderes, changing stoplosses, using technical indicators, etc. They are useful for
+both automating parts of manual trading systems (performing trailing stops, expiration of market orders) and also for full out automated trading.
+</p>
+<p>
+Indicators will be calculated java side using price bars retrieved from the backends. Integration of indicator data to various gui backends (i.e. at this time,
+Metatrader) will be supported. The only purpose of the forex backend is to allow access to spreads, current price, ability to buy/sell, etc. 
+</p></div>
+
+</div>
+
+<div id="outline-container-1_3" class="outline-3">
+<h3 id="sec-1_3"><span class="section-number-3">1.3</span> The Difference </h3>
+<div class="outline-text-3" id="text-1_3">
+
+<p>Im not sure why noone has done this before, but integration of a scripting language to create eas is, in my opinion, vital. 
+Integration of a lisp-like dialect, like clojure, will allow much more rapid creation and prototyping of eas. 
+This combined with easy access to any java library (clojure is implemented on the java virtual machine) makes for a winning combination! 
+Things like neural networks, database, and other such ‘advanced’ concepts can now be much more easily integrated than if we had used <a href="http://book.mql4.com/">mql4</a>.
+</p>
+<p>
+Its like an artist! Give an artist more efficient tools in the toolbox and who knows what can be created! [And clojure is fun to learn anyways!]
+</p></div>
+
+</div>
+
+<div id="outline-container-1_4" class="outline-3">
+<h3 id="sec-1_4"><span class="section-number-3">1.4</span> Where's the code?? </h3>
+<div class="outline-text-3" id="text-1_4">
+
+<p>This file is the code (clojure, anyways). The code is untangled using the
+keystroke C-c C-v t in emacs when this file is open. While currently most
+of the code is simply in the Code section, it will all eventually be explained
+in the <a href="http://groups.google.com/group/clojure/browse_thread/thread/664a1d305f32ab90">literate programming</a> manner.
+</p></div>
+</div>
+
+</div>
+
+<div id="outline-container-2" class="outline-2">
+<h2 id="sec-2"><span class="section-number-2">2</span> From Ideas to Implementation - Metatrader Backend </h2>
+<div class="outline-text-2" id="text-2">
+
+</div>
+
+</div>
+
+<div id="outline-container-3" class="outline-2">
+<h2 id="sec-3"><span class="section-number-2">3</span> Code </h2>
+<div class="outline-text-2" id="text-3">
+
+
+</div>
+
+<div id="outline-container-3_1" class="outline-3">
+<h3 id="sec-3_1"><span class="section-number-3">3.1</span> Backend </h3>
+<div class="outline-text-3" id="text-3_1">
+
+
+</div>
+
+<div id="outline-container-3_1_1" class="outline-4">
+<h4 id="sec-3_1_1"><span class="section-number-4">3.1.1</span> MQL Service </h4>
+<div class="outline-text-4" id="text-3_1_1">
+
+
+
+
+<div class="org-src-container"><label class="org-src-name">mql-socket-service()</label><pre class="src src-clojure">
+<span style="color: #b22222;">;;</span><span style="color: #b22222;">forex.backend.mql.socket-service: provide background sockets which allow us to connect with metatrader. Provides functions to interact with the background socket
+</span>
+<span style="color: #b22222;">;;</span><span style="color: #b22222;">todo: bug with stopping all and then stopping again! so bug with stop..
+</span>(<span style="color: #a020f0;">ns</span> forex.backend.mql.socket-service   
+  (<span style="color: #7a378b;">:require</span>
+   [utils.fiber.mbox <span style="color: #7a378b;">:as</span> m]
+   [clojure.contrib.logging <span style="color: #7a378b;">:as</span> l])
+  (<span style="color: #7a378b;">:use</span>
+   emacs 
+   forex.util.general forex.util.zmq forex.util.log
+   forex.util.spawn utils.general))
+
+<span style="color: #b22222;">;;</span><span style="color: #b22222;">TODO: 3ms or so per request, a little slow...
+</span><span style="color: #b22222;">;;</span><span style="color: #b22222;">also, unfortunately, if we add more servers, speed doesn't increase linearly. so the bottleneck is in the clojure code ... a better designed socket service should really be made.
+</span><span style="color: #b22222;">;; </span><span style="color: #b22222;">in addition, if servers drop out, we will be waiting forever for them. this is bad.
+</span>
+(<span style="color: #a020f0;">defvar</span> <span style="color: #0000ff;">mql-socket-recv-address</span> <span style="color: #8b2252;">"tcp://127.0.0.1:3000"</span>)
+(<span style="color: #a020f0;">defvar</span> <span style="color: #0000ff;">mql-socket-send-address</span> <span style="color: #8b2252;">"tcp://127.0.0.1:3005"</span>)
+(<span style="color: #a020f0;">defvar</span> <span style="color: #0000ff;">mql-socket-pub-address</span> <span style="color: #8b2252;">"tcp://127.0.0.1:3010"</span>)
+
+<span style="color: #b22222;">;;</span><span style="color: #b22222;">utils
+</span>(<span style="color: #a020f0;">defonce-</span> <span style="color: #0000ff;">*msg-id*</span> (<span style="color: #7a378b;">atom</span> 0))
+(<span style="color: #a020f0;">defn-</span> <span style="color: #0000ff;">msg-id</span> []
+  (<span style="color: #7a378b;">str</span> (<span style="color: #7a378b;">swap!</span> *msg-id* inc)))
+(<span style="color: #a020f0;">defmacro</span> <span style="color: #0000ff;">catch-unexpected</span> [&amp; body]
+  `(<span style="color: #a020f0;">try</span> (<span style="color: #a020f0;">do</span> ~@body)
+        (<span style="color: #a020f0;">catch</span> Exception e# (.printStackTrace e#) (warn e#))))
+
+<span style="color: #b22222;">;;</span><span style="color: #b22222;">socket service
+</span><span style="color: #b22222;">;;</span><span style="color: #b22222;">TODO: send id then message
+</span>(<span style="color: #a020f0;">defn-</span> <span style="color: #0000ff;">mql-recv</span> [ids msg] 
+  (catch-unexpected   
+   (<span style="color: #a020f0;">let</span> [key (<span style="color: #7a378b;">first</span> msg)
+         msg-ask (@ids key)]
+     (<span style="color: #a020f0;">if-not</span> (<span style="color: #7a378b;">satisfies?</span> PWait msg-ask)
+       (warn <span style="color: #8b2252;">"Ignoring invalid msg: %s"</span> msg)
+       (<span style="color: #a020f0;">do</span> 
+         (give msg-ask (<span style="color: #7a378b;">second</span> msg))
+         (<span style="color: #7a378b;">swap!</span> ids dissoc key))))))
+
+(<span style="color: #a020f0;">defn-</span> <span style="color: #0000ff;">socket-service-match</span> [events ids send receive]
+  (match  
+   (<span style="color: #7a378b;">first</span> events)
+   [local <span style="color: #8b2252;">"STOP"</span>] (<span style="color: #a020f0;">do</span> (info <span style="color: #8b2252;">"closing ..."</span>) <span style="color: #8b2252;">"stop"</span>)  
+   [local [<span style="color: #8b2252;">"REQUEST"</span> ?msg ?askin]]  
+   (<span style="color: #a020f0;">if-not</span> (<span style="color: #7a378b;">satisfies?</span>  PWait askin)
+     (warn <span style="color: #8b2252;">"Ignoring invalid REQUEST which does not contain a PWait argument %s %s"</span> 
+           msg askin) 
+     (<span style="color: #a020f0;">let</span> [id (msg-id)  
+           result  (.snd send (<span style="color: #7a378b;">str</span> id <span style="color: #8b2252;">" "</span> msg) +noblock+)]
+       (<span style="color: #a020f0;">if-not</span> result  
+         (<span style="color: #a020f0;">do</span>  
+           (warn <span style="color: #8b2252;">"failed to queue request %s: are any metatrader scripts alive?"</span>
+                 msg)
+           (catch-unexpected
+            (give askin (Exception. <span style="color: #8b2252;">"socket service down"</span>))))
+         (<span style="color: #7a378b;">swap!</span> ids assoc id askin))))  
+   [receive ?msg] (mql-recv ids msg) 
+   ?msg (warn <span style="color: #8b2252;">"Ignoring invalid message %s"</span> msg)))
+
+<span style="color: #b22222;">;;</span><span style="color: #b22222;">TODO: weird bugwhen stopping everything with an ea.
+</span>
+(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">spawn-mql-socket-service</span>
+  []  
+  (debugging
+   <span style="color: #8b2252;">"MQL Socket Service: "</span> 
+   (<span style="color: #a020f0;">let</span> [ids (<span style="color: #7a378b;">atom</span> {})]
+     {<span style="color: #7a378b;">:pid</span> 
+      (spawn-log  
+       #(<span style="color: #a020f0;">with-open</span> [send (<span style="color: #a020f0;">doto</span> (new-socket +push+)
+                           (.bind mql-socket-send-address))
+                    receive (<span style="color: #a020f0;">doto</span> (new-socket +pull+)
+                              (.bind mql-socket-recv-address))]
+          (<span style="color: #a020f0;">loop</span> [events (event-seq [receive local])]
+            (<span style="color: #a020f0;">when-not</span> (<span style="color: #7a378b;">=</span> <span style="color: #8b2252;">"stop"</span> (socket-service-match events ids send receive))
+              (<span style="color: #a020f0;">recur</span> (<span style="color: #7a378b;">rest</span> events))))))}))) 
+
+<span style="color: #b22222;">;;</span><span style="color: #b22222;">global socket service
+</span>(<span style="color: #a020f0;">defonce-</span> <span style="color: #0000ff;">*s*</span> (<span style="color: #7a378b;">atom</span> nil))
+(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">alive?</span> []
+  (pid? (<span style="color: #7a378b;">:pid</span> @*s*))) 
+(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">start</span> []
+  (<span style="color: #a020f0;">if</span> (alive?)
+    (warn <span style="color: #8b2252;">"mql socket is already alive!"</span>)
+    (<span style="color: #7a378b;">reset!</span> *s* (spawn-mql-socket-service))))
+(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">stop</span> []
+  (<span style="color: #a020f0;">if</span> (alive?)
+    (! (<span style="color: #7a378b;">:pid</span> @*s*) <span style="color: #8b2252;">"STOP"</span>)
+    (warn <span style="color: #8b2252;">"mql socket service is already stopped"</span>)))
+
+<span style="color: #b22222;">;;</span><span style="color: #b22222;">interact with mql 
+</span>(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">request</span> [askin msg]
+  (<span style="color: #7a378b;">io!</span>
+   (<span style="color: #a020f0;">if</span> (pid? (<span style="color: #7a378b;">:pid</span> @*s*)) 
+     (! (<span style="color: #7a378b;">:pid</span> @*s*) [<span style="color: #8b2252;">"REQUEST"</span> msg askin])
+     (throwf <span style="color: #8b2252;">"mql socket service is not alive"</span>))))
+
+(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">receive</span>
+  ([msg] (receive msg nil))
+  ([msg timeout]
+     (<span style="color: #a020f0;">let</span> [askin (beg)]
+       (request askin msg)
+       (<span style="color: #a020f0;">let</span> [result (<span style="color: #a020f0;">if</span> (wait-for askin timeout) @askin)]
+         (<span style="color: #a020f0;">cond</span>
+          (<span style="color: #7a378b;">instance?</span> Exception result) (<span style="color: #a020f0;">throw</span> result)
+          result result
+          true (throwf <span style="color: #8b2252;">"invalid result received %s"</span> result)))))) 
+</pre></div>
+
+
+</div>
+</div>
+
+</div>
+
+<div id="outline-container-3_2" class="outline-3">
+<h3 id="sec-3_2"><span class="section-number-3">3.2</span> Module </h3>
+<div class="outline-text-3" id="text-3_2">
+
+
+</div>
+
+<div id="outline-container-3_2_1" class="outline-4">
+<h4 id="sec-3_2_1"><span class="section-number-4">3.2.1</span> Account </h4>
+<div class="outline-text-4" id="text-3_2_1">
+
+
+
+
+<div class="org-src-container"><label class="org-src-name">account-core()</label><pre class="src src-clojure">
+<span style="color: #b22222;">;;</span><span style="color: #b22222;">forex.module.order.core - interface with mql backend
+</span>
+(<span style="color: #a020f0;">ns</span> forex.module.account.core
+  (<span style="color: #7a378b;">:use</span> utils.general emacs utils.fiber.spawn
+        forex.util.general
+        forex.module.error.common))
+
+(<span style="color: #a020f0;">def-</span> <span style="color: #0000ff;">order</span>
+  {<span style="color: #7a378b;">:buy</span> 0 <span style="color: #7a378b;">:sell</span> 1 <span style="color: #7a378b;">:buy-limit</span> 2 <span style="color: #7a378b;">:sell-limit</span> 3 <span style="color: #7a378b;">:buy-stop</span> 4 <span style="color: #7a378b;">:sell-stop</span> 5})
+
+(<span style="color: #a020f0;">def-</span> <span style="color: #0000ff;">color</span>
+  {<span style="color: #7a378b;">:red</span> 230 <span style="color: #7a378b;">:yellow</span> 65535 <span style="color: #7a378b;">:green</span> 65280 <span style="color: #7a378b;">:blue</span> 13749760
+   <span style="color: #7a378b;">:purple</span>  16711935 <span style="color: #7a378b;">:white</span> 16777215 <span style="color: #7a378b;">:black</span> 0})
+
+(<span style="color: #a020f0;">defn-</span> <span style="color: #0000ff;">get!</span> [hash key]
+  (<span style="color: #a020f0;">if-let</span> [it (<span style="color: #7a378b;">hash</span> key)]
+    it
+    (throwf <span style="color: #8b2252;">"invalid key %s in hash %s"</span> key hash)))
+
+<span style="color: #b22222;">;;</span><span style="color: #b22222;">the below can throw errors - how to handle this? 
+</span>(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">order-modify</span>
+  ([ticket price sl tp]
+     (order-modify ticket price sl tp <span style="color: #7a378b;">:blue</span>))
+  ([ticket price sl tp color_of]
+     (receive
+      (<span style="color: #7a378b;">format</span> <span style="color: #8b2252;">"OrderModify %s %s %s %s %s"</span>
+              ticket price sl tp (get! color color_of)))
+     <span style="color: #b22222;">;;</span><span style="color: #b22222;">{:id ticket :price price :sl sl :tp tp :color color_of}
+</span>     ))
+
+(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">order-send</span>
+  ([symbol cmd volume price] (order-send symbol cmd volume price 0 0))
+  ([symbol cmd volume price sl tp] (order-send symbol cmd volume price sl tp 3))
+  ([symbol cmd volume price sl tp slip]
+     (receive
+      (<span style="color: #7a378b;">format</span> <span style="color: #8b2252;">"OrderSend %s %s %s %s %s %s %s"</span>
+              symbol (get! order cmd)
+              volume price slip sl tp))))
+
+(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">order-close-time</span> [ticket]
+  (receive-int (<span style="color: #7a378b;">format</span> <span style="color: #8b2252;">"OrderCloseTime %s"</span> ticket)))
+
+(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">order-close</span> [ticket lots price slippage color_of]
+  (receive  
+   (<span style="color: #7a378b;">format</span> <span style="color: #8b2252;">"OrderClose %s %s %s %s %s"</span>
+           ticket lots price slippage (get! color color_of))))
+(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">order-delete</span> [ticket]
+  (receive (<span style="color: #7a378b;">format</span> <span style="color: #8b2252;">"OrderDelete %s"</span> ticket)))
+
+(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">market-info</span> [symbol type]
+  (receive-double (<span style="color: #7a378b;">format</span> <span style="color: #8b2252;">"MarketInfo %s %s"</span> symbol type)))
+
+(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">order-close-time</span> [ticket]
+  (receive-double (<span style="color: #7a378b;">format</span> <span style="color: #8b2252;">"OrderCloseTime %s"</span> ticket)))
+
+(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">order-type</span> [ticket]
+  (receive-double (<span style="color: #7a378b;">format</span> <span style="color: #8b2252;">"OrderType %s"</span> ticket)))
+
+(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">order-lots</span> [ticket]
+  (receive-double (<span style="color: #7a378b;">format</span> <span style="color: #8b2252;">"OrderLots %s"</span> ticket)))
+</pre></div>
+
+
+
+<div class="org-src-container"><label class="org-src-name">account-common()</label><pre class="src src-clojure">
+(<span style="color: #a020f0;">ns</span> forex.module.account.common
+  (<span style="color: #7a378b;">:use</span> utils.general emacs  
+        forex.util.general
+        forex.module.error.common)
+  (<span style="color: #7a378b;">:require</span> [forex.module.error.common <span style="color: #7a378b;">:as</span> err])
+  (<span style="color: #7a378b;">:require</span>  [forex.module.account.core <span style="color: #7a378b;">:as</span> core]))
+
+(<span style="color: #a020f0;">defmacro-</span> <span style="color: #0000ff;">default</span> [&amp; body] 
+  `(<span style="color: #a020f0;">binding</span> [*default* @~#'err/*er*]
+     ~@body))
+
+<span style="color: #b22222;">;;</span><span style="color: #b22222;">TODO: do we need all of these assertions?
+</span>
+(<span style="color: #a020f0;">def-</span> <span style="color: #0000ff;">value-to-order-type</span>
+  {0 <span style="color: #7a378b;">:buy</span> 1 <span style="color: #7a378b;">:sell</span> 2 <span style="color: #7a378b;">:buy-limit</span>
+   3 <span style="color: #7a378b;">:sell-limit</span> 4 <span style="color: #7a378b;">:buy-stop</span>
+   5 <span style="color: #7a378b;">:sell-stop</span>}) 
+
+(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">order-close-time</span> [{id <span style="color: #7a378b;">:id</span>}]
+  (<span style="color: #228b22;">is</span> (<span style="color: #7a378b;">string?</span> id))
+  <span style="color: #b22222;">;;</span><span style="color: #b22222;">we dont need to know mql4 error codes for order close time
+</span>  (iff (core/order-close-time id) it -1))
+
+(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">open?</span> [order]
+  (default (<span style="color: #7a378b;">=</span> (order-close-time order) 0)))
+
+(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">order-type</span>
+  <span style="color: #8b2252;">"type of order, even if it is already closed"</span>
+  [order]
+  (<span style="color: #228b22;">is</span> (<span style="color: #7a378b;">string?</span> (<span style="color: #7a378b;">:id</span> order)))
+  (default
+    (iff (core/order-type (<span style="color: #7a378b;">:id</span> order))
+         (value-to-order-type (<span style="color: #7a378b;">int</span> it)))))
+
+(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">order?</span> [order]
+  (<span style="color: #7a378b;">not</span> (<span style="color: #7a378b;">nil?</span> (order-type order))))
+
+(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">market?</span>
+  <span style="color: #8b2252;">"determine if order is market order"</span>
+  [order]
+  (<span style="color: #a020f0;">let</span> [type (order-type order)]
+    (<span style="color: #a020f0;">or</span> (<span style="color: #7a378b;">=</span> type <span style="color: #7a378b;">:sell</span>) (<span style="color: #7a378b;">=</span> type <span style="color: #7a378b;">:buy</span>))))
+
+(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">entry?</span>
+  <span style="color: #8b2252;">"determine if order is entry order"</span>
+  [order]
+  (<span style="color: #a020f0;">let</span> [type (order-type order)]
+    (<span style="color: #a020f0;">and</span> type (<span style="color: #7a378b;">not</span> (<span style="color: #a020f0;">or</span> (<span style="color: #7a378b;">=</span> type <span style="color: #7a378b;">:sell</span>) (<span style="color: #7a378b;">=</span> type <span style="color: #7a378b;">:buy</span>))))))
+
+(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">delete!</span> [{id <span style="color: #7a378b;">:id</span>}]
+  (core/order-delete id))
+
+(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">close!</span>  
+  ([o] (close! o 0))
+  ([{<span style="color: #7a378b;">:keys</span> [price lots slip id] <span style="color: #7a378b;">:as</span> order} new-lots]
+     (<span style="color: #228b22;">is</span> (<span style="color: #a020f0;">and</span> (<span style="color: #7a378b;">string?</span> id) (<span style="color: #a020f0;">and</span> price (<span style="color: #7a378b;">pos?</span> price))
+              (<span style="color: #a020f0;">and</span> (<span style="color: #7a378b;">number?</span> lots) (<span style="color: #7a378b;">&gt;=</span> lots 0))))
+     (<span style="color: #228b22;">is</span> (<span style="color: #7a378b;">&gt;=</span> (<span style="color: #7a378b;">-</span> lots new-lots) 0))
+     (<span style="color: #a020f0;">when</span> (<span style="color: #7a378b;">&gt;</span> (<span style="color: #7a378b;">-</span> lots new-lots) 0)
+       (iff (core/order-close id (<span style="color: #7a378b;">-</span> lots new-lots) price slip <span style="color: #7a378b;">:blue</span>)
+            (<span style="color: #7a378b;">merge</span> order {<span style="color: #7a378b;">:lots</span> new-lots})
+            it))))
+
+(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">modify!</span>
+  <span style="color: #8b2252;">"modify sl and tp"</span>
+  [order {<span style="color: #7a378b;">:keys</span> [sl tp price]}]
+  (<span style="color: #a020f0;">let</span> [sl (<span style="color: #a020f0;">or</span> sl (<span style="color: #7a378b;">:sl</span> order))
+        tp (<span style="color: #a020f0;">or</span> tp (<span style="color: #7a378b;">:tp</span> order))
+        price (<span style="color: #a020f0;">or</span> price (<span style="color: #7a378b;">:price</span> order))]
+    (<span style="color: #228b22;">is</span> (<span style="color: #a020f0;">and</span> sl tp price
+             (<span style="color: #7a378b;">pos?</span> sl) (<span style="color: #7a378b;">pos?</span> tp) (<span style="color: #7a378b;">pos?</span> price)))
+    (core/order-modify (<span style="color: #7a378b;">:id</span> order) price sl tp)))
+
+<span style="color: #b22222;">;;</span><span style="color: #b22222;">TOOD: how do we get map with defaults?
+</span>(<span style="color: #a020f0;">defn-</span> <span style="color: #0000ff;">verify-order</span> [{<span style="color: #7a378b;">:keys</span> [slip symbol type price tp sl lots]
+                      <span style="color: #7a378b;">:or</span> {slip 3 sl 0 tp 0}}]
+  (<span style="color: #228b22;">is</span> (<span style="color: #a020f0;">and</span> (<span style="color: #7a378b;">number?</span> slip) (<span style="color: #7a378b;">&gt;</span> slip 0) (<span style="color: #7a378b;">integer?</span> slip))
+      <span style="color: #8b2252;">"invalid order slip %s"</span> slip)
+  (<span style="color: #228b22;">is</span> (<span style="color: #a020f0;">and</span> (<span style="color: #7a378b;">keyword?</span> type) (<span style="color: #7a378b;">number?</span> lots)
+           (<span style="color: #7a378b;">number?</span> tp) (<span style="color: #7a378b;">number?</span> sl) (<span style="color: #7a378b;">number?</span> price))) 
+  (<span style="color: #228b22;">is</span> (<span style="color: #a020f0;">and</span> (<span style="color: #7a378b;">string?</span> symbol) (<span style="color: #7a378b;">&gt;</span> lots 0)
+           (<span style="color: #7a378b;">&gt;=</span> tp 0) (<span style="color: #7a378b;">&gt;=</span> sl 0) (<span style="color: #7a378b;">&gt;=</span> price 0)))  
+  (<span style="color: #a020f0;">cond</span>
+    (<span style="color: #a020f0;">or</span> (<span style="color: #7a378b;">=</span> type <span style="color: #7a378b;">:sell</span>) (<span style="color: #7a378b;">=</span> type <span style="color: #7a378b;">:sell-limit</span>) (<span style="color: #7a378b;">=</span> type <span style="color: #7a378b;">:sell-stop</span>))
+    (<span style="color: #228b22;">is</span> (<span style="color: #a020f0;">or</span> (<span style="color: #a020f0;">and</span> (zero? sl) (zero? tp))
+            (<span style="color: #a020f0;">and</span> (zero? sl) tp (<span style="color: #7a378b;">&lt;</span> tp price))
+            (<span style="color: #a020f0;">and</span> (zero? tp) sl (<span style="color: #7a378b;">&gt;</span> sl price))
+            (<span style="color: #a020f0;">and</span> (<span style="color: #7a378b;">&lt;</span> tp sl) (<span style="color: #7a378b;">&lt;</span> tp price) (<span style="color: #7a378b;">&gt;</span> sl price)))
+        <span style="color: #8b2252;">"invalid %s order with sl/tp %s/%s with price of %s"</span> type sl tp price)
+    (<span style="color: #a020f0;">or</span> (<span style="color: #7a378b;">=</span> type <span style="color: #7a378b;">:buy</span>) (<span style="color: #7a378b;">=</span> type <span style="color: #7a378b;">:buy-limit</span>) (<span style="color: #7a378b;">=</span> type <span style="color: #7a378b;">:buy-stop</span>))
+    (<span style="color: #228b22;">is</span> (<span style="color: #a020f0;">or</span> (<span style="color: #a020f0;">and</span> (zero? sl) (zero? tp))
+            (<span style="color: #a020f0;">and</span> (zero? sl) tp (<span style="color: #7a378b;">&gt;</span> tp price))
+            (<span style="color: #a020f0;">and</span> (zero? tp) sl (<span style="color: #7a378b;">&lt;</span> sl price))
+            (<span style="color: #a020f0;">and</span> (<span style="color: #7a378b;">&gt;</span> tp sl) (<span style="color: #7a378b;">&gt;</span> tp price) (<span style="color: #7a378b;">&lt;</span> sl price)))
+        <span style="color: #8b2252;">"invalid %s order with sl/tp %s/%s with price of %s"</span> type sl tp price)
+    true (throwf <span style="color: #8b2252;">"invalid %s order with sl/tp %s/%s with price of %s"</span>
+                 type sl tp price))) 
+
+<span style="color: #b22222;">;;</span><span style="color: #b22222;">TODO: change to make reliable and to work for ECN brokers and such
+</span>(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">order!</span> [{<span style="color: #7a378b;">:keys</span> [symbol type price tp sl lots slip]
+               <span style="color: #7a378b;">:as</span> order <span style="color: #7a378b;">:or</span> {slip 3 sl 0 tp 0}}]
+  (verify-order order)
+  (iff (core/order-send symbol type lots price sl tp slip)
+       (<span style="color: #7a378b;">merge</span> {<span style="color: #7a378b;">:sl</span> sl <span style="color: #7a378b;">:tp</span> tp <span style="color: #7a378b;">:slip</span> slip} (<span style="color: #7a378b;">merge</span> order {<span style="color: #7a378b;">:id</span> it }))
+       it))
+
+(<span style="color: #7a378b;">comment</span>
+  (<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">order!</span> [{<span style="color: #7a378b;">:keys</span> [symbol type price tp sl lots slip]
+                 <span style="color: #7a378b;">:as</span> order <span style="color: #7a378b;">:or</span> {slip 3 sl 0 tp 0}}]
+    (verify-order order) 
+    (iff-let [id (core/order-send symbol type lots price)]
+             (<span style="color: #a020f0;">do</span> 
+               (<span style="color: #a020f0;">if</span> (<span style="color: #a020f0;">or</span> (<span style="color: #a020f0;">and</span> sl (<span style="color: #7a378b;">not</span> (zero? sl)))
+                       (<span style="color: #a020f0;">and</span> tp (<span style="color: #7a378b;">not</span> (zero? tp))))
+                 (iff (core/order-modify id price sl tp)
+                      (<span style="color: #7a378b;">merge</span> order {<span style="color: #7a378b;">:id</span> id <span style="color: #7a378b;">:slip</span> slip <span style="color: #7a378b;">:tp</span> tp <span style="color: #7a378b;">:sl</span> sl})
+                      (<span style="color: #7a378b;">merge</span> order {<span style="color: #7a378b;">:id</span> id <span style="color: #7a378b;">:e</span> it <span style="color: #7a378b;">:sl</span> 0 <span style="color: #7a378b;">:tp</span> 0}))
+                 (<span style="color: #7a378b;">merge</span> order {<span style="color: #7a378b;">:id</span> id <span style="color: #7a378b;">:sl</span> 0 <span style="color: #7a378b;">:tp</span> 0})))
+             id))) 
+
+(<span style="color: #a020f0;">defn-</span> <span style="color: #0000ff;">immigrate</span> [&amp; syms]
+  (<span style="color: #a020f0;">let</span> [core-ns (<span style="color: #7a378b;">find-ns</span> 'forex.module.account.core)
+        publics (<span style="color: #7a378b;">ns-publics</span> 'forex.module.account.core)]
+    (on [s syms]
+      (<span style="color: #a020f0;">let</span> [sym  (<span style="color: #7a378b;">symbol</span> (camel-to-dash s))]
+        (<span style="color: #7a378b;">intern</span> *ns* sym (<span style="color: #7a378b;">var-get</span> (<span style="color: #7a378b;">intern</span> core-ns sym)))))))
+
+
+<span style="color: #b22222;">;;</span><span style="color: #b22222;">account common
+</span>
+
+(<span style="color: #a020f0;">defn-</span> <span style="color: #0000ff;">sym</span> [a] (<span style="color: #7a378b;">symbol</span> (camel-to-dash a)))
+(<span style="color: #a020f0;">defmacro-</span> <span style="color: #0000ff;">single</span> [name] `(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">~</span>(sym name) [] (receive! ~name)))
+(<span style="color: #a020f0;">defmacro-</span> <span style="color: #0000ff;">double-single</span> [name] `(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">~</span>(sym name) [] (receive-double! ~name)))
+(<span style="color: #a020f0;">defmacro-</span> <span style="color: #0000ff;">singles</span> [&amp; names] `(<span style="color: #a020f0;">do</span> ~@(<span style="color: #7a378b;">map</span> (<span style="color: #7a378b;">fn</span> [a] `(single ~a)) names)))
+(<span style="color: #a020f0;">defmacro-</span> <span style="color: #0000ff;">double-singles</span> [&amp; names] `(<span style="color: #a020f0;">do</span> ~@(<span style="color: #7a378b;">map</span> (<span style="color: #7a378b;">fn</span> [a] `(double-single ~a)) names)))
+
+<span style="color: #b22222;">;;</span><span style="color: #b22222;">none of the below singles or double-singles should throw a mql error - therefore, it is a bug if they do
+</span>(singles 
+ <span style="color: #8b2252;">"AccountCurrency"</span>
+ <span style="color: #8b2252;">"AccountCompany"</span>
+ <span style="color: #8b2252;">"AccountServer"</span> 
+ <span style="color: #8b2252;">"AccountName"</span>
+ <span style="color: #8b2252;">"AccountNumber"</span>)
+
+(double-singles
+ <span style="color: #8b2252;">"AccountCredit"</span>
+ <span style="color: #8b2252;">"AccountBalance"</span>
+ <span style="color: #8b2252;">"AccountEquity"</span>
+ <span style="color: #8b2252;">"AccountFreeMargin"</span>
+ <span style="color: #8b2252;">"AccountLeverage"</span>
+ <span style="color: #8b2252;">"AccountMargin"</span>
+ <span style="color: #8b2252;">"AccountProfit"</span>
+ <span style="color: #8b2252;">"OrdersTotal"</span>)
+<span style="color: #b22222;">;;</span><span style="color: #b22222;">
+</span>
+(<span style="color: #a020f0;">defmacro-</span> <span style="color: #0000ff;">define-market-info</span> [&amp; args]
+  `(<span style="color: #a020f0;">do</span> ~@(<span style="color: #7a378b;">map</span> (<span style="color: #7a378b;">fn</span> [[name num]]
+                `(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">~</span>(symbolicate <span style="color: #8b2252;">"mode-"</span> name)
+                   ([] (~(symbolicate <span style="color: #8b2252;">"mode-"</span> name) (env <span style="color: #7a378b;">:symbol</span>)))
+                   ([symbol#]
+                      (core/market-info symbol# ~num))))
+              (group args))))
+
+(define-market-info
+  low 1
+  high 2
+  time 5
+  bid 9
+  ask 10
+  point 11
+  digits 12
+  spread 13
+  stoplevel 14
+  lotsize 15
+  tickvalue 16
+  ticksize 17
+  swaplong 18
+  swapshort 19
+  starting 20
+  expiration 21
+  trade-allowed 22
+  minlot 23
+  lotstep 24
+  maxlot 25
+  swaptype 26
+  profitcalcmode 27
+  margincalcmode 28
+  margininit 29
+  marginmaintenance 30
+  marginhedged 31
+  marginrequired 32
+  freezelevel 33)
+
+(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">demo?</span> []
+  (<span style="color: #a020f0;">if</span> (<span style="color: #7a378b;">re-find</span> #<span style="color: #8b2252;">"(?i)demo"</span> (account-server))
+    true
+    false))
+</pre></div>
+
+
+</div>
+
+</div>
+
+<div id="outline-container-3_2_2" class="outline-4">
+<h4 id="sec-3_2_2"><span class="section-number-4">3.2.2</span> Ea </h4>
+<div class="outline-text-4" id="text-3_2_2">
+
+
+
+
+<div class="org-src-container"><label class="org-src-name">ea-common()</label><pre class="src src-clojure">
+(<span style="color: #a020f0;">ns</span> forex.module.ea.common
+  (<span style="color: #7a378b;">:use</span> utils.general forex.util.general
+        utils.fiber.spawn clojure.contrib.core)
+  (<span style="color: #7a378b;">:require</span> [clj-time.core <span style="color: #7a378b;">:as</span> t])
+  (<span style="color: #7a378b;">:use</span>
+   forex.util.log
+   forex.module.error.common
+   forex.module.indicator.common
+   forex.module.account.common))
+
+<span style="color: #b22222;">;;</span><span style="color: #b22222;">##ea implementation
+</span>(<span style="color: #a020f0;">defonce</span> <span style="color: #0000ff;">*ea*</span> (<span style="color: #7a378b;">atom</span> []))
+(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">every</span> [pred coll]
+  (<span style="color: #a020f0;">if</span> (<span style="color: #7a378b;">empty?</span> coll)
+    false
+    (<span style="color: #a020f0;">loop</span> [a coll]
+      (<span style="color: #a020f0;">if</span> (<span style="color: #7a378b;">empty?</span> a)
+        true
+        (<span style="color: #a020f0;">if</span> (<span style="color: #7a378b;">not</span> (pred (<span style="color: #7a378b;">first</span> a)))
+          false
+          (<span style="color: #a020f0;">recur</span> (<span style="color: #7a378b;">rest</span> a)))))))
+
+(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">query</span> [m]
+  (<span style="color: #7a378b;">filter</span>
+   (<span style="color: #7a378b;">fn</span> [ea]
+     (<span style="color: #a020f0;">if</span> (every (<span style="color: #7a378b;">fn</span> [[key val]]
+                  (<span style="color: #7a378b;">=</span> val (ea key)))
+                m)
+       ea))
+   @*ea*))
+(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">alive?</span> [ea] (pid? (<span style="color: #7a378b;">:pid</span> ea)))
+
+(<span style="color: #a020f0;">defmacro</span> <span style="color: #0000ff;">catch-unexpected</span> [prefix &amp; body]
+  `(<span style="color: #a020f0;">try</span> (<span style="color: #a020f0;">do</span> ~@body)
+        (<span style="color: #a020f0;">catch</span> Exception e# (severe <span style="color: #8b2252;">"%s - caught unexpected error %s"</span> ~prefix e#))))
+
+(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">run-by-tick</span> [{<span style="color: #7a378b;">:keys</span> [symbol timeframe name deinit init start] <span style="color: #7a378b;">:as</span> ea}]
+  (debugging
+   (<span style="color: #7a378b;">format</span> <span style="color: #8b2252;">"%s_%s %s: "</span> symbol timeframe name)
+   (wenv (<span style="color: #7a378b;">:symbol</span> symbol <span style="color: #7a378b;">:timeframe</span> timeframe)
+         (<span style="color: #a020f0;">try</span>
+           (init)
+           (<span style="color: #a020f0;">loop</span> [prev-close nil]
+             (sleep 1)
+             (<span style="color: #a020f0;">when-not</span> (match (? 0) <span style="color: #8b2252;">"stop"</span> true) 
+               (<span style="color: #a020f0;">let</span> [new-close (close)]
+                 (<span style="color: #a020f0;">when-not</span> (<span style="color: #7a378b;">=</span> new-close prev-close)
+                   (start ea))
+                 (<span style="color: #a020f0;">recur</span> new-close)))) 
+           (<span style="color: #a020f0;">catch</span> Exception e 
+             (severe <span style="color: #8b2252;">"caught exception %s ... stopping ea"</span> e)
+             (.printStackTrace e))
+           (<span style="color: #a020f0;">finally</span>
+            (warn <span style="color: #8b2252;">"stopping ea ..."</span>)
+            (catch-unexpected <span style="color: #8b2252;">"deinit"</span> (deinit)))))))
+
+(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">new-ea</span> [ea]
+  (<span style="color: #a020f0;">let</span> [default {<span style="color: #7a378b;">:symbol</span> (env <span style="color: #7a378b;">:symbol</span>)
+                 <span style="color: #7a378b;">:timeframe</span> (env <span style="color: #7a378b;">:timeframe</span>) <span style="color: #7a378b;">:id</span> (<span style="color: #7a378b;">gensym</span>)
+                 <span style="color: #7a378b;">:deinit</span> (<span style="color: #7a378b;">constantly</span> true)
+                 <span style="color: #7a378b;">:init</span> (<span style="color: #7a378b;">constantly</span> true)}
+        m (<span style="color: #7a378b;">merge</span> default ea)
+        {<span style="color: #7a378b;">:keys</span> [symbol timeframe run name start init deinit]} m
+        m (<span style="color: #7a378b;">merge</span> {<span style="color: #7a378b;">:run</span> (<span style="color: #7a378b;">partial</span> run-by-tick m)} m)]
+    (<span style="color: #228b22;">is</span> (<span style="color: #a020f0;">and</span> name start symbol timeframe))
+    (<span style="color: #228b22;">is</span> (<span style="color: #a020f0;">and</span> (<span style="color: #7a378b;">fn?</span> start) (<span style="color: #7a378b;">fn?</span> init) (<span style="color: #a020f0;">or</span> (<span style="color: #7a378b;">nil?</span> run) (<span style="color: #7a378b;">fn?</span> run)) (<span style="color: #7a378b;">fn?</span> deinit)))
+    m))
+
+<span style="color: #b22222;">;;</span><span style="color: #b22222;">TODO: pid without spawn!!
+</span>(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">run</span> [ea]
+  (<span style="color: #a020f0;">let</span> [new-ea (<span style="color: #7a378b;">merge</span> ea {<span style="color: #7a378b;">:pid</span> (spawn #((<span style="color: #7a378b;">:run</span> ea)))})]
+    (<span style="color: #7a378b;">swap!</span> *ea* conj new-ea)
+    new-ea))
+(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">run-ea</span> [ea] (run (new-ea ea))) 
+<span style="color: #b22222;">;;</span><span style="color: #b22222;">TODO: wait till it stops and delete
+</span>(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">stop</span> [ea]
+  (<span style="color: #a020f0;">let</span> [stop-it (<span style="color: #7a378b;">fn</span> [e]
+                  (<span style="color: #a020f0;">if</span> (pid? (<span style="color: #7a378b;">:pid</span> e))
+                    (<span style="color: #a020f0;">do</span> (! (<span style="color: #7a378b;">:pid</span> e) <span style="color: #8b2252;">"stop"</span>)
+                        (<span style="color: #7a378b;">reset!</span> *ea* (<span style="color: #7a378b;">remove</span> #{e} @*ea*))
+                        true)
+                    (<span style="color: #a020f0;">do</span> (<span style="color: #7a378b;">reset!</span> *ea* (<span style="color: #7a378b;">remove</span> #{e} @*ea*)) nil)))]
+    (<span style="color: #a020f0;">if</span> (<span style="color: #7a378b;">map?</span> ea)
+      (stop-it ea)
+      (<span style="color: #7a378b;">map</span> stop-it ea))))
+</pre></div>
+
+
+</div>
+
+</div>
+
+<div id="outline-container-3_2_3" class="outline-4">
+<h4 id="sec-3_2_3"><span class="section-number-4">3.2.3</span> Error </h4>
+<div class="outline-text-4" id="text-3_2_3">
+
+
+
+
+<div class="org-src-container"><label class="org-src-name">error-common()</label><pre class="src src-clojure">
+<span style="color: #b22222;">;;</span><span style="color: #b22222;">forex.module.error.common - utilities for handling mql errors
+</span>
+(<span style="color: #a020f0;">ns</span> forex.module.error.common
+  (<span style="color: #7a378b;">:require</span> [forex.backend.mql.socket-service <span style="color: #7a378b;">:as</span> s])
+  (<span style="color: #7a378b;">:use</span> utils.general emacs 
+        forex.util.general))
+
+<span style="color: #b22222;">;;</span><span style="color: #b22222;">raw receive
+</span>(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">raw-receive</span> [msg]
+  (s/receive msg))
+(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">raw-receive-lst</span> [msg]
+  (split (raw-receive msg) #<span style="color: #8b2252;">" +"</span>))
+
+
+<span style="color: #b22222;">;;</span><span style="color: #b22222;">receive with errors
+</span>(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">receive!</span> [msg]
+  (<span style="color: #a020f0;">let</span> [spl (raw-receive-lst msg)]
+    (<span style="color: #a020f0;">if</span> (<span style="color: #7a378b;">=</span> (<span style="color: #7a378b;">first</span> spl) <span style="color: #8b2252;">"error"</span>)
+      (throwf <span style="color: #8b2252;">"MQL error %s"</span> (<span style="color: #7a378b;">second</span> spl))
+      (<span style="color: #228b22;">join</span> <span style="color: #8b2252;">" "</span>  spl))))
+
+(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">receive-lst!</span> [msg]
+  (<span style="color: #a020f0;">let</span> [spl (raw-receive-lst msg)]
+    (<span style="color: #a020f0;">if</span> (<span style="color: #7a378b;">=</span> (<span style="color: #7a378b;">first</span> spl) <span style="color: #8b2252;">"error"</span>)
+      (throwf <span style="color: #8b2252;">"MQL error %s"</span> (<span style="color: #7a378b;">second</span> spl))
+      spl)))
+
+(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">receive-double!</span> [msg]
+  (Double/parseDouble (receive! msg)))
+
+<span style="color: #b22222;">;;</span><span style="color: #b22222;">receive with default instead of errors, returns error object for errors
+</span><span style="color: #b22222;">;;</span><span style="color: #b22222;">is customizable to default to errors!
+</span>(<span style="color: #a020f0;">defrecord</span> <span style="color: #0000ff;">MqlErr</span> [e])
+(<span style="color: #a020f0;">defonce-</span> <span style="color: #0000ff;">*er*</span> (<span style="color: #7a378b;">gensym</span>)) 
+(<span style="color: #a020f0;">def</span> <span style="color: #0000ff;">*default*</span> *er*)
+
+(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">e?</span> [a] (<span style="color: #7a378b;">instance?</span> MqlErr a))
+
+(<span style="color: #a020f0;">defmacro</span> <span style="color: #0000ff;">iff-let</span>
+  ([test then] `(iff-let ~test ~then nil))
+  ([[var test] then else]
+     `(<span style="color: #a020f0;">let</span> [~var ~test]
+        (<span style="color: #a020f0;">if</span> (<span style="color: #a020f0;">and</span> test (<span style="color: #7a378b;">not</span> (e? ~var)))
+          ~then
+          ~else))))
+
+(<span style="color: #a020f0;">defmacro</span> <span style="color: #0000ff;">iff</span>
+  ([test then] `(iff ~test ~then nil))
+  ([test then else]
+     `(iff-let [~'it ~test]
+               ~then ~else)))
+
+(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">receive</span>
+  ([msg] (receive msg *default*))
+  ([msg default]
+     (<span style="color: #a020f0;">let</span> [spl (raw-receive-lst msg)]
+       (<span style="color: #a020f0;">if</span> (<span style="color: #7a378b;">=</span> (<span style="color: #7a378b;">first</span> spl) <span style="color: #8b2252;">"error"</span>)
+         (<span style="color: #a020f0;">if</span> (<span style="color: #7a378b;">=</span> default *er*)
+           (MqlErr. (Integer/parseInt (<span style="color: #7a378b;">second</span> spl)))
+           (<span style="color: #a020f0;">if</span> (<span style="color: #7a378b;">fn?</span> default) (default (MqlErr. (Integer/parseInt (<span style="color: #7a378b;">second</span> spl)))) default))
+         (<span style="color: #228b22;">join</span> <span style="color: #8b2252;">""</span> spl)))))
+
+(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">receive-double</span>
+  ([msg] (receive-double msg *default*))
+  ([msg default]
+     (<span style="color: #a020f0;">let</span> [spl (raw-receive-lst msg)]
+       (<span style="color: #a020f0;">if</span> (<span style="color: #7a378b;">=</span> (<span style="color: #7a378b;">first</span> spl) <span style="color: #8b2252;">"error"</span>)
+         (<span style="color: #a020f0;">if</span> (<span style="color: #7a378b;">=</span> default *er*)
+           (MqlErr. (Integer/parseInt (<span style="color: #7a378b;">second</span> spl)))
+           (<span style="color: #a020f0;">if</span> (<span style="color: #7a378b;">fn?</span> default) (default (MqlErr. (Integer/parseInt (<span style="color: #7a378b;">second</span> spl)))) default))
+         (Double/parseDouble (<span style="color: #228b22;">join</span> <span style="color: #8b2252;">" "</span>  spl))))))
+
+(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">receive-int</span> [s]
+  (iff (receive-double s)
+       (<span style="color: #7a378b;">int</span> it)
+       it))
+</pre></div>
+
+
+</div>
+
+</div>
+
+<div id="outline-container-3_2_4" class="outline-4">
+<h4 id="sec-3_2_4"><span class="section-number-4">3.2.4</span> Indicator </h4>
+<div class="outline-text-4" id="text-3_2_4">
+
+
+
+
+<div class="org-src-container"><label class="org-src-name">indicator-common()</label><pre class="src src-clojure">
+<span style="color: #b22222;">;; </span><span style="color: #b22222;">forex.indicator.common - interfacing with java indicators and local caching of indicators
+</span>(<span style="color: #a020f0;">ns</span> forex.module.indicator.common
+  (<span style="color: #7a378b;">:use</span>
+   utils.general 
+   forex.util.general
+   forex.module.account.common
+   forex.module.error.common)
+  (<span style="color: #7a378b;">:require</span> [forex.module.error.common <span style="color: #7a378b;">:as</span> s]))
+
+<span style="color: #b22222;">;;</span><span style="color: #b22222;">high low open close
+</span>(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">get-rel-data</span> [<span style="color: #228b22;">^String</span> symbol <span style="color: #228b22;">^Integer</span> timeframe <span style="color: #228b22;">^Integer</span> from <span style="color: #228b22;">^Integer</span> to]
+  (<span style="color: #228b22;">is</span>  (<span style="color: #7a378b;">&gt;=</span> to from) <span style="color: #8b2252;">"in get-data, from/to is invalid"</span>)
+  (<span style="color: #a020f0;">loop</span> [dat nil retries 0]
+    (<span style="color: #a020f0;">if</span> (<span style="color: #7a378b;">&gt;</span> retries 3) (throwf <span style="color: #8b2252;">"MQL error %s"</span> (<span style="color: #7a378b;">second</span> dat)))
+    (<span style="color: #a020f0;">let</span> [data (s/raw-receive-lst (<span style="color: #7a378b;">format</span> <span style="color: #8b2252;">"bars_relative %s %s %s %s"</span>
+                                      symbol timeframe from to))]
+      (<span style="color: #a020f0;">if</span> (<span style="color: #7a378b;">=</span> (<span style="color: #7a378b;">first</span> data) <span style="color: #8b2252;">"error"</span>) 
+        (<span style="color: #a020f0;">do</span> (sleep 0.4) (<span style="color: #a020f0;">recur</span> data (<span style="color: #7a378b;">+</span> retries 1)))
+        data)))) 
+
+(<span style="color: #a020f0;">defn-</span> <span style="color: #0000ff;">rel</span> [i]
+  (<span style="color: #a020f0;">let</span> [sym (env <span style="color: #7a378b;">:symbol</span>)
+        time (env <span style="color: #7a378b;">:timeframe</span>)]
+    (<span style="color: #228b22;">is</span> (<span style="color: #a020f0;">and</span> (<span style="color: #7a378b;">string?</span> sym) (<span style="color: #7a378b;">integer?</span> time)))
+    (get-rel-data sym time i i)))
+
+(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">high</span>
+  ([] (high 0)) 
+  ([i] (Double/parseDouble (<span style="color: #7a378b;">nth</span> (rel i) 1))))
+(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">open</span> 
+  ([] (open 0))
+  ([i] (Double/parseDouble (<span style="color: #7a378b;">nth</span> (rel i) 3))))
+(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">low</span>
+  ([] (low 0))
+  ([i] (Double/parseDouble (<span style="color: #7a378b;">nth</span> (rel i) 2))))
+(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">close</span>
+  ([] (close 0))
+  ([i] (Double/parseDouble (<span style="color: #7a378b;">nth</span> (rel i) 4))))
+
+(<span style="color: #7a378b;">comment</span>
+  (<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">open</span>
+   ([] (open 0))  
+   ([i] (.open (get-stream (env <span style="color: #7a378b;">:symbol</span>) (env <span style="color: #7a378b;">:timeframe</span>)) i)))
+  (<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">high</span>
+    ([] (high 0))
+    ([i] (.high (get-stream (env <span style="color: #7a378b;">:symbol</span>) (env <span style="color: #7a378b;">:timeframe</span>)) i))) 
+  (<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">low</span>
+    ([] (low 0)) 
+    ([i] (.low (get-stream (env <span style="color: #7a378b;">:symbol</span>) (env <span style="color: #7a378b;">:timeframe</span>)) i))) 
+  (<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">close</span>
+    ([] (close 0)) 
+    ([i] (.close (get-stream (env <span style="color: #7a378b;">:symbol</span>) (env <span style="color: #7a378b;">:timeframe</span>)) i))))
+<span style="color: #b22222;">;;</span><span style="color: #b22222;">TODO: change
+</span>(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">ask</span>
+  ([] (ask 0))
+  ([i] (iff (mode-ask (env <span style="color: #7a378b;">:symbol</span>)) it (throwf <span style="color: #8b2252;">"MQL error %s"</span> (<span style="color: #7a378b;">:e</span> it)))))
+<span style="color: #b22222;">;;</span><span style="color: #b22222;">bid==close 
+</span>(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">bid</span>
+  ([] (bid 0))
+  ([i] (iff (mode-bid (env <span style="color: #7a378b;">:symbol</span>)) it (throwf <span style="color: #8b2252;">"MQL error %s"</span> (<span style="color: #7a378b;">:e</span> it)))))
+
+(<span style="color: #7a378b;">comment</span>
+  (<span style="color: #a020f0;">ns</span> forex.indicator.common
+    (<span style="color: #7a378b;">:use</span> utils.general forex.util.general
+          forex.backend.common)
+    (<span style="color: #7a378b;">:require</span> [ forex.backend.common.core <span style="color: #7a378b;">:as</span> common])
+    (<span style="color: #7a378b;">:import</span> (indicators SMA RSI CCI ATR VMA EMA)))
+
+  <span style="color: #b22222;">;;</span><span style="color: #b22222;">Indicator Cache Strategy - if indicator is deinitialized, then we must get rid of it! ???
+</span>
+  (<span style="color: #a020f0;">defmacro</span> <span style="color: #0000ff;">mem-local-indicator</span> [function cache-var results-var]
+    `(mem (<span style="color: #7a378b;">fn</span> [indicator-name# &amp; args#]
+            (<span style="color: #a020f0;">let</span> [result# (<span style="color: #7a378b;">apply</span> ~function args#)]
+              (<span style="color: #7a378b;">swap!</span> ~results-var assoc (<span style="color: #7a378b;">list</span> indicator-name# args#) result#)
+              (.ex result#)
+              result#))
+          (naive-var-local-cache-strategy ~cache-var)))
+
+  (<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">def-indicator</span> [name create]
+    (<span style="color: #a020f0;">let</span> [memoize-create (mem-local-indicator
+                          create common/*indicators-cache*
+                          common/*indicators*)]
+      (<span style="color: #7a378b;">fn</span> <span style="color: #0000ff;">indicator</span>
+        ([params] (indicator params 0))
+        ([params index]
+           (<span style="color: #a020f0;">let</span> [price-stream (get-stream (env <span style="color: #7a378b;">:symbol</span>) (env <span style="color: #7a378b;">:timeframe</span>))
+                 stream (memoize-create name price-stream params)] 
+             (<span style="color: #a020f0;">if</span> index
+               (with-read-lock common/*indicator-lock* (.get stream index)) 
+               (<span style="color: #7a378b;">fn</span> <span style="color: #0000ff;">ind</span> ([] (ind 0))
+                 ([index] (with-read-lock common/*indicator-lock*
+                            (.get stream index))))))))))
+
+  (<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">def-price-indicator</span> [name create]
+    (<span style="color: #a020f0;">let</span> [memoize-create
+          (mem-local-indicator
+           create
+           common/*indicators-cache*
+           common/*indicators*)]
+      (<span style="color: #7a378b;">fn</span> <span style="color: #0000ff;">indicator</span>
+        ([params] (indicator params 0))
+        ([params index]
+           (<span style="color: #a020f0;">let</span> [price-stream (get-stream (env <span style="color: #7a378b;">:symbol</span>) (env <span style="color: #7a378b;">:timeframe</span>))
+                 stream (memoize-create name price-stream
+                                        (.Close price-stream) params)]
+             (<span style="color: #a020f0;">if</span> index
+               (with-read-lock common/*indicator-lock* (.get stream index))
+               (<span style="color: #7a378b;">fn</span> <span style="color: #0000ff;">ind</span> ([] (ind 0))
+                 ([index] (with-read-lock common/*indicator-lock*
+                            (.get stream index))))))))))
+
+  (<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">open</span>
+    ([] (open 0))  
+    ([i] (.open (get-stream (env <span style="color: #7a378b;">:symbol</span>) (env <span style="color: #7a378b;">:timeframe</span>)) i)))
+  (<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">high</span>
+    ([] (high 0))
+    ([i]
+       (.high (get-stream (env <span style="color: #7a378b;">:symbol</span>) (env <span style="color: #7a378b;">:timeframe</span>)) i))) 
+  (<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">low</span>
+    ([] (low 0)) 
+    ([i]
+       (.low (get-stream (env <span style="color: #7a378b;">:symbol</span>) (env <span style="color: #7a378b;">:timeframe</span>)) i))) 
+  (<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">close</span>
+    ([] (close 0)) 
+    ([i] 
+       (.close (get-stream (env <span style="color: #7a378b;">:symbol</span>) (env <span style="color: #7a378b;">:timeframe</span>)) i)))
+
+  <span style="color: #b22222;">;;</span><span style="color: #b22222;">TODO: if indicator is 'deinitialized' - clear from cache!
+</span>
+  (<span style="color: #a020f0;">def</span> <span style="color: #0000ff;">sma</span> (def-price-indicator 'sma
+             (<span style="color: #7a378b;">fn</span> [price stream period] (SMA. price stream period))))
+  (<span style="color: #a020f0;">def</span> <span style="color: #0000ff;">ema</span> (def-price-indicator 'ema
+             (<span style="color: #7a378b;">fn</span> [price stream period] (EMA. price stream period))))
+  (<span style="color: #a020f0;">def</span> <span style="color: #0000ff;">rsi</span> (def-price-indicator 'rsi
+             (<span style="color: #7a378b;">fn</span> [price stream period] (RSI. price  stream period))))
+  (<span style="color: #a020f0;">def</span> <span style="color: #0000ff;">atr</span> (def-indicator 'atr
+             (<span style="color: #7a378b;">fn</span> [price period] (ATR. price period))))
+  (<span style="color: #a020f0;">def</span> <span style="color: #0000ff;">cci</span> (def-indicator 'cci
+             (<span style="color: #7a378b;">fn</span> [price period] (CCI. price period))))
+  (<span style="color: #a020f0;">def</span> <span style="color: #0000ff;">vma</span> (def-indicator 'vma
+             (<span style="color: #7a378b;">fn</span> [price [adx_period weight period]]
+               (VMA. price adx_period weight period))))
+
+  <span style="color: #b22222;">;;</span><span style="color: #b22222;">BUG IN VMA - paramaters [2 2 1]
+</span>
+
+  )
+</pre></div>
+
+
+
+</div>
+</div>
+
+</div>
+
+<div id="outline-container-3_3" class="outline-3">
+<h3 id="sec-3_3"><span class="section-number-3">3.3</span> Util </h3>
+<div class="outline-text-3" id="text-3_3">
+
+
+</div>
+
+<div id="outline-container-3_3_1" class="outline-4">
+<h4 id="sec-3_3_1"><span class="section-number-4">3.3.1</span> General </h4>
+<div class="outline-text-4" id="text-3_3_1">
+
+
+
+
+<div class="org-src-container"><label class="org-src-name">forex-util-general()</label><pre class="src src-clojure">
+<span style="color: #b22222;">;; </span><span style="color: #b22222;">forex.util.general - general utilities for clj-forex
+</span>
+(<span style="color: #a020f0;">ns</span> forex.util.general
+  (<span style="color: #7a378b;">:use</span> utils.general forex.util.spawn forex.util.log)
+  (<span style="color: #7a378b;">:import</span> (org.joda.time DateTime DateTimeZone Instant)))
+
+(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">symbolicate</span>
+  <span style="color: #8b2252;">"symbolicate symbols together. ignores things like whitespaces, just drops them!"</span>
+  [&amp; args]
+  (<span style="color: #7a378b;">symbol</span> (<span style="color: #7a378b;">apply</span> str args)))
+
+
+<span style="color: #b22222;">;;</span><span style="color: #b22222;">TODO: add support for waiting on multiple objects, including sockets!
+</span>(<span style="color: #a020f0;">defprotocol</span> <span style="color: #0000ff;">PWait</span>
+  (wait-for [this timeout units] [this timeout]))
+<span style="color: #b22222;">;;</span><span style="color: #b22222;">copied from clojure source, but adding timeout wait-for
+</span>(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">beg</span>
+  <span style="color: #8b2252;">"Alpha - subject to change.
+  Returns a promise object that can be read with deref/@, and set,
+  once only, with deliver. Calls to deref/@ prior to delivery will
+  block. All subsequent derefs will return the same delivered value
+  without blocking."</span>
+  {<span style="color: #7a378b;">:added</span> <span style="color: #8b2252;">"1.1"</span>}
+  []
+  (<span style="color: #a020f0;">let</span> [d (java.util.concurrent.CountDownLatch. 1)
+        v (<span style="color: #7a378b;">atom</span> nil)]
+    (<span style="color: #7a378b;">reify</span> 
+      clojure.lang.IDeref
+      (<span style="color: #7a378b;">deref</span> [_] (.await d) @v)
+      PWait
+      (wait-for [this timeout]
+                (wait-for this timeout
+                          java.util.concurrent.TimeUnit/MILLISECONDS))
+      (wait-for [this timeout units]
+                (<span style="color: #a020f0;">if</span> timeout
+                  (.await d timeout units)
+                  (<span style="color: #a020f0;">do</span> (.await d) true)))
+      clojure.lang.IFn
+      (invoke [this x] 
+              (<span style="color: #7a378b;">locking</span> d
+                (<span style="color: #a020f0;">if</span> (<span style="color: #7a378b;">pos?</span> (.getCount d))
+                  (<span style="color: #a020f0;">do</span> (<span style="color: #7a378b;">reset!</span> v x)
+                      (.countDown d)
+                      x)
+                  (<span style="color: #a020f0;">throw</span>
+                   (IllegalStateException.
+                    <span style="color: #8b2252;">"Multiple deliver calls to a promise"</span>))))))))
+
+(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">give</span>
+  <span style="color: #8b2252;">"Alpha - subject to change.
+  Delivers the supplied value to the promise, releasing any pending
+  derefs. A subsequent call to deliver on a promise will throw an exception."</span>
+  {<span style="color: #7a378b;">:added</span> <span style="color: #8b2252;">"1.1"</span>}
+  [promise val]
+  (<span style="color: #7a378b;">promise</span> val))
+
+
+
+(<span style="color: #a020f0;">defmacro</span> <span style="color: #0000ff;">awhen</span> [test &amp; body]
+  `(<span style="color: #a020f0;">when-let</span> [~'it ~test]
+     ~@body))
+
+(<span style="color: #a020f0;">defmacro</span> <span style="color: #0000ff;">naive-var-local-cache-strategy</span> [var] 
+ `(<span style="color: #a020f0;">let</span> [cache# (<span style="color: #7a378b;">atom</span> {})]
+    (<span style="color: #7a378b;">reify</span> PCachingStrategy
+      (retrieve [_ item#] (<span style="color: #7a378b;">get</span> @cache# item#))
+      (cached? [_ item#] (<span style="color: #7a378b;">contains?</span> @cache# item#))
+      (hit [this# _] this#)
+      (miss [this# item# result#]
+            (<span style="color: #7a378b;">reset!</span> cache# (<span style="color: #7a378b;">swap!</span> ~var assoc item# result#))
+            this#))))
+
+(<span style="color: #a020f0;">defmacro</span> <span style="color: #0000ff;">constants</span> [&amp; args]
+  `(<span style="color: #a020f0;">do</span> ~@(<span style="color: #7a378b;">map</span> (<span style="color: #7a378b;">fn</span> [[name val]] `(<span style="color: #a020f0;">def</span> <span style="color: #0000ff;">~name</span> ~val)) (group args 2))))
+
+(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">now</span> [] (DateTime. DateTimeZone/UTC))
+
+(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">abs</span>
+  ([] (<span style="color: #7a378b;">int</span> (<span style="color: #7a378b;">/</span> (.getMillis (Instant. (now))) 1000)))
+  ([date] (<span style="color: #7a378b;">int</span> (<span style="color: #7a378b;">/</span> (.getMillis (Instant. date)) 1000))))
+
+(<span style="color: #a020f0;">defmacro</span> <span style="color: #0000ff;">spawn-log</span> [func]
+  `(spawn (<span style="color: #7a378b;">fn</span> [] (<span style="color: #a020f0;">try</span> (~func) (<span style="color: #a020f0;">catch</span> Exception e#
+                                (.printStackTrace e#) (severe e#))))))
+
+(<span style="color: #a020f0;">defonce</span> <span style="color: #0000ff;">*env*</span> (<span style="color: #7a378b;">atom</span> {<span style="color: #7a378b;">:timeframe</span> 1440 <span style="color: #7a378b;">:index</span> 0})) <span style="color: #b22222;">;</span><span style="color: #b22222;">default +D1+
+</span>(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">env</span> [key] (<span style="color: #7a378b;">key</span> @*env*))
+(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">env!</span> [map]
+  (<span style="color: #7a378b;">swap!</span> *env* #(<span style="color: #7a378b;">merge</span> % map))
+  map)
+
+<span style="color: #b22222;">;;</span><span style="color: #b22222;">todo: fix private!
+</span><span style="color: #b22222;">;;</span><span style="color: #b22222;">todo: ignores all nils?
+</span>(<span style="color: #a020f0;">defmacro</span> <span style="color: #0000ff;">wenv</span> [[&amp; args] &amp; body]
+  `(<span style="color: #a020f0;">binding</span> [forex.util.general/*env*
+             (<span style="color: #7a378b;">atom</span> (<span style="color: #7a378b;">merge</span> @@~#'*env* (<span style="color: #7a378b;">hash-map</span> ~@args)))]
+     ~@body))
+
+(<span style="color: #a020f0;">defmacro</span> <span style="color: #0000ff;">with-write-lock</span> [l &amp; body]
+  `(<span style="color: #a020f0;">let</span> [obj# ~l]
+     (<span style="color: #a020f0;">try</span> (<span style="color: #a020f0;">do</span> (.lock (.writeLock obj#)) ~@body)
+          (<span style="color: #a020f0;">finally</span> (.unlock (.writeLock obj#))))))
+
+(<span style="color: #a020f0;">defmacro</span> <span style="color: #0000ff;">with-read-lock</span> [l &amp; body]
+  `(<span style="color: #a020f0;">let</span> [obj# ~l]
+     (<span style="color: #a020f0;">try</span> (<span style="color: #a020f0;">do</span> (.lock (.readLock obj#)) ~@body)
+          (<span style="color: #a020f0;">finally</span> (.unlock (.readLock obj#))))))
+</pre></div>
+
+
+</div>
+
+</div>
+
+<div id="outline-container-3_3_2" class="outline-4">
+<h4 id="sec-3_3_2"><span class="section-number-4">3.3.2</span> Log </h4>
+<div class="outline-text-4" id="text-3_3_2">
+
+
+
+
+<div class="org-src-container"><label class="org-src-name">forex-util-log()</label><pre class="src src-clojure">
+<span style="color: #b22222;">;;</span><span style="color: #b22222;">forex.util.log - log to a log file and to *out* and System/out
+</span>
+(<span style="color: #a020f0;">ns</span> forex.util.log
+  (<span style="color: #7a378b;">:import</span> [java.util.logging Logger Level LogManager Handler
+            FileHandler SimpleFormatter ConsoleHandler])
+  (<span style="color: #7a378b;">:require</span> [clojure.contrib.duck-streams <span style="color: #7a378b;">:as</span> f])
+  (<span style="color: #7a378b;">:use</span> emacs utils.general))
+
+<span style="color: #b22222;">;;</span><span style="color: #b22222;">TODO: minor mode
+</span>(<span style="color: #a020f0;">defvar</span> <span style="color: #0000ff;">log-dir</span> <span style="color: #8b2252;">"%h/.forex"</span>
+  <span style="color: #8b2252;">"Directory of logging"</span>)
+
+(<span style="color: #a020f0;">defn-</span> <span style="color: #0000ff;">formatter</span> []
+  (<span style="color: #a020f0;">let</span> [d (java.util.Date.)]
+    (<span style="color: #7a378b;">proxy</span> [java.util.logging.Formatter] []
+      (<span style="color: #7a378b;">format</span> [r] 
+              (clojure.core/<span style="color: #7a378b;">format</span> <span style="color: #8b2252;">"%s%n%s: %s%n%n"</span>
+                                   (<span style="color: #a020f0;">do</span> (.setTime d (.getMillis r)) d)
+                                   (.getLevel r)
+                                   (.getMessage r))))))
+
+<span style="color: #b22222;">;;</span><span style="color: #b22222;">wrap the PrintWriter *out* in an OutputStream to be used in ConsoleHandler
+</span>(<span style="color: #a020f0;">defn-</span> <span style="color: #0000ff;">new-out-stream</span> [out]
+  (<span style="color: #7a378b;">proxy</span> [java.io.OutputStream] []
+    (close [] (.close out))
+    (<span style="color: #7a378b;">flush</span> [] (.flush out))
+    (write ([b] (.print out (String. b)))
+           ([b off len] (.print out (String. b off len))))))
+
+<span style="color: #b22222;">;;</span><span style="color: #b22222;">TODO: if user deletes log file, it will not be recreated
+</span><span style="color: #b22222;">;;</span><span style="color: #b22222;">this will create a logger which logs to /home/dir/.forex/log.log and will output to System/out (in emacs+slime, this is in the *inferior-lisp* buffer
+</span><span style="color: #b22222;">;;</span><span style="color: #b22222;">or in the *shell* if you do lein swank
+</span>
+(<span style="color: #a020f0;">defn-</span> <span style="color: #0000ff;">new-logger</span> [file]
+  (f/make-parents
+   (java.io.File. (<span style="color: #7a378b;">format</span> <span style="color: #8b2252;">"%s/.forex/%s"</span> (System/getProperty <span style="color: #8b2252;">"user.home"</span>) file)))
+  (<span style="color: #a020f0;">let</span> [l (java.util.logging.Logger/getLogger (<span style="color: #7a378b;">str</span> *ns*))]
+    (mapc #(.removeHandler l %) (.getHandlers l))
+    (.addHandler l (<span style="color: #a020f0;">doto</span> (ConsoleHandler.) (.setFormatter (formatter))) <span style="color: #b22222;">;;</span><span style="color: #b22222;">(new-out-stream *out*) = to *out*, but sort of clutters everything
+</span>                 )
+    (.addHandler l (<span style="color: #a020f0;">doto</span> (FileHandler. (<span style="color: #7a378b;">str</span> log-dir <span style="color: #8b2252;">"/"</span> file))
+                     (.setFormatter (formatter))))
+    (.setUseParentHandlers l false)
+    l))
+
+(<span style="color: #a020f0;">defonce-</span> <span style="color: #0000ff;">log</span> (java.util.logging.Logger/getLogger (<span style="color: #7a378b;">str</span> *ns*)))
+
+<span style="color: #b22222;">;;</span><span style="color: #b22222;">TODO: only use one log file!!! eh?
+</span>(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">init-logger</span> []
+  (<span style="color: #a020f0;">if-not</span> log
+   (<span style="color: #a020f0;">def-</span> <span style="color: #0000ff;">log</span> (new-logger <span style="color: #8b2252;">"log"</span>))))
+(init-logger)
+<span style="color: #b22222;">;;</span><span style="color: #b22222;">TODO: set filtering levels
+</span><span style="color: #b22222;">;;</span><span style="color: #b22222;">fine,finer,finest wont log
+</span>
+(<span style="color: #a020f0;">def-</span> <span style="color: #0000ff;">*debug-info*</span> <span style="color: #8b2252;">""</span>)
+(<span style="color: #a020f0;">defmacro</span> <span style="color: #0000ff;">debugging</span> [str &amp; args] `(<span style="color: #a020f0;">binding</span> [*debug-info* ~str] ~@args))
+
+(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">info</span> [msg &amp; args]
+   (.info log (<span style="color: #7a378b;">apply</span> format (<span style="color: #7a378b;">str</span> *debug-info* <span style="color: #8b2252;">" "</span> msg) args)))
+ (<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">fine</span> [msg &amp; args]
+   (.fine log (<span style="color: #7a378b;">apply</span> format  (<span style="color: #7a378b;">str</span> *debug-info* <span style="color: #8b2252;">" "</span> msg) args)))
+ (<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">finer</span> [msg &amp; args]
+   (.finer log (<span style="color: #7a378b;">apply</span> format (<span style="color: #7a378b;">str</span> *debug-info* <span style="color: #8b2252;">" "</span> msg) args)))
+ (<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">finest</span> [msg &amp; args]
+   (.finest log (<span style="color: #7a378b;">apply</span> format (<span style="color: #7a378b;">str</span> *debug-info* <span style="color: #8b2252;">" "</span> msg) args)))
+(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">severe</span> [msg &amp; args]
+  (<span style="color: #a020f0;">let</span> [s (<span style="color: #7a378b;">apply</span> format (<span style="color: #7a378b;">str</span> *debug-info* <span style="color: #8b2252;">" "</span> msg) args)]
+    (.severe log s)
+    (<span style="color: #7a378b;">print</span> (<span style="color: #7a378b;">format</span> <span style="color: #8b2252;">"SEVERE: %s%n"</span> s))))
+(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">warn</span> [msg &amp; args]
+  (<span style="color: #a020f0;">let</span> [s (<span style="color: #7a378b;">apply</span> format (<span style="color: #7a378b;">str</span> *debug-info* <span style="color: #8b2252;">" "</span> msg) args)]
+    (.warning log s)
+    (<span style="color: #7a378b;">print</span> (<span style="color: #7a378b;">format</span> <span style="color: #8b2252;">"WARNING: %s%n"</span> s)))) 
+</pre></div>
+
+
+</div>
+
+</div>
+
+<div id="outline-container-3_3_3" class="outline-4">
+<h4 id="sec-3_3_3"><span class="section-number-4">3.3.3</span> Spawn </h4>
+<div class="outline-text-4" id="text-3_3_3">
+
+
+
+
+<div class="org-src-container"><label class="org-src-name">forex-util-spawn()</label><pre class="src src-clojure">
+<span style="color: #b22222;">;;</span><span style="color: #b22222;">this is a generalization of util.fiber.spawn and will eventually replace it. it allows us to poll on not only local mailbox but also on sockets
+</span>(<span style="color: #a020f0;">ns</span> forex.util.spawn
+  (<span style="color: #7a378b;">:use</span> utils.general forex.util.zmq)
+  (<span style="color: #7a378b;">:require</span> [utils.fiber.spawn <span style="color: #7a378b;">:as</span> s]))
+
+(<span style="color: #a020f0;">def-</span> <span style="color: #0000ff;">*pid*</span> (<span style="color: #7a378b;">atom</span> []))
+
+(<span style="color: #a020f0;">defalias</span> <span style="color: #0000ff;">pid?</span> s/pid?)
+(<span style="color: #a020f0;">defalias</span> <span style="color: #0000ff;">self</span> s/self)
+(<span style="color: #a020f0;">def</span> <span style="color: #0000ff;">kill-all</span> s/kill-all)
+(<span style="color: #a020f0;">defalias</span> <span style="color: #0000ff;">spawn-in-repl</span> s/spawn-in-repl) <span style="color: #b22222;">;;</span><span style="color: #b22222;">TODO: add socket for this one
+</span>
+(<span style="color: #a020f0;">defalias</span> <span style="color: #0000ff;">?</span> s/?)
+
+(<span style="color: #a020f0;">defalias</span> <span style="color: #0000ff;">make-tag</span> s/make-tag)
+(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">!</span> [pid msg]
+  (<span style="color: #a020f0;">with-open</span> [local (<span style="color: #a020f0;">doto</span> (new-socket +push+)
+                      (.connect (<span style="color: #7a378b;">format</span> <span style="color: #8b2252;">"inproc://%s"</span> pid)))]
+    (s/! pid msg)
+    (.snd local <span style="color: #8b2252;">"REQUEST"</span> +noblock+)))
+(<span style="color: #a020f0;">defn</span>  <span style="color: #0000ff;">stop-all</span> []
+  (<span style="color: #7a378b;">swap!</span> *pid*
+         (<span style="color: #7a378b;">fn</span> [old]
+           (<span style="color: #7a378b;">map</span> #(<span style="color: #a020f0;">if</span> (pid? %)
+                   (! % <span style="color: #8b2252;">"STOP"</span>)) @*pid*))))
+
+
+(<span style="color: #a020f0;">defrecord</span> <span style="color: #0000ff;">LocalSocket</span> [socket]
+  PSocket
+  (raw [this] (.raw socket)) 
+  (recv [this flags] 
+        (<span style="color: #a020f0;">let</span> [r (.recv socket flags)]
+          (s/?)))
+  (recv [this] (recv this 0))
+  (close [this] (.close socket))
+  (hasReceiveMore [this] false))
+
+
+(<span style="color: #7a378b;">comment</span>
+  (<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">te</span> []
+   (<span style="color: #a020f0;">def</span> <span style="color: #0000ff;">pid</span> (spawn #(<span style="color: #a020f0;">do</span> (<span style="color: #7a378b;">pr</span> <span style="color: #8b2252;">"BEFORE"</span>) (<span style="color: #7a378b;">pr</span> local)
+                        (pformat <span style="color: #8b2252;">"local %s%n"</span> (<span style="color: #7a378b;">first</span> (event-seq [local])))
+                        (<span style="color: #7a378b;">pr</span> <span style="color: #8b2252;">"AFTER"</span>))))))
+
+
+(<span style="color: #a020f0;">defonce-</span> <span style="color: #0000ff;">*local*</span> (ThreadLocal.))
+(<span style="color: #a020f0;">defn-</span> <span style="color: #0000ff;">self-get</span> [key]
+  (<span style="color: #a020f0;">let</span> [map (.get *local*)]
+    (<span style="color: #a020f0;">when</span> map 
+      (<span style="color: #7a378b;">map</span> key))))
+(<span style="color: #a020f0;">defn-</span> <span style="color: #0000ff;">self-assoc</span> [key obj]
+  (<span style="color: #a020f0;">let</span> [map (.get *local*)]
+    (<span style="color: #a020f0;">if</span> map 
+     (.set *local* (<span style="color: #7a378b;">assoc</span> map key obj)))))
+(<span style="color: #a020f0;">def</span> <span style="color: #0000ff;">local</span> nil)
+(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">spawn</span> [thunk]
+  (<span style="color: #a020f0;">let</span> [pid (s/spawn (<span style="color: #7a378b;">fn</span> [] 
+                       (.set *local* {})
+                       (<span style="color: #a020f0;">with-open</span>
+                           [local-socket (LocalSocket. 
+                                   (<span style="color: #a020f0;">doto</span>
+                                       (new-socket +pull+)
+                                     (.bind  (<span style="color: #7a378b;">str</span> <span style="color: #8b2252;">"inproc://"</span> (self)))))]        
+                         (<span style="color: #a020f0;">binding</span> [local local-socket]
+                           (thunk)))))]
+    (<span style="color: #7a378b;">swap!</span> *pid* concat [pid])
+    pid))
+
+(<span style="color: #a020f0;">defmulti</span> <span style="color: #0000ff;">event-seq</span> class)
+(<span style="color: #a020f0;">defmethod</span> <span style="color: #0000ff;">event-seq</span> clojure.lang.IPersistentVector [v]
+  (event-seq (new-poller v)))
+(<span style="color: #a020f0;">defmethod</span> <span style="color: #0000ff;">event-seq</span> forex.util.zmq.Poller [p]
+  ((<span style="color: #7a378b;">fn</span> <span style="color: #0000ff;">the-seq</span> [p] 
+     (<span style="color: #7a378b;">lazy-seq</span>
+      (<span style="color: #a020f0;">let</span> [amount (.poll p)] 
+        (<span style="color: #7a378b;">concat</span> (<span style="color: #a020f0;">for</span> [i (<span style="color: #7a378b;">range</span> 0 (.getSize p)) <span style="color: #7a378b;">:when</span> (.pollin p i)]
+                  (<span style="color: #a020f0;">let</span> [sock (.getSocket p i)
+                        msg 
+                        (<span style="color: #a020f0;">loop</span> [msg [(.recv sock 0)]]                    
+                          (<span style="color: #a020f0;">if</span> (.hasReceiveMore sock)
+                            (<span style="color: #a020f0;">recur</span> (<span style="color: #7a378b;">cons</span> (String. (.recv sock 0)) msg))
+                            msg))]
+                    [sock (<span style="color: #a020f0;">if</span> (<span style="color: #7a378b;">=</span> (<span style="color: #7a378b;">count</span> msg) 1) (<span style="color: #7a378b;">first</span> msg) (<span style="color: #7a378b;">vec</span> msg))]))
+                (the-seq p)))))
+   p)) 
+
+<span style="color: #b22222;">;;</span><span style="color: #b22222;">? with multiple sources or change to poll
+</span><span style="color: #b22222;">;;</span><span style="color: #b22222;">!? (timeout)
+</span><span style="color: #b22222;">;;</span><span style="color: #b22222;">?? (filter)
+</span>
+
+</pre></div>
+
+
+</div>
+
+</div>
+
+<div id="outline-container-3_3_4" class="outline-4">
+<h4 id="sec-3_3_4"><span class="section-number-4">3.3.4</span> ZMQ </h4>
+<div class="outline-text-4" id="text-3_3_4">
+
+
+
+
+<div class="org-src-container"><label class="org-src-name">forex-util-zmq()</label><pre class="src src-clojure">
+(<span style="color: #a020f0;">ns</span> forex.util.zmq
+  (<span style="color: #7a378b;">:import</span> (org.zeromq ZMQ))
+  (<span style="color: #7a378b;">:use</span> utils.general))
+
+                                        <span style="color: #b22222;">; </span><span style="color: #b22222;">Constants
+</span>(<span style="color: #a020f0;">def</span> <span style="color: #0000ff;">+noblock+</span> 1)
+
+(<span style="color: #a020f0;">def</span> <span style="color: #0000ff;">+p2p+</span> 0)
+(<span style="color: #a020f0;">def</span> <span style="color: #0000ff;">+pub+</span> 1)
+(<span style="color: #a020f0;">def</span> <span style="color: #0000ff;">+sub+</span> 2)
+(<span style="color: #a020f0;">def</span> <span style="color: #0000ff;">+req+</span> 3)
+(<span style="color: #a020f0;">def</span> <span style="color: #0000ff;">+rep+</span> 4)
+(<span style="color: #a020f0;">def</span> <span style="color: #0000ff;">+xreq+</span> 5)
+(<span style="color: #a020f0;">def</span> <span style="color: #0000ff;">+xrep+</span> 6)
+(<span style="color: #a020f0;">def</span> <span style="color: #0000ff;">+pull+</span> 7)
+(<span style="color: #a020f0;">def</span> <span style="color: #0000ff;">+push+</span> 8)
+
+(<span style="color: #a020f0;">def</span> <span style="color: #0000ff;">+hwm+</span> 1)
+(<span style="color: #a020f0;">def</span> <span style="color: #0000ff;">+lwm+</span> 2)
+(<span style="color: #a020f0;">def</span> <span style="color: #0000ff;">+swap+</span> 3)
+(<span style="color: #a020f0;">def</span> <span style="color: #0000ff;">+affinity+</span> 4)
+(<span style="color: #a020f0;">def</span> <span style="color: #0000ff;">+identity+</span> 5)
+(<span style="color: #a020f0;">def</span> <span style="color: #0000ff;">+subscribe+</span> 6)
+(<span style="color: #a020f0;">def</span> <span style="color: #0000ff;">+unsubscribe+</span> 7)
+(<span style="color: #a020f0;">def</span> <span style="color: #0000ff;">+rate+</span> 8)
+(<span style="color: #a020f0;">def</span> <span style="color: #0000ff;">+recovery-ivl+</span> 9)
+(<span style="color: #a020f0;">def</span> <span style="color: #0000ff;">+mcast-loop+</span> 10)
+(<span style="color: #a020f0;">def</span> <span style="color: #0000ff;">+sndbuf+</span> 11)
+(<span style="color: #a020f0;">def</span> <span style="color: #0000ff;">+rcvbuf+</span> 12)
+
+(<span style="color: #a020f0;">def</span> <span style="color: #0000ff;">+pollin+</span> 1)
+(<span style="color: #a020f0;">def</span> <span style="color: #0000ff;">+pollout+</span> 2)
+(<span style="color: #a020f0;">def</span> <span style="color: #0000ff;">+pollerr+</span> 4)
+(<span style="color: #a020f0;">def</span> <span style="color: #0000ff;">+more+</span> 2)
+
+<span style="color: #b22222;">;;</span><span style="color: #b22222;">Context
+</span>(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">new-context</span> [io-threads]
+  (ZMQ/context io-threads))
+(<span style="color: #a020f0;">defonce</span> <span style="color: #0000ff;">*context*</span> (new-context 1))
+
+(<span style="color: #a020f0;">defprotocol</span> <span style="color: #0000ff;">PSocket</span>
+  (raw [this])
+  (recv [this flags] [this])
+  (bind [this address])
+  (connect [this address])
+  (hasReceiveMore [this])
+  (close [this])
+  (snd [this msg flags]))
+(<span style="color: #a020f0;">defprotocol</span> <span style="color: #0000ff;">PPoller</span>
+  (setTimeout [this timeout])
+  (poll [this])
+  (register [this socket])
+  (getSocket [this i])
+  (getSize [this])
+  (pollin [this i])) 
+(<span style="color: #a020f0;">defrecord</span> <span style="color: #0000ff;">Poller</span> [poll sockets]
+  PPoller 
+  (getSize [this] (.getSize (<span style="color: #7a378b;">:poll</span> this)))
+  (pollin [this i] (.pollin (<span style="color: #7a378b;">:poll</span> this) i))
+  (setTimeout [this timeout] (.setTimeout (<span style="color: #7a378b;">:poll</span> this) timeout))
+  (poll [this] (.poll (<span style="color: #7a378b;">:poll</span> this)))
+  (register [this socket]
+            (.register (<span style="color: #7a378b;">:poll</span> this)
+                       (<span style="color: #a020f0;">if</span> (<span style="color: #7a378b;">extends?</span> PSocket (<span style="color: #7a378b;">class</span> socket))
+                         (.raw socket)
+                         socket))
+            (<span style="color: #7a378b;">swap!</span> (<span style="color: #7a378b;">:sockets</span> this) conj socket))
+  (getSocket [this i] (<span style="color: #7a378b;">nth</span> @(<span style="color: #7a378b;">:sockets</span> this) i)))
+
+(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">new-poller</span>
+  ([sockets] (new-poller *context* sockets))
+  ([context sockets]
+     (<span style="color: #a020f0;">let</span> [p (Poller. (.poller context (<span style="color: #7a378b;">count</span> sockets)) (<span style="color: #7a378b;">atom</span> []))]
+       (.setTimeout p -1)
+       (on [sock sockets]
+           (.register p sock))
+       p)))
+
+(<span style="color: #a020f0;">defrecord</span> <span style="color: #0000ff;">Socket</span> [socket]
+  PSocket
+  (raw [this] (<span style="color: #7a378b;">:socket</span> this))
+  (snd [this msg flags] (.send socket (.getBytes msg) flags))
+  (recv [this flags] (String. (.recv socket flags)))
+  (recv [this] (recv this 0)) 
+  (close [this] (.close socket))
+  (bind [this address] (.bind socket address))
+  (connect [this address] (.connect socket address))
+  (hasReceiveMore [this] (.hasReceiveMore socket)))
+
+(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">new-socket</span>
+  ([type] (new-socket *context* type))
+  ([context type] (Socket. (.socket context type))))
+
+(<span style="color: #7a378b;">comment</span>
+  (<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">new-poll</span>
+    ([sockets] (new-poll *context* sockets))
+    ([context sockets]
+       (<span style="color: #a020f0;">let</span> [p (.poller context (<span style="color: #7a378b;">count</span> sockets))]
+         (.setTimeout p -1)
+         (on [sock sockets]
+             (.register p (.socket sock)))
+         p)))
+
+  (<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">new-socket</span>
+    ([socket-type]
+       (new-socket *context* socket-type))
+    ([context socket-type ]
+       (.socket context socket-type))))
+</pre></div>
+
+
+</div>
+
+</div>
+
+<div id="outline-container-3_3_5" class="outline-4">
+<h4 id="sec-3_3_5"><span class="section-number-4">3.3.5</span> Devel </h4>
+<div class="outline-text-4" id="text-3_3_5">
+
+
+
+
+<div class="org-src-container"><label class="org-src-name">forex-util-mql-devel()</label><pre class="src src-clojure">
+(<span style="color: #a020f0;">ns</span> forex.utils.mql-devel
+  (<span style="color: #7a378b;">:use</span> utils.general))
+
+
+(<span style="color: #a020f0;">defmacro</span> <span style="color: #0000ff;">cond-out</span> [&amp; args]
+  (<span style="color: #7a378b;">apply</span> str (<span style="color: #7a378b;">map</span> (<span style="color: #7a378b;">fn</span> [a]
+                    (<span style="color: #a020f0;">let</span> [name (<span style="color: #7a378b;">str</span> a)]
+                      (<span style="color: #7a378b;">format</span> <span style="color: #8b2252;">" else if (command==\"%s\") {\n\t   ret = process_%s(request);\n\t}"</span> name name)))
+                  args)))
+
+(cond-out
+ AccountBalance
+ AccountCredit
+ AccountCompany
+ AccountCurrency
+ AccountEquity
+ AccountFreeMargin
+ AccountLeverage
+ AccountMargin
+ AccountName
+ AccountNumber
+ AccountServer
+ AccountProfit
+ OrderLots
+ OrderDelete
+ OrderCloseTime
+ OrderType
+ OrdersTotal
+ OrderSend
+ MarketInfo
+ OrderClose
+ OrderModify)
+</pre></div>
+
+
+
+</div>
+</div>
+
+</div>
+
+<div id="outline-container-3_4" class="outline-3">
+<h3 id="sec-3_4"><span class="section-number-3">3.4</span> User </h3>
+<div class="outline-text-3" id="text-3_4">
+
+
+
+
+<div class="org-src-container"><label class="org-src-name">forex_user()</label><pre class="src src-clojure">
+(<span style="color: #a020f0;">ns</span> forex-user
+  (<span style="color: #7a378b;">:use</span> forex.util.general utils.general forex.util.log)
+  (<span style="color: #7a378b;">:use</span> forex.module.error.common
+        forex.module.ea.common
+        forex.module.indicator.common
+        forex.module.account.common)
+  (<span style="color: #7a378b;">:require</span> [forex.backend.mql.socket-service <span style="color: #7a378b;">:as</span> backend]
+            [clj-time.core <span style="color: #7a378b;">:as</span> t]))
+
+<span style="color: #b22222;">;;</span><span style="color: #b22222;">utils
+</span>(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">pip-price</span>
+  ([] (pip-price (env <span style="color: #7a378b;">:symbol</span>)))
+  ([symbol] (mode-tickvalue symbol)))
+<span style="color: #b22222;">;;</span><span style="color: #b22222;">TODO: mql err on point? no way! we should throw an error
+</span>(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">point</span>
+  ([] (point (env <span style="color: #7a378b;">:symbol</span>)))
+  ([symbol]
+     (<span style="color: #7a378b;">*</span> 10 (mode-point symbol))))
+(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">pips</span>
+  ([price] (pips price (env <span style="color: #7a378b;">:symbol</span>)))
+  ([price symbol]
+     (<span style="color: #7a378b;">/</span> price (point symbol)))) 
+(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">price-of</span>
+  ([val] (price-of val (env <span style="color: #7a378b;">:symbol</span>)))
+  ([val symbol]
+     (<span style="color: #7a378b;">*</span> (pip-price symbol) (pips val))))
+(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">exit</span> []
+  (throwf <span style="color: #8b2252;">"stopping ea"</span>))
+<span style="color: #b22222;">;;</span><span style="color: #b22222;">
+</span>
+(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">timeout-ea</span> [order timeout self]
+  (<span style="color: #a020f0;">cond</span>
+   (<span style="color: #7a378b;">not</span> (open? order))
+   (<span style="color: #a020f0;">do</span> (warn <span style="color: #8b2252;">"order is closed ... exiting"</span>) (exit))
+   (t/after? (t/now) timeout)
+   (<span style="color: #a020f0;">do</span>
+     (iff (delete! order) 
+          (warn <span style="color: #8b2252;">"entry order timed out ..."</span>)
+          (warn <span style="color: #8b2252;">"order is now a market order!"</span>))
+     (exit)) 
+   (market? order)
+   (<span style="color: #a020f0;">do</span>
+     (warn <span style="color: #8b2252;">"order is now a market order"</span>)
+     (exit))))
+
+(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">timeout</span> [order]
+  (<span style="color: #7a378b;">partial</span> timeout-ea order (t/plus (t/now) (t/hours 12))))
+
+(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">order-it</span> [percent {<span style="color: #7a378b;">:keys</span> [type symbol price sl tp1 tp2]}]
+  (wenv (<span style="color: #7a378b;">:symbol</span> symbol)
+        (<span style="color: #a020f0;">let</span> [two-percent (<span style="color: #7a378b;">*</span> (<span style="color: #7a378b;">/</span> percent 100) (account-balance))
+              lots (<span style="color: #7a378b;">int</span> (<span style="color: #7a378b;">/</span> two-percent (price-of (Math/abs (<span style="color: #7a378b;">-</span> sl price)))))]
+          (<span style="color: #a020f0;">condp</span> = lots 
+              0 (warn <span style="color: #8b2252;">"cannot make order with risk"</span>)
+              (iff (order! {<span style="color: #7a378b;">:type</span> type <span style="color: #7a378b;">:symbol</span> symbol <span style="color: #7a378b;">:price</span> price <span style="color: #7a378b;">:sl</span> sl
+                            <span style="color: #7a378b;">:tp</span> (<span style="color: #a020f0;">if</span> (<span style="color: #7a378b;">=</span> lots 1) tp1 tp1)
+                            <span style="color: #7a378b;">:lots</span> (<span style="color: #7a378b;">*</span> (mode-minlot) lots)}) 
+                   {<span style="color: #7a378b;">:ea</span> (run-ea {<span style="color: #7a378b;">:name</span> <span style="color: #8b2252;">"timeout"</span>
+                                 <span style="color: #7a378b;">:start</span> (timeout it)})
+                    <span style="color: #7a378b;">:order</span> it}
+                   it)))))
+
+(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">do-it</span> []
+  (<span style="color: #a020f0;">def</span> <span style="color: #0000ff;">ea</span>
+    (order-it 3 {<span style="color: #7a378b;">:type</span> <span style="color: #7a378b;">:sell-stop</span> <span style="color: #7a378b;">:symbol</span> <span style="color: #8b2252;">"USDCAD"</span> <span style="color: #7a378b;">:price</span> 0.995 <span style="color: #7a378b;">:sl</span> 1.0028
+                 <span style="color: #7a378b;">:tp1</span> 0.9924 <span style="color: #7a378b;">:tp2</span> 0.9898}))) 
+</pre></div>
+
+
+
+
+</div>
+</div>
+</div>
+<div id="postamble">
+<p class="author"> Author: Seth Burleigh
+</p>
+<p class="date"> Date: 2011-01-07 16:42:15 CST</p>
+<p class="creator">HTML generated by org-mode 7.01trans in emacs 23</p>
+</div>
+</div>
+</body>
+</html>
