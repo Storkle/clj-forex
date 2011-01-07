@@ -2,6 +2,7 @@ native
 classes
 CMakeFiles
 /src/forex/
+/src/*.clj
 *~
 /clj-forex-0.1.jar
 /pom.xml
