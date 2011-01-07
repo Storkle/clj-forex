@@ -1,4 +1,48 @@
+string process_iHigh (string command[]) {
+  string symbol = command[2];
+  int timeframe = StrToInteger(command[3]);
+  int shift = StrToInteger(command[4]);
+  double val = iHigh(symbol,timeframe,shift);
+  int err = GetLastError();
+  if (err!=0)  
+    return("error "+err);
+  return(val);
+ }
+ 
+string process_iOpen (string command[]) {
+  string symbol = command[2];
+  int timeframe = StrToInteger(command[3]);
+  int shift = StrToInteger(command[4]);
+  double val = iOpen(symbol,timeframe,shift);
+  int err = GetLastError();
+  if (err!=0) 
+    return("error "+err);
+  return(val);
+ }
 
+string process_iClose (string command[]) {
+  string symbol = command[2];
+  int timeframe = StrToInteger(command[3]);
+  int shift = StrToInteger(command[4]);
+  double val = iClose(symbol,timeframe,shift);
+  int err = GetLastError();
+  if (err!=0) 
+    return("error "+err);
+  return(val);
+ }
+ 
+string process_iLow (string command[]) {
+  string symbol = command[2];
+  int timeframe = StrToInteger(command[3]);
+  int shift = StrToInteger(command[4]);
+  double val = iLow(symbol,timeframe,shift);
+  int err = GetLastError();
+  if (err!=0) 
+    return("error "+err);
+  return(val);
+ }
+ 
+ 
 string process_AccountBalance(string command[]) {
   return(AccountBalance());
 }
@@ -137,7 +181,7 @@ string process_OrderType(string command[]) {
    int order_type = OrderType();
    if (result==False) {
      err = GetLastError();
-     return("error" + err);
+     return("error " + err);
    }
    return(order_type);
 }
@@ -163,7 +207,7 @@ string process_OrderLots(string command[]) {
    bool result = OrderSelect(id,SELECT_BY_TICKET);
    if (result==False) {
      int err = GetLastError();
-     return("error" +err);
+     return("error " +err);
    }
    return(OrderLots());
 }

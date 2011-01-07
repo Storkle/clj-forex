@@ -208,6 +208,8 @@ int loop () {
     string command = request[1];
     string id = request[0];
     
+    RefreshRates();
+    
     if (command=="KILL") {
       Print("KILLING node ...");
       z_send(push,"true",ZMQ_SNDMORE);
@@ -243,7 +245,7 @@ int start()
   {
   ObjectCreate("label", OBJ_LABEL, 0, 0, 0);
   ObjectSet("label", OBJPROP_XDISTANCE, 0);
-  ObjectSet("label", OBJPROP_YDISTANCE, 0);
+  ObjectSet("label", OBJPROP_YDISTANCE, 10);
   ObjectSetText("label", "COMMANDO", 10, "Times New Roman", Blue);
   WindowRedraw();
   
