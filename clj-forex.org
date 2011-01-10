@@ -442,7 +442,7 @@ in the [[http://groups.google.com/group/clojure/browse_thread/thread/664a1d305f3
   (:require  [forex.module.account.core :as core]))
 
 (defn- >? [a] (and (number? a) (>= a 0)))
-
+ 
 (defmacro- default [& body] 
   `(binding [*default* @~#'err/*er*]
      ~@body))
@@ -627,7 +627,7 @@ in the [[http://groups.google.com/group/clojure/browse_thread/thread/664a1d305f3
                    ([symbol#]
                       (core/market-info symbol# ~num))))
               (group args))))
-
+ 
 (define-market-info
   low 1
   high 2
@@ -657,7 +657,7 @@ in the [[http://groups.google.com/group/clojure/browse_thread/thread/664a1d305f3
   marginhedged 31
   marginrequired 32
   freezelevel 33)
-
+ 
 (defn demo? []
   (if (re-find #"(?i)demo" (account-server))
     true
@@ -1369,7 +1369,8 @@ in the [[http://groups.google.com/group/clojure/browse_thread/thread/664a1d305f3
 		    :order it}
 		   it)))))
  
-;;(def oo (order! (atom {:type :buy :price (close) :lots 0.1})))
+ 
+ 
 (defn do-it []
   (def ea
     (order-it 3 
