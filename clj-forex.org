@@ -327,8 +327,8 @@ in the [[http://groups.google.com/group/clojure/browse_thread/thread/664a1d305f3
     [order]
     (let [type (order-type order)]
       (and type (not (or (= type :sell) (= type :buy))))))
-  
-  (extend clojure.lang.PersistentArrayMap
+   
+  (extend clojure.lang.IPersistentMap
     POrder {:order-close-time order-close-time*
             :order-type order-type*
             :delete! delete!*
@@ -441,92 +441,92 @@ in the [[http://groups.google.com/group/clojure/browse_thread/thread/664a1d305f3
 *** Ea
 #+srcname:ea-common
 #+begin_src clojure :tangle src/forex/module/ea/common.clj
-
-(ns forex.module.ea.common
-  (:use utils.general forex.util.general
-        utils.fiber.spawn clojure.contrib.core)
-  (:require [clj-time.core :as t])
-  (:use
-   forex.util.log
-   forex.module.error.common
-   forex.module.indicator.common
-   forex.module.account.common))
   
-;;##ea implementation
-(defonce *ea* (atom []))
-(defn every [pred coll]
-  (if (empty? coll)
-    false
-    (loop [a coll]
-      (if (empty? a)
-        true
-        (if (not (pred (first a)))
-          false
-          (recur (rest a)))))))
-
-(defn query [m]
-  (filter
-   (fn [ea]
-     (if (every (fn [[key val]]
-                  (= val (ea key)))
-                m) 
-       ea))
-   @*ea*))
-(defn alive? [ea] (pid? (:pid ea)))
- 
-(defmacro- catch-unexpected [prefix & body]
-  `(try (do ~@body)
-        (catch Exception e# (severe "%s - caught unexpected error %s" ~prefix e#))))
- 
-(defn run-by-tick [{:keys [symbol timeframe name deinit init start] :as ea}]
-  (debugging
-   (format "%s_%s %s: " symbol timeframe name)
-   (wenv (:symbol symbol :timeframe timeframe)
-         (try
-           (init)
-           (loop [prev-close nil]
-             (sleep 1)
-             (when-not (match (? 0) "stop" true) 
-               (let [new-close (close)]
-                 (when-not (= new-close prev-close)
-                   (start ea))
-                 (recur new-close)))) 
-           (catch Exception e 
-             (severe "caught exception %s ... stopping ea" e)
-             (.printStackTrace e))
-           (finally
-            (warn "stopping ea ...")
-            (catch-unexpected "deinit" (deinit)))))))
-
-(defn new-ea [ea]
-  (let [default {:symbol (env :symbol)
-                 :timeframe (env :timeframe) :id (gensym)
-                 :deinit (constantly true)
-                 :init (constantly true)}
-        m (merge default ea)
-        {:keys [symbol timeframe run name start init deinit]} m
-        m (merge {:run (partial run-by-tick m)} m)]
-    (is (and name start symbol timeframe))
-    (is (and (fn? start) (fn? init) (or (nil? run) (fn? run)) (fn? deinit)))
-    m))
-
-;;TODO: pid without spawn!!
-(defn run [ea]
-  (let [new-ea (merge ea {:pid (spawn #((:run ea)))})]
-    (swap! *ea* conj new-ea)
-    new-ea))
-(defn run-ea [ea] (run (new-ea ea))) 
-;;TODO: wait till it stops and delete
-(defn stop [ea]
-  (let [stop-it (fn [e]
-                  (if (pid? (:pid e))
-                    (do (! (:pid e) "stop")
-                        (reset! *ea* (remove #{e} @*ea*))
-                        true)
-                    (do (reset! *ea* (remove #{e} @*ea*)) nil)))]
-    (if (map? ea)
-      (stop-it ea)
-      (map stop-it ea))))
+  (ns forex.module.ea.common
+    (:use utils.general forex.util.general
+          utils.fiber.spawn clojure.contrib.core)
+    (:require [clj-time.core :as t])
+    (:use
+     forex.util.log
+     forex.module.error.common
+     forex.module.indicator.common
+     forex.module.account.common))
+    
+  ;;##ea implementation
+  (defonce *ea* (atom []))
+  (defn every [pred coll]
+    (if (empty? coll)
+      false
+      (loop [a coll]
+        (if (empty? a)
+          true
+          (if (not (pred (first a)))
+            false
+            (recur (rest a)))))))
+  
+  (defn query [m]
+    (filter
+     (fn [ea]
+       (if (every (fn [[key val]]
+                    (= val (ea key)))
+                  m) 
+         ea))
+     @*ea*))
+  (defn alive? [ea] (pid? (:pid ea)))
+   
+  (defmacro- catch-unexpected [prefix & body]
+    `(try (do ~@body)
+          (catch Exception e# (severe "%s - caught unexpected error %s" ~prefix e#))))
+   
+  (defn run-by-tick [{:keys [symbol timeframe name deinit init start] :as ea}]
+    (debugging
+     (format "%s_%s %s: " symbol timeframe name)
+     (wenv (:symbol symbol :timeframe timeframe)
+           (try
+             (init)
+             (loop [prev-close nil]
+               (sleep 1)
+               (when-not (match (? 0) "stop" true) 
+                 (let [new-close (close)]
+                   (when-not (= new-close prev-close)
+                     (start ea))
+                   (recur new-close)))) 
+             (catch Exception e 
+               (severe "caught exception %s ... stopping ea" e)
+               (.printStackTrace e))
+             (finally
+              (warn "stopping ea ...")
+              (catch-unexpected "deinit" (deinit)))))))
+  
+  (defn new-ea [ea]
+    (let [default {:symbol (env :symbol)
+                   :timeframe (env :timeframe) :id (gensym)
+                   :deinit (constantly true)
+                   :init (constantly true)}
+          m (merge default ea)
+          {:keys [symbol timeframe run name start init deinit]} m
+          m (merge {:run (partial run-by-tick m)} m)]
+      (is (and name start symbol timeframe))
+      (is (and (fn? start) (fn? init) (or (nil? run) (fn? run)) (fn? deinit)))
+      m))
+  
+  ;;TODO: pid without spawn!!
+  (defn run [ea]
+    (let [new-ea (merge ea {:pid (spawn #((:run ea)))})]
+      (swap! *ea* conj new-ea)
+      new-ea))
+  (defn run-ea [ea] (run (new-ea ea))) 
+  ;;TODO: wait till it stops and delete
+  (defn stop [ea]
+    (let [stop-it (fn [e]
+                    (if (pid? (:pid e))
+                      (do (! (:pid e) "stop")
+                          (reset! *ea* (remove #{e} @*ea*))
+                          true)
+                      (do (reset! *ea* (remove #{e} @*ea*)) nil)))]
+      (if (map? ea)
+        (stop-it ea)
+        (map stop-it ea))))
 #+end_src
 *** Error
 #+srcname:error-common 
