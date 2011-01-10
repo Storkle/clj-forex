@@ -244,18 +244,18 @@ in the [[http://groups.google.com/group/clojure/browse_thread/thread/664a1d305f3
   (order? [this]) 
   (market? [this]) (entry? [this]))
 
-(defn order-close-time* [{id :id}]
+(defn- order-close-time* [{id :id}]
   (is (string? id))
   ;;we dont need to know mql4 error codes for order close time
   (iff (core/order-close-time id) it -1))
-(defn order-type*  [order]
+(defn- order-type*  [order]
   (is (string? (:id order)))
   (default
     (iff (core/order-type (:id order))
          (value-to-order-type (int it)))))
-(defn delete!* [{id :id :as o}]
+(defn- delete!* [{id :id :as o}]
   (iff (core/order-delete id) (merge o {:lots 0}) it))
-(defn close!*
+(defn- close!*
   ([o] (close! o 0))
   ([{:keys [price lots slip id] :as order} new-lots]
      (is (and (string? id) (and price (pos? price))
@@ -266,7 +266,7 @@ in the [[http://groups.google.com/group/clojure/browse_thread/thread/664a1d305f3
             (merge order {:lots new-lots})
             it))))
 
-(defn modify!* [order {:keys [sl tp price]}]
+(defn- modify!* [order {:keys [sl tp price]}]
   (let [sl (or sl (:sl order))
         tp (or tp (:tp order))
         price (or price (:price order))]
@@ -301,24 +301,24 @@ in the [[http://groups.google.com/group/clojure/browse_thread/thread/664a1d305f3
     true (throwf "invalid %s order with sl/tp %s/%s with price of %s"
                  type sl tp price))) 
 ;;TODO: change to make reliable and to work for ECN brokers and such
-(defn order!* [{:keys [symbol type price tp sl lots slip]
+(defn- order!* [{:keys [symbol type price tp sl lots slip]
 			:as order :or {slip 3 sl 0 tp 0}}]
   (verify-order order)
   (iff (core/order-send symbol type lots price sl tp slip)
        (merge {:sl sl :tp tp :slip slip} (merge order {:id it }))
        it))
-(defn open?* [order]
+(defn- open?* [order]
   (default (= (order-close-time order) 0)))
-(defn close?* [order]
+(defn- close?* [order]
   (not (open? order)))
-(defn order?* [order]
+(defn- order?* [order]
   (not (nil? (order-type order))))   
-(defn market?*
+(defn- market?*
   "determine if order is market order"
   [order]
   (let [type (order-type order)]
     (or (= type :sell) (= type :buy)))) 
-(defn entry?*
+(defn- entry?*
   "determine if order is entry order"
   [order]
   (let [type (order-type order)]
@@ -365,8 +365,6 @@ in the [[http://groups.google.com/group/clojure/browse_thread/thread/664a1d305f3
 	  (let [sym  (symbol (camel-to-dash s))]
 	    (intern *ns* sym (var-get (intern core-ns sym))))))))
 
-
- 
 ;;account common
 (defn- sym [a] (symbol (camel-to-dash a)))
 (defmacro- single [name] `(defn ~(sym name) [] (receive! ~name)))
@@ -392,7 +390,7 @@ in the [[http://groups.google.com/group/clojure/browse_thread/thread/664a1d305f3
  "AccountProfit"
  "OrdersTotal")
 ;;
-
+ 
 (defmacro- define-market-info [& args]
   `(do ~@(map (fn [[name num]]
                 `(defn ~(symbolicate "mode-" name)
