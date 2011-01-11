@@ -450,7 +450,7 @@ in the [[http://groups.google.com/group/clojure/browse_thread/thread/664a1d305f3
    forex.module.error.common
    forex.module.indicator.common
    forex.module.account.common))
-  
+(defn- get-fn [a] (if (var? a) (var-get a) a))  
 ;;##ea implementation
 (defonce *eas* (atom []))
 (defn every [pred coll]
@@ -488,7 +488,10 @@ in the [[http://groups.google.com/group/clojure/browse_thread/thread/664a1d305f3
              (when-not (match (? 0) "stop" true) 
                (let [new-close (close)]
                  (when-not (= new-close prev-close)
-                   (start (:vars ea) (:args ea)))
+		   (let [func (get-fn start)]
+		     (if (fn? func)
+		       (func (:vars ea) (:args ea))
+		       (warn "%s is not a function. start cannot be called" func))))
                  (recur new-close)))) 
            (catch Exception e 
              (severe "caught exception %s ... stopping ea" e)
@@ -499,16 +502,17 @@ in the [[http://groups.google.com/group/clojure/browse_thread/thread/664a1d305f3
 
 (defn- timeframe? [a] (number? a))
 (defrecord EA [name init deinit start symbol timeframe args pid run vars])
+
 (defn new-ea [{:keys [name init deinit start symbol timeframe run vars]
 	       :or {init (constantly {})
 		    deinit (constantly true)
 		    timeframe (env :timeframe)
 		    run run-by-tick}} args]
-  (is (and (fn? init) (fn? deinit) (string? name)
+  (is (and (fn? (get-fn init)) (fn? (get-fn deinit)) (string? name)
 	   (string? symbol) (fn? run) (timeframe? timeframe)))
   (EA. (format "%s %s, %s" name symbol timeframe)
        init deinit start symbol timeframe (or  args {}) nil
-       run (or vars {})))
+       run (or vars {}))) 
 (defmethod clojure.core/print-method EA [o w]
   (.write w (format "<EA \"%s\" %s %s |%s|>"
 		    (:name o)
@@ -527,10 +531,10 @@ in the [[http://groups.google.com/group/clojure/browse_thread/thread/664a1d305f3
   (debugging (format "INIT %s: " (:name ea))
 	     (binding [*ea* ea]
 	       (wenv (:symbol (:symbol ea) :timeframe (:timeframe ea))
-		     (let [result ((:init ea) (:args ea))]
+		     (let [result ((get-fn (:init ea)) (:args ea))]
 		       (if result
 			 (merge ea {:vars (merge {} result)})))))))
-  
+ 
 (defn run-all [ea]
   (binding [*ea* ea]
     (let [new-ea (run-init ea)]
@@ -1224,8 +1228,6 @@ in the [[http://groups.google.com/group/clojure/browse_thread/thread/664a1d305f3
 		     :tp2 (Double/parseDouble tp2)}))))))
 ;;;;;;;;;;;;;;;;;;;;;;ea
 
-
-
 (defn timeout [{:keys [order state end-time]}]
   (cond
    (market? order)
@@ -1245,12 +1247,13 @@ in the [[http://groups.google.com/group/clojure/browse_thread/thread/664a1d305f3
        (do (close! order half)
 	   (modify! order {:sl price :tp tp2})
 	   (exit "closed %s lots" half))))))
-
+  
 (defn start [{state :state order :order :as self} _]
   (cond
-   (= @state :break-even) (break-even order state)
+   (= @state :break-even) (do (break-even order state)
+			      (out "switching to break even"))
    (= @state :timeout) (timeout self)))
-
+ 
 (defn init [{:keys [type sl price]}]
   (iff (order! (atom-hash {:type type :sl sl :price price
 			   :lots (* (mode-minlot) 2)}))
@@ -1258,8 +1261,10 @@ in the [[http://groups.google.com/group/clojure/browse_thread/thread/664a1d305f3
 	:state (atom :timeout)
 	:order it} 
        (out "MQL error %s" (:e it))))
+  
+;;TODO: stop a specific node
 
-;;(def ea (run {:name "timeout" :symbol "EURUSD" :init init :start start} a))
+;;(def ea (run {:name "timeout" :symbol "EURUSD" :init init :start #'start} a))
 
 #+end_src
 
