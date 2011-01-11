@@ -191,7 +191,7 @@ in the [[http://groups.google.com/group/clojure/browse_thread/thread/664a1d305f3
              ticket lots price slippage (get! color color_of))))
   (defn order-delete [ticket]
     (receive (format "OrderDelete %s" ticket)))
-   
+  
   (defn market-info [symbol type]
     (receive-double (format "MarketInfo %s %s" symbol type)))
   
@@ -327,7 +327,7 @@ in the [[http://groups.google.com/group/clojure/browse_thread/thread/664a1d305f3
     [order]
     (let [type (order-type order)]
       (and type (not (or (= type :sell) (= type :buy))))))
-   
+  
   (extend clojure.lang.IPersistentMap
     POrder {:order-close-time order-close-time*
             :order-type order-type*
@@ -441,92 +441,117 @@ in the [[http://groups.google.com/group/clojure/browse_thread/thread/664a1d305f3
 *** Ea
 #+srcname:ea-common
 #+begin_src clojure :tangle src/forex/module/ea/common.clj
+(ns forex.module.ea.common
+  (:use utils.general forex.util.general
+        utils.fiber.spawn clojure.contrib.core)
+  (:require [clj-time.core :as t])
+  (:use
+   forex.util.log
+   forex.module.error.common
+   forex.module.indicator.common
+   forex.module.account.common))
   
-  (ns forex.module.ea.common
-    (:use utils.general forex.util.general
-          utils.fiber.spawn clojure.contrib.core)
-    (:require [clj-time.core :as t])
-    (:use
-     forex.util.log
-     forex.module.error.common
-     forex.module.indicator.common
-     forex.module.account.common))
-    
-  ;;##ea implementation
-  (defonce *ea* (atom []))
-  (defn every [pred coll]
-    (if (empty? coll)
-      false
-      (loop [a coll]
-        (if (empty? a)
-          true
-          (if (not (pred (first a)))
-            false
-            (recur (rest a)))))))
+;;##ea implementation
+(defonce *eas* (atom []))
+(defn every [pred coll]
+  (if (empty? coll)
+    false
+    (loop [a coll]
+      (if (empty? a)
+        true
+        (if (not (pred (first a)))
+          false
+          (recur (rest a)))))))
+
+(defn query [m]
+  (filter
+   (fn [ea]
+     (if (every (fn [[key val]]
+                  (= val (ea key)))
+                m) 
+       ea))
+   @*eas*))
+(defn alive? [ea] (pid? (:pid ea)))
+ 
+(defmacro- catch-unexpected [prefix & body]
+  `(try (do ~@body)
+        (catch Exception e#
+	  (severe "%s - caught unexpected error %s" ~prefix e#))))
+ 
+(defn run-by-tick [{:keys [symbol timeframe name deinit init start] :as ea}]
+  (debugging
+   (format "%s: " (:name ea))
+   (wenv (:symbol symbol :timeframe timeframe)
+         (try
+           (loop [prev-close nil]
+             (sleep 1)
+             (when-not (match (? 0) "stop" true) 
+               (let [new-close (close)]
+                 (when-not (= new-close prev-close)
+                   (start (:vars ea) (:args ea)))
+                 (recur new-close)))) 
+           (catch Exception e 
+             (severe "caught exception %s ... stopping ea" e)
+             (.printStackTrace e))
+           (finally
+            (warn "stopping ea ...")
+            (catch-unexpected "deinit" (deinit)))))))
+
+(defn- timeframe? [a] (number? a))
+(defrecord EA [name init deinit start symbol timeframe args pid run vars])
+(defn new-ea [{:keys [name init deinit start symbol timeframe run vars]
+	       :or {init (constantly {})
+		    deinit (constantly true)
+		    timeframe (env :timeframe)
+		    run run-by-tick}} args]
+  (is (and (fn? init) (fn? deinit) (string? name)
+	   (string? symbol) (fn? run) (timeframe? timeframe)))
+  (EA. (format "%s %s, %s" name symbol timeframe)
+       init deinit start symbol timeframe (or  args {}) nil
+       run (or vars {})))
+(defmethod clojure.core/print-method EA [o w]
+  (.write w (format "<EA \"%s\" %s %s |%s|>"
+		    (:name o)
+		    (if (pid? (:pid o)) true false)		    
+		    (:args o) (:vars o))))
+
+;;TODO: pid without spawn!!
+(defonce *ea* nil)
+(defn run-start [ea]
+  (binding [*ea* ea] 
+    (let [new-ea (merge ea {:pid (spawn #((:run ea) ea))})]
+      (swap! *eas* conj new-ea)
+      new-ea)))
+
+(defn run-init [ea]
+  (debugging (format "INIT %s: " (:name ea))
+	     (binding [*ea* ea]
+	       (wenv (:symbol (:symbol ea) :timeframe (:timeframe ea))
+		     (let [result ((:init ea) (:args ea))]
+		       (if result
+			 (merge ea {:vars (merge {} result)})))))))
   
-  (defn query [m]
-    (filter
-     (fn [ea]
-       (if (every (fn [[key val]]
-                    (= val (ea key)))
-                  m) 
-         ea))
-     @*ea*))
-  (defn alive? [ea] (pid? (:pid ea)))
-   
-  (defmacro- catch-unexpected [prefix & body]
-    `(try (do ~@body)
-          (catch Exception e# (severe "%s - caught unexpected error %s" ~prefix e#))))
-   
-  (defn run-by-tick [{:keys [symbol timeframe name deinit init start] :as ea}]
-    (debugging
-     (format "%s_%s %s: " symbol timeframe name)
-     (wenv (:symbol symbol :timeframe timeframe)
-           (try
-             (init)
-             (loop [prev-close nil]
-               (sleep 1)
-               (when-not (match (? 0) "stop" true) 
-                 (let [new-close (close)]
-                   (when-not (= new-close prev-close)
-                     (start ea))
-                   (recur new-close)))) 
-             (catch Exception e 
-               (severe "caught exception %s ... stopping ea" e)
-               (.printStackTrace e))
-             (finally
-              (warn "stopping ea ...")
-              (catch-unexpected "deinit" (deinit)))))))
-  
-  (defn new-ea [ea]
-    (let [default {:symbol (env :symbol)
-                   :timeframe (env :timeframe) :id (gensym)
-                   :deinit (constantly true)
-                   :init (constantly true)}
-          m (merge default ea)
-          {:keys [symbol timeframe run name start init deinit]} m
-          m (merge {:run (partial run-by-tick m)} m)]
-      (is (and name start symbol timeframe))
-      (is (and (fn? start) (fn? init) (or (nil? run) (fn? run)) (fn? deinit)))
-      m))
-  
-  ;;TODO: pid without spawn!!
-  (defn run [ea]
-    (let [new-ea (merge ea {:pid (spawn #((:run ea)))})]
-      (swap! *ea* conj new-ea)
-      new-ea))
-  (defn run-ea [ea] (run (new-ea ea))) 
-  ;;TODO: wait till it stops and delete
-  (defn stop [ea]
-    (let [stop-it (fn [e]
-                    (if (pid? (:pid e))
-                      (do (! (:pid e) "stop")
-                          (reset! *ea* (remove #{e} @*ea*))
-                          true)
-                      (do (reset! *ea* (remove #{e} @*ea*)) nil)))]
-      (if (map? ea)
-        (stop-it ea)
-        (map stop-it ea))))
+(defn run-all [ea]
+  (binding [*ea* ea]
+    (let [new-ea (run-init ea)]
+     (if (instance? EA new-ea)
+       (run-start new-ea) 
+       (warn "EA %s failed to start - returned nil from INIT" (:name ea))))))
+
+(defn run [ea args]
+  (run-all (new-ea ea args)))
+
+(defn sym [] (:symbol *ea*))
+(defn period [] (:period *ea*))
+;;TODO: wait till it stops and delete
+(defn stop [ea]
+  (let [stop-it (fn [e]
+                  (if (pid? (:pid e))
+                    (do (! (:pid e) "stop") 
+                        true)))]
+    (if (map? ea)
+      (stop-it ea)
+      (map stop-it ea))))
 #+end_src
 *** Error
 #+srcname:error-common 
@@ -805,9 +830,10 @@ in the [[http://groups.google.com/group/clojure/browse_thread/thread/664a1d305f3
 *** Log
 #+srcname:forex-util-log 
 #+begin_src clojure :tangle src/forex/util/log.clj
+
 (ns forex.util.log
   (:import [java.util.logging Logger Level LogManager Handler
-	    FileHandler SimpleFormatter ConsoleHandler])
+            FileHandler SimpleFormatter ConsoleHandler])
   (:require [clojure.contrib.duck-streams :as f])
   (:use emacs utils.general))
 
@@ -819,10 +845,10 @@ in the [[http://groups.google.com/group/clojure/browse_thread/thread/664a1d305f3
   (let [d (java.util.Date.)]
     (proxy [java.util.logging.Formatter] []
       (format [r] 
-	      (clojure.core/format "%s%n%s: %s%n%n"
-				   (do (.setTime d (.getMillis r)) d)
-				   (.getLevel r)
-				   (.getMessage r))))))
+              (clojure.core/format "%s%n%s: %s%n%n"
+                                   (do (.setTime d (.getMillis r)) d)
+                                   (.getLevel r)
+                                   (.getMessage r))))))
 
 ;;wrap the PrintWriter *out* in an OutputStream to be used in ConsoleHandler
 (defn- new-out-stream [out]
@@ -830,7 +856,7 @@ in the [[http://groups.google.com/group/clojure/browse_thread/thread/664a1d305f3
     (close [] (.close out))
     (flush [] (.flush out))
     (write ([b] (.print out (String. b)))
-	   ([b off len] (.print out (String. b off len))))))
+           ([b off len] (.print out (String. b off len))))))
 
 ;;TODO: if user deletes log file, it will not be recreated
 ;;this will create a logger which logs to /home/dir/.forex/log.log and will output to System/out (in emacs+slime, this is in the *inferior-lisp* buffer
@@ -842,9 +868,9 @@ in the [[http://groups.google.com/group/clojure/browse_thread/thread/664a1d305f3
   (let [l (java.util.logging.Logger/getLogger (str *ns*))]
     (mapc #(.removeHandler l %) (.getHandlers l))
     (.addHandler l (doto (ConsoleHandler.) (.setFormatter (formatter))) ;;(new-out-stream *out*) = to *out*, but sort of clutters everything
-		 )
+                 )
     (.addHandler l (doto (FileHandler. (str log-dir "/" file))
-		     (.setFormatter (formatter))))
+                     (.setFormatter (formatter))))
     (.setUseParentHandlers l false)
     l))
 
@@ -862,7 +888,12 @@ in the [[http://groups.google.com/group/clojure/browse_thread/thread/664a1d305f3
 (defmacro debugging [str & args] `(binding [*debug-info* ~str] ~@args))
 
 (defn info [msg & args]
-   (.info log (apply format (str *debug-info* " " msg) args)))
+  (.info log (apply format (str *debug-info* " " msg) args)))
+(defn out [msg & args]
+  (println (apply format (str "INFO: " *debug-info* " " msg) args))
+  (apply info msg args)
+  nil)
+
  (defn fine [msg & args]
    (.fine log (apply format  (str *debug-info* " " msg) args)))
  (defn finer [msg & args]
@@ -875,8 +906,8 @@ in the [[http://groups.google.com/group/clojure/browse_thread/thread/664a1d305f3
     (print (format "SEVERE: %s%n" s))))
 (defn warn [msg & args]
   (let [s (apply format (str *debug-info* " " msg) args)]
-    (.warning log s)
-    (print (format "WARNING: %s%n" s)))) 
+    (.warning log s) 
+    (print (format "WARNING: %s%n" s))))
 #+end_src
 *** Spawn
 #+srcname:forex-util-spawn
@@ -1120,19 +1151,24 @@ in the [[http://groups.google.com/group/clojure/browse_thread/thread/664a1d305f3
 ** User
 #+srcname:forex_user
 #+begin_src clojure :tangle src/forex_user.clj
+
 (ns forex-user
-  (:use forex.util.general utils.general forex.util.log)
+  (:use forex.util.general utils.general
+	forex.util.log)
   (:use forex.module.error.common
         forex.module.ea.common
         forex.module.indicator.common
-        forex.module.account.common)
-  (:require [forex.backend.mql.socket-service :as backend]
-            [clj-time.core :as t]))
+        forex.module.account.common
+	[clj-time.core :exclude [extend start]])
+  (:require
+   [forex.backend.mql.socket-service :as backend])) 
 
 (defn pip-price
   ([] (pip-price (env :symbol)))
   ([symbol] (mode-tickvalue symbol)))
 ;;TODO: mql err on point? no way! we should throw an error
+(defn clear-eas [] (count (reset! *eas* (filter alive? @*eas*))))
+
 (defn point 
   ([] (point (env :symbol)))
   ([symbol]
@@ -1145,12 +1181,85 @@ in the [[http://groups.google.com/group/clojure/browse_thread/thread/664a1d305f3
   ([val] (price-of val (env :symbol)))
   ([val symbol]
      (* (pip-price symbol) (pips val)))) 
-(defn exit [] 
-  (throwf "stopping ea"))
+(defn exit [& args] 
+  (throwf (apply format args)))
+(defn sell? [{type :type}]
+  (or (= type :sell) (= type :sell-stop) (= type :sell-limit)))
+(defn buy? [{type :type}]
+  (or (= type :buy) (= type :buy-stop) (= type :buy-limit)))
+(defn hit? [order val]
+  (cond
+   (sell? order)
+   (<= (close) val)
+   (buy? order)
+   (>= (close) val )
+   true (throwf "invalid order type %s" order)))
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(def method-regex
+  (re-pattern (.replaceAll
+	       (str "(?i)\\s*(Propulsion|Pip Reactor|Impulse|Spring)\\s+Method"
+		    ".+running on (\\w+/\\w+)"
+		    ".+generated a (Buy|Sell) Signal @ (\\d{0,15}\\.\\d{0,15})"
+		    ".+Stop @ (\\d{0,15}\\.\\d{0,15})"
+		    ".+1st Limit @ (\\d{0,15}\\.\\d{0,15})"
+		    ".+2nd Limit @ (\\d{0,15}\\.\\d{0,15})") 
+	       "\\s+" "\\\\s+")))
+(defmacro catch-un [& body]
+  `(try (do ~@body) (catch Exception e# (warn "caught unexpected error: %s" e#))))
 
-  
- 
+(defn match-method [s]
+  (when s
+    (debugging "Matching Profit Multiplier Trade: "
+	       (catch-un 
+		(when-let [it (first (re-seq method-regex (.replaceAll s "[\\r\\n]+" " ")))]
+		  (let [[method-type symbol type price stop tp1 tp2] (rest it)]
+		    {:method (.toLowerCase method-type)
+		     :symbol (.replaceAll symbol "/" "")
+		     :type (condp = (.toLowerCase type)
+			       "buy" :buy-stop
+			       "sell" :sell-stop)
+		     :price (Double/parseDouble price)
+		     :sl (Double/parseDouble stop)
+		     :tp1 (Double/parseDouble tp1)
+		     :tp2 (Double/parseDouble tp2)}))))))
+;;;;;;;;;;;;;;;;;;;;;;ea
 
+
+
+(defn timeout [{:keys [order state end-time]}]
+  (cond
+   (market? order)
+   (do (reset! state :break-even) (out "changed to break even"))
+   (after? (now) end-time)
+   (when-not (e? (delete! order)) (exit "order timed out"))))
+
+(defn break-even
+  [{:keys [tp1 price tp2 lots] :as order} state]
+  (cond
+   (close? order) (exit "order is now closed")
+   (hit? order tp1) 
+   (let [half (int (/ lots 2))]
+     (if (= half 0)
+       (do (close! order)
+	   (exit "Order lot size is 1, closed all positions"))
+       (do (close! order half)
+	   (modify! order {:sl price :tp tp2})
+	   (exit "closed %s lots" half))))))
+
+(defn start [{state :state order :order :as self} _]
+  (cond
+   (= @state :break-even) (break-even order state)
+   (= @state :timeout) (timeout self)))
+
+(defn init [{:keys [type sl price]}]
+  (iff (order! (atom-hash {:type type :sl sl :price price
+			   :lots (* (mode-minlot) 2)}))
+       {:end-time (plus (now) (hours 12))
+	:state (atom :timeout)
+	:order it} 
+       (out "MQL error %s" (:e it))))
+
+;;(def ea (run {:name "timeout" :symbol "EURUSD" :init init :start start} a))
 
 #+end_src
 

@@ -19,11 +19,22 @@ int context;
 int poll; 
 int push,pull;  
 
+int handle;
+string fileName = "commando_log.txt";
 //string pid = "pid";
 //string group = "";
 
+
+void log(string text, string style = "text")
+  {
+   FileWrite(handle, "", style, ">" + TimeToStr(CurTime()) + ":"+Symbol()+" "+Period()+": ", text, "");
+  }
+  
 int deinit() {
  trace("deinitializing");
+ if (handle>0) 
+   FileClose(handle);
+   
  z_term(context); 
  z_close(push); 
  //NOTE: if we forget to close sockets, metatrader will probably eventually crash after deinit;
@@ -47,6 +58,7 @@ int connect () {
   if (z_connect(pull,"tcp://127.0.0.1:"+pull_port)==-1)
     return(-1);
   Print("connected!");
+  poll = z_new_poll(pull);
   return(0); 
 }
  
@@ -67,7 +79,7 @@ string process_bars_absolute(string &req[]) {
     double close = iClose(symbol,timeframe,i); 
     int err = GetLastError();
     if (err!=0) 
-      return(error(err));
+      return("error "+err);
     ret=ret+high+" "+low+" "+open+" "+close+" ";
   }
   return(ret);
@@ -86,7 +98,7 @@ string process_bars_relative(string &req[]) {
     double close = iClose(symbol,timeframe,i); 
     int err = GetLastError();
     if (err!=0) 
-      return(error(err));
+      return("error "+err);
     ret=ret+high+" "+low+" "+open+" "+close+" ";
   }
   return(iTime(symbol,timeframe,from)+" "+ret);
@@ -196,20 +208,38 @@ string protocol(string&request[]) {
 }
 
 
-    
+ 
+ int alive_counter=0;   
 int loop () { 
   Print("Entering Commando Loop");
   while(true) { 
     if (IsStopped())
       return(0);
     string request[];
-    Print("waiting ...");
+    log("waiting ...");
+    while(true) {
+      int rrr = z_poll(poll,1000);
+      if (rrr<0) {
+        Print("failure in polling... returning -1");
+        return(-1);
+      }
+
+      RefreshRates();
+      if (rrr>0) {
+        alive_counter=0;
+        break;  
+      }  
+      if (alive_counter>=60) {
+        alive_counter=0;
+        log("pinging ... we are alive and waiting!");
+      } else {
+        alive_counter+=1;
+      }
+    }
     split(request,z_recv(pull));
     string command = request[1];
     string id = request[0];
-    
-    RefreshRates();
-    
+  
     if (command=="KILL") {
       Print("KILLING node ...");
       z_send(push,"true",ZMQ_SNDMORE);
@@ -220,26 +250,12 @@ int loop () {
       z_send(push,ret,ZMQ_SNDMORE);
       z_send(push,id);
     }
-    Print("OK");
+
     GetLastError();
-    /*
-    z_send(push,pid,ZMQ_SNDMORE);      //send pid
-    z_send(push,group,ZMQ_SNDMORE);                //send group
-    z_send(push,"REQUEST");
-    
-    string first = z_recv(sub);
-    if (first=="KILL")  {
-      Print("KILLING node: group "+group+" pid "+pid);
-      return(0);
-    }     
-    Print("I received "+z_recv(sub)); 
-    Sleep(1000);
-    if (IsStopped())
-      return(0); 
-    */
   }
   return(0);
 } 
+
 
 int start()
   {
@@ -248,9 +264,15 @@ int start()
   ObjectSet("label", OBJPROP_YDISTANCE, 10);
   ObjectSetText("label", "COMMANDO", 10, "Times New Roman", Blue);
   WindowRedraw();
+  fileName = Symbol()+"_"+Period();
+   handle = FileOpen(fileName, FILE_CSV|FILE_WRITE, " ");
+  if (handle<=0) {
+    Print("error in opening file. exiting!");
+    return(-1);
+  }
   
    if (connect()==-1) {
-      return(0); 
+      return(-1); 
     }  
    loop();
    return(0);
