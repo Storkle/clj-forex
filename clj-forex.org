@@ -498,7 +498,12 @@ in the [[http://groups.google.com/group/clojure/browse_thread/thread/664a1d305f3
              (.printStackTrace e))
            (finally
             (warn "stopping ea ...")
-            (catch-unexpected "deinit" (deinit)))))))
+            (catch-unexpected
+	     "deinit" 
+	     (let [de (get-fn deinit)]
+	       (if (fn? de)
+		 (de)
+		 (throwf "deinit is not a funcion %s" de)))))))))
 
 (defn- timeframe? [a] (number? a))
 (defrecord EA [name init deinit start symbol timeframe args pid run vars])
