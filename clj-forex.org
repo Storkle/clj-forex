@@ -880,17 +880,7 @@ Yes, currently it is not very development start friendly. That will change!
     `(binding [forex.util.general/*env*
 	       (atom (merge @@~#'*env* (hash-map ~@args)))]
        ~@body))
-
-  (defmacro with-write-lock [l & body]
-    `(let [obj# ~l]
-       (try (do (.lock (.writeLock obj#)) ~@body)
-	    (finally (.unlock (.writeLock obj#))))))
-
-  (defmacro with-read-lock [l & body]
-    `(let [obj# ~l]
-       (try (do (.lock (.readLock obj#)) ~@body)
-	    (finally (.unlock (.readLock obj#))))))
-#+end_src
+#+end_src 
 *** Log
 #+srcname:forex-util-log 
 #+begin_src clojure :tangle src/forex/util/log.clj
