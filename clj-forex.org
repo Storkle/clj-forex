@@ -27,6 +27,70 @@ This file is the code (clojure, anyways). The code is untangled using the
 keystroke C-c C-v t in emacs when this file is open. While currently most
 of the code is simply in the Code section, it will all eventually be explained
 in the [[http://groups.google.com/group/clojure/browse_thread/thread/664a1d305f32ab90][literate programming]] manner.
+* Development Tools
+org-mode in emacs + babel is used. Currently code is one ns per one code block
+format. Therefore, i use the below code, along with the latest git repository
+for org-mode (needed!). I then hit f8 to detangle all my changes to my org file.
+f9 can be used to jump from source code to location in org file. 
+#+begin_src emacs-lisp
+  (defvar clj-forex-file "/home/seth/Dropbox/.rep/clj-forex/clj-forex.org")
+   
+  (setq org-bracket-link-analytic-regexp 
+          (concat ";;[ ]*"
+           "\\[\\["
+           "\\(\\(" (mapconcat 'regexp-quote org-link-types "\\|") "\\):\\)?"
+           "\\([^]]+\\)"
+           "\\]"
+           "\\(\\[" "\\([^]]+\\)" "\\]\\)?"
+           "\\]"
+   ))
+  
+  (defmacro with-file (file &rest body)
+    "open up file in a buffer, and set current buffer to it"
+    `(with-current-buffer (find-file-noselect ,file t) ,@body))
+  
+  (defun out-files (org-file)
+    (let (args)
+      (org-babel-map-src-blocks org-file
+        (let ((tangle-file (with-temp-buffer
+                             (insert header-args)
+                             (goto-char (point-min))
+                             (if (re-search-forward ":tangle[ ]+\\([^ ]+\\)" nil t)
+                                 (match-string 1)
+                               nil))))
+          (when tangle-file (push tangle-file args))))
+      args))
+  
+  (defmacro with-cd (dir &rest body)
+    (let ((current (gensym)))
+      `(let ((,current default-directory))
+         (cd ,dir)
+         (unwind-protect (progn ,@body) (cd default-directory)))))
+  
+  (defun detangle ()
+    (interactive)
+    (save-excursion
+      (let* ((org-file clj-forex-file)
+             (out (out-files org-file)))
+        (with-cd (file-name-directory org-file)
+                 (dolist (file out)
+                   (with-file
+                    file
+                    (goto-char (truncate (/ (+ (point-min) (point-max)) 2)))              
+                    (save-excursion (org-babel-detangle)))))
+        (message "Detangled %s source blocks" (length out)))))
+  (global-set-key (kbd "<f8>") 'detangle)
+  (global-set-key (kbd "<f9>") 'org-babel-tangle-jump-to-org)
+  (setq org-src-fontify-natively t)
+#+end_src
+
+Given the tangled output of the source files, which basically tags the
+code so that it can detangle it and jump back to the org file, we can
+technically work in something other than emacs if we have a clojure tool
+to detangle and tangle. However, this is not yet implemented. Also, it is planned
+to give noweb support for babel so that i can break up the blocks.
+
+Yes, currently it is not very development start friendly. That will change!
 * From Ideas to Implementation - Metatrader Backend
 * Code
 ** Backend
