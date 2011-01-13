@@ -673,7 +673,7 @@ Yes, currently it is not very development start friendly. That will change!
   ;;receive with default instead of errors, returns error object for errors
   ;;is customizable to default to errors!
   (defrecord MqlError [e])
-  (defonce- *er* (gensym))  
+  (defonce- *er* (gensym)) 
   (def *default* *er*)
 
   (defn e? [a] (instance? MqlError a))
@@ -716,9 +716,9 @@ Yes, currently it is not very development start friendly. That will change!
 	   (Double/parseDouble (join " "  spl))))))
 
   (defn receive-int [s]
-    (awhen (receive-double s)
-	   (int it)
-	   it))
+    (aif (receive-double s)
+	 (int it)
+	 it))
 #+end_src
 *** Indicator
 #+srcname:indicator-common
@@ -1321,7 +1321,6 @@ Yes, currently it is not very development start friendly. That will change!
     [order {:keys [tp1 tp2]}]
     (when (hit? order tp1)
       (out "closing to half ...")
-      ;;TODO: if it is closed already to the amount, ignore!!!
       (awhen (-> (close! order (int (/ (:lots order) 2)))
 		 (modify! {:sl (:price order) :tp tp2}))
 	     (exit "finished break even - closing ..."))))
