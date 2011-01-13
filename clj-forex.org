@@ -1,7 +1,7 @@
 #+TITLE: CLJ-FOREX
 #+Author: Seth Burleigh
 #+Babel: :comments link :noweb yes
- 
+  
 * Introduction
 ** What is forex?
 Forex is a currency trading market. But you probably know all about forex, since you're here! If not, read up on it! \\
@@ -33,9 +33,8 @@ format. Therefore, i use the below code, along with the latest git repository
 for org-mode (needed!). I then hit f8 to detangle all my changes to my org file.
 f9 can be used to jump from source code to location in org file. 
 #+begin_src emacs-lisp
-  (defvar clj-forex-file)
-  (setq clj-forex-file "/home/seth/Dropbox/.rep/clj-forex/clj-forex.org")
-   
+  (defvar clj-forex-file "/home/seth/Dropbox/.rep/clj-forex/clj-forex.org")
+  (defvar  org-bracket-link-analytic-regexp)
   (setq org-bracket-link-analytic-regexp 
           (concat ";;[ ]*"
            "\\[\\["
@@ -72,14 +71,15 @@ f9 can be used to jump from source code to location in org file.
     (interactive)
     (save-excursion
       (let* ((org-file clj-forex-file)
-             (out (out-files org-file)))
+             (out (out-files org-file))
+             (amount 0))
         (with-cd (file-name-directory org-file)
                  (dolist (file out)
                    (with-file
                     file
-                    (goto-char (truncate (/ (+ (point-min) (point-max)) 2)))              
-                    (save-excursion (org-babel-detangle)))))
-        (message "Detangled %s source blocks" (length out)))))
+                    (goto-char (truncate (/ (+ (point-min) (point-max)) 2)))       
+                    (incf amount (org-babel-detangle)))))
+        (message "Detangled %s source blocks" amount))))
   (global-set-key (kbd "<f8>") 'detangle)
   (global-set-key (kbd "<f9>") 'org-babel-tangle-jump-to-org)
   (setq org-src-fontify-natively t)
