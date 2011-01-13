@@ -7,7 +7,7 @@ lang="en" xml:lang="en">
 <title>CLJ-FOREX</title>
 <meta http-equiv="Content-Type" content="text/html;charset=utf-8"/>
 <meta name="generator" content="Org-mode"/>
-<meta name="generated" content="2011-01-11 13:55:53 CST"/>
+<meta name="generated" content="2011-01-13 16:47:22 CST"/>
 <meta name="author" content="Seth Burleigh"/>
 <meta name="description" content=""/>
 <meta name="keywords" content=""/>
@@ -84,6 +84,7 @@ lang="en" xml:lang="en">
 <h1 class="title">CLJ-FOREX</h1>
 
 
+
 <div id="table-of-contents">
 <h2>Table of Contents</h2>
 <div id="text-table-of-contents">
@@ -96,32 +97,33 @@ lang="en" xml:lang="en">
 <li><a href="#sec-1_4">1.4 Where's the code?? </a></li>
 </ul>
 </li>
-<li><a href="#sec-2">2 From Ideas to Implementation - Metatrader Backend </a></li>
-<li><a href="#sec-3">3 Code </a>
+<li><a href="#sec-2">2 Development Tools </a></li>
+<li><a href="#sec-3">3 From Ideas to Implementation - Metatrader Backend </a></li>
+<li><a href="#sec-4">4 Code </a>
 <ul>
-<li><a href="#sec-3_1">3.1 Backend </a>
+<li><a href="#sec-4_1">4.1 Backend </a>
 <ul>
-<li><a href="#sec-3_1_1">3.1.1 MQL Socket Service </a></li>
+<li><a href="#sec-4_1_1">4.1.1 MQL Socket Service </a></li>
 </ul>
 </li>
-<li><a href="#sec-3_2">3.2 Module </a>
+<li><a href="#sec-4_2">4.2 Module </a>
 <ul>
-<li><a href="#sec-3_2_1">3.2.1 Account </a></li>
-<li><a href="#sec-3_2_2">3.2.2 Ea </a></li>
-<li><a href="#sec-3_2_3">3.2.3 Error </a></li>
-<li><a href="#sec-3_2_4">3.2.4 Indicator </a></li>
+<li><a href="#sec-4_2_1">4.2.1 Account </a></li>
+<li><a href="#sec-4_2_2">4.2.2 Ea </a></li>
+<li><a href="#sec-4_2_3">4.2.3 Error </a></li>
+<li><a href="#sec-4_2_4">4.2.4 Indicator </a></li>
 </ul>
 </li>
-<li><a href="#sec-3_3">3.3 Util </a>
+<li><a href="#sec-4_3">4.3 Util </a>
 <ul>
-<li><a href="#sec-3_3_1">3.3.1 General </a></li>
-<li><a href="#sec-3_3_2">3.3.2 Log </a></li>
-<li><a href="#sec-3_3_3">3.3.3 Spawn </a></li>
-<li><a href="#sec-3_3_4">3.3.4 ZMQ </a></li>
-<li><a href="#sec-3_3_5">3.3.5 Devel </a></li>
+<li><a href="#sec-4_3_1">4.3.1 General </a></li>
+<li><a href="#sec-4_3_2">4.3.2 Log </a></li>
+<li><a href="#sec-4_3_3">4.3.3 Spawn </a></li>
+<li><a href="#sec-4_3_4">4.3.4 ZMQ </a></li>
+<li><a href="#sec-4_3_5">4.3.5 Devel </a></li>
 </ul>
 </li>
-<li><a href="#sec-3_4">3.4 User </a></li>
+<li><a href="#sec-4_4">4.4 User </a></li>
 </ul>
 </li>
 </ul>
@@ -199,30 +201,108 @@ in the <a href="http://groups.google.com/group/clojure/browse_thread/thread/664a
 </div>
 
 <div id="outline-container-2" class="outline-2">
-<h2 id="sec-2"><span class="section-number-2">2</span> From Ideas to Implementation - Metatrader Backend </h2>
+<h2 id="sec-2"><span class="section-number-2">2</span> Development Tools </h2>
 <div class="outline-text-2" id="text-2">
 
-</div>
+<p>org-mode in emacs + babel is used. Currently code is one ns per one code block
+format. Therefore, i use the below code, along with the latest git repository
+for org-mode (needed!). I then hit f8 to detangle all my changes to my org file.
+f9 can be used to jump from source code to location in org file. 
+</p>
+
+
+<pre class="src src-emacs-lisp">(<span style="color: #a020f0;">defvar</span> <span style="color: #a0522d;">clj-forex-file</span> <span style="color: #8b2252;">"/home/seth/Dropbox/.rep/clj-forex/clj-forex.org"</span>)
+(<span style="color: #a020f0;">defvar</span>  <span style="color: #a0522d;">org-bracket-link-analytic-regexp</span>)
+(setq org-bracket-link-analytic-regexp 
+        (concat <span style="color: #8b2252;">";;[ ]*"</span>
+         <span style="color: #8b2252;">"\\[\\["</span>
+         <span style="color: #8b2252;">"</span><span style="color: #8b2252; font-weight: bold;">\\</span><span style="color: #8b2252; font-weight: bold;">(</span><span style="color: #8b2252; font-weight: bold;">\\</span><span style="color: #8b2252; font-weight: bold;">(</span><span style="color: #8b2252;">"</span> (mapconcat 'regexp-quote org-link-types <span style="color: #8b2252;">"</span><span style="color: #8b2252; font-weight: bold;">\\</span><span style="color: #8b2252; font-weight: bold;">|</span><span style="color: #8b2252;">"</span>) <span style="color: #8b2252;">"</span><span style="color: #8b2252; font-weight: bold;">\\</span><span style="color: #8b2252; font-weight: bold;">)</span><span style="color: #8b2252;">:</span><span style="color: #8b2252; font-weight: bold;">\\</span><span style="color: #8b2252; font-weight: bold;">)</span><span style="color: #8b2252;">?"</span>
+         <span style="color: #8b2252;">"</span><span style="color: #8b2252; font-weight: bold;">\\</span><span style="color: #8b2252; font-weight: bold;">(</span><span style="color: #8b2252;">[</span><span style="color: #8b2252;">^</span><span style="color: #8b2252;">]]+</span><span style="color: #8b2252; font-weight: bold;">\\</span><span style="color: #8b2252; font-weight: bold;">)</span><span style="color: #8b2252;">"</span>
+         <span style="color: #8b2252;">"\\]"</span>
+         <span style="color: #8b2252;">"</span><span style="color: #8b2252; font-weight: bold;">\\</span><span style="color: #8b2252; font-weight: bold;">(</span><span style="color: #8b2252;">\\["</span> <span style="color: #8b2252;">"</span><span style="color: #8b2252; font-weight: bold;">\\</span><span style="color: #8b2252; font-weight: bold;">(</span><span style="color: #8b2252;">[</span><span style="color: #8b2252;">^</span><span style="color: #8b2252;">]]+</span><span style="color: #8b2252; font-weight: bold;">\\</span><span style="color: #8b2252; font-weight: bold;">)</span><span style="color: #8b2252;">"</span> <span style="color: #8b2252;">"\\]</span><span style="color: #8b2252; font-weight: bold;">\\</span><span style="color: #8b2252; font-weight: bold;">)</span><span style="color: #8b2252;">?"</span>
+         <span style="color: #8b2252;">"\\]"</span>
+ ))
+
+(<span style="color: #a020f0;">defmacro</span> <span style="color: #0000ff;">with-file</span> (file <span style="color: #228b22;">&amp;rest</span> body)
+  <span style="color: #8b2252;">"open up file in a buffer, and set current buffer to it"</span>
+  `(<span style="color: #a020f0;">with-current-buffer</span> (find-file-noselect ,file t) ,@body))
+
+(<span style="color: #a020f0;">defun</span> <span style="color: #0000ff;">out-files</span> (org-file)
+  (<span style="color: #a020f0;">let</span> (args)
+    (org-babel-map-src-blocks org-file
+      (<span style="color: #a020f0;">let</span> ((tangle-file (<span style="color: #a020f0;">with-temp-buffer</span>
+                           (insert header-args)
+                           (goto-char (point-min))
+                           (<span style="color: #a020f0;">if</span> (re-search-forward <span style="color: #8b2252;">":tangle[ ]+</span><span style="color: #8b2252; font-weight: bold;">\\</span><span style="color: #8b2252; font-weight: bold;">(</span><span style="color: #8b2252;">[</span><span style="color: #8b2252;">^</span><span style="color: #8b2252;"> ]+</span><span style="color: #8b2252; font-weight: bold;">\\</span><span style="color: #8b2252; font-weight: bold;">)</span><span style="color: #8b2252;">"</span> nil t)
+                               (match-string 1)
+                             nil))))
+        (<span style="color: #a020f0;">when</span> tangle-file (push tangle-file args))))
+    args))
+
+(<span style="color: #a020f0;">defmacro</span> <span style="color: #0000ff;">with-cd</span> (dir <span style="color: #228b22;">&amp;rest</span> body)
+  (<span style="color: #a020f0;">let</span> ((current (gensym)))
+    `(<span style="color: #a020f0;">let</span> ((,current default-directory))
+       (cd ,dir)
+       (<span style="color: #a020f0;">unwind-protect</span> (<span style="color: #a020f0;">progn</span> ,@body) (cd default-directory)))))
+
+(<span style="color: #a020f0;">defun</span> <span style="color: #0000ff;">detangle</span> ()
+  (interactive)
+  (<span style="color: #a020f0;">save-excursion</span>
+    (<span style="color: #a020f0;">let*</span> ((org-file clj-forex-file)
+           (out (out-files org-file))
+           (amount 0))
+      (with-cd (file-name-directory org-file)
+               (<span style="color: #a020f0;">dolist</span> (file out)
+                 (with-file
+                  file
+                  (goto-char (truncate (/ (+ (point-min) (point-max)) 2)))       
+                  (incf amount (org-babel-detangle)))))
+      (message <span style="color: #8b2252;">"Detangled %s source blocks"</span> amount))))
+(global-set-key (kbd <span style="color: #8b2252;">"&lt;f8&gt;"</span>) 'detangle)
+(global-set-key (kbd <span style="color: #8b2252;">"&lt;f9&gt;"</span>) 'org-babel-tangle-jump-to-org)
+(setq org-src-fontify-natively t)
+</pre>
+
+
+
+<p>
+Given the tangled output of the source files, which basically tags the
+code so that it can detangle it and jump back to the org file, we can
+technically work in something other than emacs if we have a clojure tool
+to detangle and tangle. However, this is not yet implemented. Also, it is planned
+to give noweb support for babel so that i can break up the blocks.
+</p>
+<p>
+Yes, currently it is not very development start friendly. That will change!
+</p></div>
 
 </div>
 
 <div id="outline-container-3" class="outline-2">
-<h2 id="sec-3"><span class="section-number-2">3</span> Code </h2>
+<h2 id="sec-3"><span class="section-number-2">3</span> From Ideas to Implementation - Metatrader Backend </h2>
 <div class="outline-text-2" id="text-3">
 
+</div>
 
 </div>
 
-<div id="outline-container-3_1" class="outline-3">
-<h3 id="sec-3_1"><span class="section-number-3">3.1</span> Backend </h3>
-<div class="outline-text-3" id="text-3_1">
+<div id="outline-container-4" class="outline-2">
+<h2 id="sec-4"><span class="section-number-2">4</span> Code </h2>
+<div class="outline-text-2" id="text-4">
 
 
 </div>
 
-<div id="outline-container-3_1_1" class="outline-4">
-<h4 id="sec-3_1_1"><span class="section-number-4">3.1.1</span> MQL Socket Service </h4>
-<div class="outline-text-4" id="text-3_1_1">
+<div id="outline-container-4_1" class="outline-3">
+<h3 id="sec-4_1"><span class="section-number-3">4.1</span> Backend </h3>
+<div class="outline-text-3" id="text-4_1">
+
+
+</div>
+
+<div id="outline-container-4_1_1" class="outline-4">
+<h4 id="sec-4_1_1"><span class="section-number-4">4.1.1</span> MQL Socket Service </h4>
+<div class="outline-text-4" id="text-4_1_1">
 
 
 
@@ -334,7 +414,7 @@ in the <a href="http://groups.google.com/group/clojure/browse_thread/thread/664a
          (<span style="color: #a020f0;">cond</span>
           (<span style="color: #7a378b;">instance?</span> Exception result) (<span style="color: #a020f0;">throw</span> result)
           result result
-          true (throwf <span style="color: #8b2252;">"invalid result received %s"</span> result)))))) 
+          true (throwf <span style="color: #8b2252;">"invalid result received %s"</span> result))))))
 </pre></div>
 
 
@@ -343,16 +423,16 @@ in the <a href="http://groups.google.com/group/clojure/browse_thread/thread/664a
 
 </div>
 
-<div id="outline-container-3_2" class="outline-3">
-<h3 id="sec-3_2"><span class="section-number-3">3.2</span> Module </h3>
-<div class="outline-text-3" id="text-3_2">
+<div id="outline-container-4_2" class="outline-3">
+<h3 id="sec-4_2"><span class="section-number-3">4.2</span> Module </h3>
+<div class="outline-text-3" id="text-4_2">
 
 
 </div>
 
-<div id="outline-container-3_2_1" class="outline-4">
-<h4 id="sec-3_2_1"><span class="section-number-4">3.2.1</span> Account </h4>
-<div class="outline-text-4" id="text-3_2_1">
+<div id="outline-container-4_2_1" class="outline-4">
+<h4 id="sec-4_2_1"><span class="section-number-4">4.2.1</span> Account </h4>
+<div class="outline-text-4" id="text-4_2_1">
 
 
 
@@ -423,12 +503,13 @@ in the <a href="http://groups.google.com/group/clojure/browse_thread/thread/664a
 
 
 <div class="org-src-container"><label class="org-src-name">account-common()</label><pre class="src src-clojure">
-(<span style="color: #a020f0;">ns</span> forex.module.account.common
+<span style="color: #b22222;">;;</span><span style="color: #b22222;">TODO: unit test everything
+</span>(<span style="color: #a020f0;">ns</span> forex.module.account.common
   (<span style="color: #7a378b;">:use</span> utils.general emacs  
         forex.util.general
         forex.module.error.common
         forex.module.indicator.common)
-  (<span style="color: #7a378b;">:require</span> [forex.module.error.common <span style="color: #7a378b;">:as</span> err])
+  (<span style="color: #7a378b;">:require</span> forex.module.error.common [forex.module.error.common <span style="color: #7a378b;">:as</span> err])
   (<span style="color: #7a378b;">:require</span>  [forex.module.account.core <span style="color: #7a378b;">:as</span> core]))
 
 (<span style="color: #a020f0;">defn-</span> <span style="color: #0000ff;">&gt;?</span> [a] (<span style="color: #a020f0;">and</span> (<span style="color: #7a378b;">number?</span> a) (<span style="color: #7a378b;">&gt;=</span> a 0)))
@@ -457,22 +538,26 @@ in the <a href="http://groups.google.com/group/clojure/browse_thread/thread/664a
 (<span style="color: #a020f0;">defn-</span> <span style="color: #0000ff;">order-close-time*</span> [{id <span style="color: #7a378b;">:id</span>}]
   (<span style="color: #228b22;">is</span> (<span style="color: #7a378b;">string?</span> id))
   <span style="color: #b22222;">;;</span><span style="color: #b22222;">we dont need to know mql4 error codes for order close time
-</span>  (iff (core/order-close-time id) it -1))
+</span>  (aif (core/order-close-time id) it -1))
 (<span style="color: #a020f0;">defn-</span> <span style="color: #0000ff;">order-type*</span>  [order]
   (<span style="color: #228b22;">is</span> (<span style="color: #7a378b;">string?</span> (<span style="color: #7a378b;">:id</span> order)))
   (default
-    (iff (core/order-type (<span style="color: #7a378b;">:id</span> order))
+    (aif (core/order-type (<span style="color: #7a378b;">:id</span> order))
          (value-to-order-type (<span style="color: #7a378b;">int</span> it)))))
-(<span style="color: #a020f0;">defn-</span> <span style="color: #0000ff;">delete!*</span> [{id <span style="color: #7a378b;">:id</span> <span style="color: #7a378b;">:as</span> o}]
-  (iff (core/order-delete id) (<span style="color: #7a378b;">merge</span> o {<span style="color: #7a378b;">:lots</span> 0}) it))
+
+(<span style="color: #a020f0;">defn-</span> <span style="color: #0000ff;">delete!*</span> [{id <span style="color: #7a378b;">:id</span> lots <span style="color: #7a378b;">:lots</span> <span style="color: #7a378b;">:as</span> o}]
+  (<span style="color: #a020f0;">if-not</span> (<span style="color: #7a378b;">=</span> lots 0)
+    (aif (core/order-delete id) (<span style="color: #7a378b;">merge</span> o {<span style="color: #7a378b;">:lots</span> 0}) it)
+    o))
+
 (<span style="color: #a020f0;">defn-</span> <span style="color: #0000ff;">close!*</span>
   ([o] (close! o 0))
   ([{<span style="color: #7a378b;">:keys</span> [price lots slip id] <span style="color: #7a378b;">:as</span> order} new-lots]
      (<span style="color: #228b22;">is</span> (<span style="color: #a020f0;">and</span> (<span style="color: #7a378b;">string?</span> id) (<span style="color: #a020f0;">and</span> price (<span style="color: #7a378b;">pos?</span> price))
               (<span style="color: #a020f0;">and</span> (<span style="color: #7a378b;">number?</span> lots) (<span style="color: #7a378b;">&gt;=</span> lots 0))))
      (<span style="color: #228b22;">is</span> (<span style="color: #7a378b;">&gt;=</span> (<span style="color: #7a378b;">-</span> lots new-lots) 0))
-     (<span style="color: #a020f0;">if</span> (<span style="color: #7a378b;">&gt;</span> (<span style="color: #7a378b;">-</span> lots new-lots) 0)
-       (iff (core/order-close id (<span style="color: #7a378b;">-</span> lots new-lots) price slip <span style="color: #7a378b;">:blue</span>)
+     (<span style="color: #a020f0;">if-not</span> (<span style="color: #7a378b;">=</span> new-lots lots)
+       (aif (core/order-close id (<span style="color: #7a378b;">-</span> lots new-lots) price slip <span style="color: #7a378b;">:blue</span>)
             (<span style="color: #7a378b;">merge</span> order {<span style="color: #7a378b;">:lots</span> new-lots})
             it)
        order)))
@@ -485,7 +570,7 @@ in the <a href="http://groups.google.com/group/clojure/browse_thread/thread/664a
              (&gt;? sl) (&gt;? tp) (<span style="color: #7a378b;">pos?</span> price)))
     (<span style="color: #a020f0;">if-not</span> (<span style="color: #a020f0;">and</span> (<span style="color: #7a378b;">=</span> sl (<span style="color: #7a378b;">:sl</span> order))
                  (<span style="color: #7a378b;">=</span> tp (<span style="color: #7a378b;">:tp</span> order)))
-      (iff (core/order-modify (<span style="color: #7a378b;">:id</span> order) price sl tp)
+      (aif (core/order-modify (<span style="color: #7a378b;">:id</span> order) price sl tp)
            (<span style="color: #7a378b;">merge</span> order {<span style="color: #7a378b;">:sl</span> sl <span style="color: #7a378b;">:tp</span> tp <span style="color: #7a378b;">:price</span> price})
            it)
       order)))
@@ -519,10 +604,10 @@ in the <a href="http://groups.google.com/group/clojure/browse_thread/thread/664a
 </span>(<span style="color: #a020f0;">defn-</span> <span style="color: #0000ff;">order!*</span> [{<span style="color: #7a378b;">:keys</span> [symbol type price tp sl lots slip]
                         <span style="color: #7a378b;">:as</span> order <span style="color: #7a378b;">:or</span> {symbol (env <span style="color: #7a378b;">:symbol</span>) slip 3 sl 0 tp 0}}]
   (verify-order (<span style="color: #7a378b;">merge</span> {<span style="color: #7a378b;">:symbol</span> symbol} order))
-  (iff (core/order-send symbol type lots price 0 0 slip)
+  (aif (core/order-send symbol type lots price 0 0 slip)
        (<span style="color: #a020f0;">let</span> [o (<span style="color: #7a378b;">merge</span> {<span style="color: #7a378b;">:slip</span> slip <span style="color: #7a378b;">:symbol</span> symbol} (<span style="color: #7a378b;">merge</span> order {<span style="color: #7a378b;">:id</span> it}))]
          <span style="color: #b22222;">;;</span><span style="color: #b22222;">now, use modify to change sl and tp
-</span>         (iff (modify!* o {<span style="color: #7a378b;">:sl</span> sl <span style="color: #7a378b;">:tp</span> tp})
+</span>         (aif (modify!* o {<span style="color: #7a378b;">:sl</span> sl <span style="color: #7a378b;">:tp</span> tp})
               (<span style="color: #7a378b;">merge</span> {<span style="color: #7a378b;">:sl</span> sl <span style="color: #7a378b;">:tp</span> tp} o)
               o))
        it))
@@ -558,16 +643,23 @@ in the <a href="http://groups.google.com/group/clojure/browse_thread/thread/664a
           <span style="color: #7a378b;">:market?</span> market?*
           <span style="color: #7a378b;">:entry?</span> entry?*})
 
+(<span style="color: #7a378b;">extend-type</span> forex.module.error.common.MqlError
+  POrder
+  (order! [this] this)
+  (delete! [this] this)
+  (close! [this] this)
+  (modify! [this] this))
+
 (<span style="color: #7a378b;">extend-type</span> forex.util.general.AtomHash <span style="color: #b22222;">;;</span><span style="color: #b22222;">clojure.lang.Atom
 </span>  POrder
   (order-close-time [this] (order-close-time @this))
   (order-type [this] (order-type @this))
-  (order! [this] (iff (order! @this) (<span style="color: #a020f0;">do</span> (<span style="color: #7a378b;">reset!</span> (.val this) it) this) it))
-  (delete! [this] (iff (delete! @this) (<span style="color: #a020f0;">do</span> (<span style="color: #7a378b;">reset!</span> (.val this) it) this) it))
+  (order! [this] (aif (order! @this) (<span style="color: #a020f0;">do</span> (<span style="color: #7a378b;">reset!</span> (.val this) it) this) it))
+  (delete! [this] (aif (delete! @this) (<span style="color: #a020f0;">do</span> (<span style="color: #7a378b;">reset!</span> (.val this) it) this) it))
   (close!
-   ([this new-amount] (iff (close! @this new-amount) (<span style="color: #a020f0;">do</span> (<span style="color: #7a378b;">reset!</span> (.val this) it) this) it))
+   ([this new-amount] (aif (close! @this new-amount) (<span style="color: #a020f0;">do</span> (<span style="color: #7a378b;">reset!</span> (.val this) it) this) it))
    ([this] (close! this 0)))
-  (modify! [this sl-tp] (iff (modify! @this sl-tp) (<span style="color: #a020f0;">do</span> (<span style="color: #7a378b;">reset!</span> (.val this) it) this) it))
+  (modify! [this sl-tp] (aif (modify! @this sl-tp) (<span style="color: #a020f0;">do</span> (<span style="color: #7a378b;">reset!</span> (.val this) it) this) it))
   (open? [this] (open? @this))
   (close? [this] (<span style="color: #7a378b;">not</span> (open? @this)))
   (order? [this] (order? @this))
@@ -652,7 +744,6 @@ in the <a href="http://groups.google.com/group/clojure/browse_thread/thread/664a
   (<span style="color: #a020f0;">if</span> (<span style="color: #7a378b;">re-find</span> #<span style="color: #8b2252;">"(?i)demo"</span> (account-server))
     true
     false))
-
 </pre></div>
 
 
@@ -660,9 +751,9 @@ in the <a href="http://groups.google.com/group/clojure/browse_thread/thread/664a
 
 </div>
 
-<div id="outline-container-3_2_2" class="outline-4">
-<h4 id="sec-3_2_2"><span class="section-number-4">3.2.2</span> Ea </h4>
-<div class="outline-text-4" id="text-3_2_2">
+<div id="outline-container-4_2_2" class="outline-4">
+<h4 id="sec-4_2_2"><span class="section-number-4">4.2.2</span> Ea </h4>
+<div class="outline-text-4" id="text-4_2_2">
 
 
 
@@ -795,9 +886,9 @@ in the <a href="http://groups.google.com/group/clojure/browse_thread/thread/664a
 
 </div>
 
-<div id="outline-container-3_2_3" class="outline-4">
-<h4 id="sec-3_2_3"><span class="section-number-4">3.2.3</span> Error </h4>
-<div class="outline-text-4" id="text-3_2_3">
+<div id="outline-container-4_2_3" class="outline-4">
+<h4 id="sec-4_2_3"><span class="section-number-4">4.2.3</span> Error </h4>
+<div class="outline-text-4" id="text-4_2_3">
 
 
 
@@ -833,25 +924,28 @@ in the <a href="http://groups.google.com/group/clojure/browse_thread/thread/664a
 
 <span style="color: #b22222;">;;</span><span style="color: #b22222;">receive with default instead of errors, returns error object for errors
 </span><span style="color: #b22222;">;;</span><span style="color: #b22222;">is customizable to default to errors!
-</span>(<span style="color: #a020f0;">defrecord</span> <span style="color: #0000ff;">MqlErr</span> [e])
+</span>(<span style="color: #a020f0;">defrecord</span> <span style="color: #0000ff;">MqlError</span> [e])
 (<span style="color: #a020f0;">defonce-</span> <span style="color: #0000ff;">*er*</span> (<span style="color: #7a378b;">gensym</span>)) 
 (<span style="color: #a020f0;">def</span> <span style="color: #0000ff;">*default*</span> *er*)
 
-(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">e?</span> [a] (<span style="color: #7a378b;">instance?</span> MqlErr a))
+(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">e?</span> [a] (<span style="color: #7a378b;">instance?</span> MqlError a))
 
-(<span style="color: #a020f0;">defmacro</span> <span style="color: #0000ff;">iff-let</span>
-  ([test then] `(iff-let ~test ~then nil))
-  ([[var test] then else]
-     `(<span style="color: #a020f0;">let</span> [~var ~test]
-        (<span style="color: #a020f0;">if</span> (<span style="color: #a020f0;">and</span> test (<span style="color: #7a378b;">not</span> (e? ~var)))
+(<span style="color: #a020f0;">defmacro</span> <span style="color: #0000ff;">aif</span>
+  ([test then] `(aif ~test ~then nil))
+  ([test then else]
+     `(<span style="color: #a020f0;">let</span> [~'it ~test]
+        (<span style="color: #a020f0;">if</span> (<span style="color: #a020f0;">and</span> test (<span style="color: #7a378b;">not</span> (e? ~'it)))
           ~then
           ~else))))
-
-(<span style="color: #a020f0;">defmacro</span> <span style="color: #0000ff;">iff</span>
-  ([test then] `(iff ~test ~then nil))
+(<span style="color: #a020f0;">defmacro</span> <span style="color: #0000ff;">awhen</span> [test &amp; body] `(aif ~test (<span style="color: #a020f0;">do</span> ~@body)))
+(<span style="color: #a020f0;">defmacro</span> <span style="color: #0000ff;">aif-not</span>
+  ([test then] `(aif-not ~test ~then nil))
   ([test then else]
-     `(iff-let [~'it ~test]
-               ~then ~else)))
+     `(<span style="color: #a020f0;">let</span> [~'it ~test]
+        (<span style="color: #a020f0;">if</span> (<span style="color: #7a378b;">not</span> (<span style="color: #a020f0;">and</span> test (<span style="color: #7a378b;">not</span> (e? ~'it))))
+          ~then
+          ~else))))
+(<span style="color: #a020f0;">defmacro</span> <span style="color: #0000ff;">awhen-not</span> [test &amp; body] `(aif-not ~test (<span style="color: #a020f0;">do</span> ~@body)))
 
 (<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">receive</span>
   ([msg] (receive msg *default*))
@@ -859,8 +953,8 @@ in the <a href="http://groups.google.com/group/clojure/browse_thread/thread/664a
      (<span style="color: #a020f0;">let</span> [spl (raw-receive-lst msg)]
        (<span style="color: #a020f0;">if</span> (<span style="color: #7a378b;">=</span> (<span style="color: #7a378b;">first</span> spl) <span style="color: #8b2252;">"error"</span>)
          (<span style="color: #a020f0;">if</span> (<span style="color: #7a378b;">=</span> default *er*)
-           (MqlErr. (Integer/parseInt (<span style="color: #7a378b;">second</span> spl)))
-           (<span style="color: #a020f0;">if</span> (<span style="color: #7a378b;">fn?</span> default) (default (MqlErr. (Integer/parseInt (<span style="color: #7a378b;">second</span> spl)))) default))
+           (MqlError. (Integer/parseInt (<span style="color: #7a378b;">second</span> spl)))
+           (<span style="color: #a020f0;">if</span> (<span style="color: #7a378b;">fn?</span> default) (default (MqlError. (Integer/parseInt (<span style="color: #7a378b;">second</span> spl)))) default))
          (<span style="color: #228b22;">join</span> <span style="color: #8b2252;">""</span> spl)))))
 
 (<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">receive-double</span>
@@ -869,12 +963,12 @@ in the <a href="http://groups.google.com/group/clojure/browse_thread/thread/664a
      (<span style="color: #a020f0;">let</span> [spl (raw-receive-lst msg)]
        (<span style="color: #a020f0;">if</span> (<span style="color: #7a378b;">=</span> (<span style="color: #7a378b;">first</span> spl) <span style="color: #8b2252;">"error"</span>)
          (<span style="color: #a020f0;">if</span> (<span style="color: #7a378b;">=</span> default *er*)
-           (MqlErr. (Integer/parseInt (<span style="color: #7a378b;">second</span> spl)))
-           (<span style="color: #a020f0;">if</span> (<span style="color: #7a378b;">fn?</span> default) (default (MqlErr. (Integer/parseInt (<span style="color: #7a378b;">second</span> spl)))) default))
+           (MqlError. (Integer/parseInt (<span style="color: #7a378b;">second</span> spl)))
+           (<span style="color: #a020f0;">if</span> (<span style="color: #7a378b;">fn?</span> default) (default (MqlError. (Integer/parseInt (<span style="color: #7a378b;">second</span> spl)))) default))
          (Double/parseDouble (<span style="color: #228b22;">join</span> <span style="color: #8b2252;">" "</span>  spl))))))
 
 (<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">receive-int</span> [s]
-  (iff (receive-double s)
+  (aif (receive-double s)
        (<span style="color: #7a378b;">int</span> it)
        it))
 </pre></div>
@@ -884,9 +978,9 @@ in the <a href="http://groups.google.com/group/clojure/browse_thread/thread/664a
 
 </div>
 
-<div id="outline-container-3_2_4" class="outline-4">
-<h4 id="sec-3_2_4"><span class="section-number-4">3.2.4</span> Indicator </h4>
-<div class="outline-text-4" id="text-3_2_4">
+<div id="outline-container-4_2_4" class="outline-4">
+<h4 id="sec-4_2_4"><span class="section-number-4">4.2.4</span> Indicator </h4>
+<div class="outline-text-4" id="text-4_2_4">
 
 
 
@@ -937,7 +1031,7 @@ in the <a href="http://groups.google.com/group/clojure/browse_thread/thread/664a
 <span style="color: #b22222;">;;</span><span style="color: #b22222;">bid==close 
 </span>(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">bid</span>
   ([] (bid 0))
-  ([i] (iff (mode-bid (env <span style="color: #7a378b;">:symbol</span>)) it (throwf <span style="color: #8b2252;">"MQL error %s"</span> (<span style="color: #7a378b;">:e</span> it))))) 
+  ([i] (iff (mode-bid (env <span style="color: #7a378b;">:symbol</span>)) it (throwf <span style="color: #8b2252;">"MQL error %s"</span> (<span style="color: #7a378b;">:e</span> it)))))
 </pre></div>
 
 
@@ -947,16 +1041,16 @@ in the <a href="http://groups.google.com/group/clojure/browse_thread/thread/664a
 
 </div>
 
-<div id="outline-container-3_3" class="outline-3">
-<h3 id="sec-3_3"><span class="section-number-3">3.3</span> Util </h3>
-<div class="outline-text-3" id="text-3_3">
+<div id="outline-container-4_3" class="outline-3">
+<h3 id="sec-4_3"><span class="section-number-3">4.3</span> Util </h3>
+<div class="outline-text-3" id="text-4_3">
 
 
 </div>
 
-<div id="outline-container-3_3_1" class="outline-4">
-<h4 id="sec-3_3_1"><span class="section-number-4">3.3.1</span> General </h4>
-<div class="outline-text-4" id="text-3_3_1">
+<div id="outline-container-4_3_1" class="outline-4">
+<h4 id="sec-4_3_1"><span class="section-number-4">4.3.1</span> General </h4>
+<div class="outline-text-4" id="text-4_3_1">
 
 
 
@@ -1050,12 +1144,6 @@ in the <a href="http://groups.google.com/group/clojure/browse_thread/thread/664a
   [promise val]
   (<span style="color: #7a378b;">promise</span> val))
 
-
-
-(<span style="color: #a020f0;">defmacro</span> <span style="color: #0000ff;">awhen</span> [test &amp; body]
-  `(<span style="color: #a020f0;">when-let</span> [~'it ~test]
-     ~@body))
-
 (<span style="color: #a020f0;">defmacro</span> <span style="color: #0000ff;">naive-var-local-cache-strategy</span> [var] 
  `(<span style="color: #a020f0;">let</span> [cache# (<span style="color: #7a378b;">atom</span> {})]
     (<span style="color: #7a378b;">reify</span> PCachingStrategy
@@ -1069,17 +1157,11 @@ in the <a href="http://groups.google.com/group/clojure/browse_thread/thread/664a
 (<span style="color: #a020f0;">defmacro</span> <span style="color: #0000ff;">constants</span> [&amp; args]
   `(<span style="color: #a020f0;">do</span> ~@(<span style="color: #7a378b;">map</span> (<span style="color: #7a378b;">fn</span> [[name val]] `(<span style="color: #a020f0;">def</span> <span style="color: #0000ff;">~name</span> ~val)) (group args 2))))
 
-(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">now</span> [] (DateTime. DateTimeZone/UTC))
-
-(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">abs</span>
-  ([] (<span style="color: #7a378b;">int</span> (<span style="color: #7a378b;">/</span> (.getMillis (Instant. (now))) 1000)))
-  ([date] (<span style="color: #7a378b;">int</span> (<span style="color: #7a378b;">/</span> (.getMillis (Instant. date)) 1000))))
-
 (<span style="color: #a020f0;">defmacro</span> <span style="color: #0000ff;">spawn-log</span> [func]
   `(spawn (<span style="color: #7a378b;">fn</span> [] (<span style="color: #a020f0;">try</span> (~func) (<span style="color: #a020f0;">catch</span> Exception e#
                                 (.printStackTrace e#) (severe e#))))))
 
-(<span style="color: #a020f0;">defonce</span> <span style="color: #0000ff;">*env*</span> (<span style="color: #7a378b;">atom</span> {<span style="color: #7a378b;">:timeframe</span> 1440 <span style="color: #7a378b;">:index</span> 0})) <span style="color: #b22222;">;</span><span style="color: #b22222;">default +D1+
+(<span style="color: #a020f0;">defonce</span> <span style="color: #0000ff;">*env*</span> (<span style="color: #7a378b;">atom</span> {<span style="color: #7a378b;">:timeframe</span> 1440 <span style="color: #7a378b;">:symbol</span> <span style="color: #8b2252;">"EURUSD"</span>})) <span style="color: #b22222;">;</span><span style="color: #b22222;">default +D1+, EURUSD
 </span>(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">env</span> [key] (<span style="color: #7a378b;">key</span> @*env*))
 (<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">env!</span> [map]
   (<span style="color: #7a378b;">swap!</span> *env* #(<span style="color: #7a378b;">merge</span> % map))
@@ -1087,20 +1169,10 @@ in the <a href="http://groups.google.com/group/clojure/browse_thread/thread/664a
 
 <span style="color: #b22222;">;;</span><span style="color: #b22222;">todo: fix private!
 </span><span style="color: #b22222;">;;</span><span style="color: #b22222;">todo: ignores all nils?
-</span>(<span style="color: #a020f0;">defmacro</span> <span style="color: #0000ff;">wenv</span> [[&amp; args] &amp; body]
+</span>(<span style="color: #a020f0;">defmacro</span> <span style="color: #0000ff;">wenv</span> [[&amp; args] &amp; body] 
   `(<span style="color: #a020f0;">binding</span> [forex.util.general/*env*
              (<span style="color: #7a378b;">atom</span> (<span style="color: #7a378b;">merge</span> @@~#'*env* (<span style="color: #7a378b;">hash-map</span> ~@args)))]
      ~@body))
-
-(<span style="color: #a020f0;">defmacro</span> <span style="color: #0000ff;">with-write-lock</span> [l &amp; body]
-  `(<span style="color: #a020f0;">let</span> [obj# ~l]
-     (<span style="color: #a020f0;">try</span> (<span style="color: #a020f0;">do</span> (.lock (.writeLock obj#)) ~@body)
-          (<span style="color: #a020f0;">finally</span> (.unlock (.writeLock obj#))))))
-
-(<span style="color: #a020f0;">defmacro</span> <span style="color: #0000ff;">with-read-lock</span> [l &amp; body]
-  `(<span style="color: #a020f0;">let</span> [obj# ~l]
-     (<span style="color: #a020f0;">try</span> (<span style="color: #a020f0;">do</span> (.lock (.readLock obj#)) ~@body)
-          (<span style="color: #a020f0;">finally</span> (.unlock (.readLock obj#))))))
 </pre></div>
 
 
@@ -1108,9 +1180,9 @@ in the <a href="http://groups.google.com/group/clojure/browse_thread/thread/664a
 
 </div>
 
-<div id="outline-container-3_3_2" class="outline-4">
-<h4 id="sec-3_3_2"><span class="section-number-4">3.3.2</span> Log </h4>
-<div class="outline-text-4" id="text-3_3_2">
+<div id="outline-container-4_3_2" class="outline-4">
+<h4 id="sec-4_3_2"><span class="section-number-4">4.3.2</span> Log </h4>
+<div class="outline-text-4" id="text-4_3_2">
 
 
 
@@ -1200,9 +1272,9 @@ in the <a href="http://groups.google.com/group/clojure/browse_thread/thread/664a
 
 </div>
 
-<div id="outline-container-3_3_3" class="outline-4">
-<h4 id="sec-3_3_3"><span class="section-number-4">3.3.3</span> Spawn </h4>
-<div class="outline-text-4" id="text-3_3_3">
+<div id="outline-container-4_3_3" class="outline-4">
+<h4 id="sec-4_3_3"><span class="section-number-4">4.3.3</span> Spawn </h4>
+<div class="outline-text-4" id="text-4_3_3">
 
 
 
@@ -1296,18 +1368,16 @@ in the <a href="http://groups.google.com/group/clojure/browse_thread/thread/664a
 <span style="color: #b22222;">;;</span><span style="color: #b22222;">? with multiple sources or change to poll
 </span><span style="color: #b22222;">;;</span><span style="color: #b22222;">!? (timeout)
 </span><span style="color: #b22222;">;;</span><span style="color: #b22222;">?? (filter)
-</span>
-
-</pre></div>
+</span></pre></div>
 
 
 </div>
 
 </div>
 
-<div id="outline-container-3_3_4" class="outline-4">
-<h4 id="sec-3_3_4"><span class="section-number-4">3.3.4</span> ZMQ </h4>
-<div class="outline-text-4" id="text-3_3_4">
+<div id="outline-container-4_3_4" class="outline-4">
+<h4 id="sec-4_3_4"><span class="section-number-4">4.3.4</span> ZMQ </h4>
+<div class="outline-text-4" id="text-4_3_4">
 
 
 
@@ -1426,9 +1496,9 @@ in the <a href="http://groups.google.com/group/clojure/browse_thread/thread/664a
 
 </div>
 
-<div id="outline-container-3_3_5" class="outline-4">
-<h4 id="sec-3_3_5"><span class="section-number-4">3.3.5</span> Devel </h4>
-<div class="outline-text-4" id="text-3_3_5">
+<div id="outline-container-4_3_5" class="outline-4">
+<h4 id="sec-4_3_5"><span class="section-number-4">4.3.5</span> Devel </h4>
+<div class="outline-text-4" id="text-4_3_5">
 
 
 
@@ -1473,9 +1543,9 @@ in the <a href="http://groups.google.com/group/clojure/browse_thread/thread/664a
 
 </div>
 
-<div id="outline-container-3_4" class="outline-3">
-<h3 id="sec-3_4"><span class="section-number-3">3.4</span> User </h3>
-<div class="outline-text-3" id="text-3_4">
+<div id="outline-container-4_4" class="outline-3">
+<h3 id="sec-4_4"><span class="section-number-3">4.4</span> User </h3>
+<div class="outline-text-3" id="text-4_4">
 
 
 
@@ -1483,7 +1553,7 @@ in the <a href="http://groups.google.com/group/clojure/browse_thread/thread/664a
 <div class="org-src-container"><label class="org-src-name">forex_user()</label><pre class="src src-clojure">
 (<span style="color: #a020f0;">ns</span> forex-user
   (<span style="color: #7a378b;">:use</span> forex.util.general utils.general
-        forex.util.log)
+        forex.util.log) 
   (<span style="color: #7a378b;">:use</span> forex.module.error.common
         forex.module.ea.common
         forex.module.indicator.common
@@ -1530,14 +1600,15 @@ in the <a href="http://groups.google.com/group/clojure/browse_thread/thread/664a
                     <span style="color: #8b2252;">".+running on (\\w+/\\w+)"</span>
                     <span style="color: #8b2252;">".+generated a (Buy|Sell) Signal @ (\\d{0,15}\\.\\d{0,15})"</span>
                     <span style="color: #8b2252;">".+Stop @ (\\d{0,15}\\.\\d{0,15})"</span>
-                    <span style="color: #8b2252;">".+1st Limit @ (\\d{0,15}\\.\\d{0,15})"</span>
-                    <span style="color: #8b2252;">".+2nd Limit @ (\\d{0,15}\\.\\d{0,15})"</span>) 
+                    <span style="color: #8b2252;">".+(?:1st|First) Limit @ (\\d{0,15}\\.\\d{0,15})"</span>
+                    <span style="color: #8b2252;">".+(?:2nd|Second) Limit @ (\\d{0,15}\\.\\d{0,15})"</span>) 
                <span style="color: #8b2252;">"\\s+"</span> <span style="color: #8b2252;">"\\\\s+"</span>)))
+
 (<span style="color: #a020f0;">defmacro</span> <span style="color: #0000ff;">catch-un</span> [&amp; body]
   `(<span style="color: #a020f0;">try</span> (<span style="color: #a020f0;">do</span> ~@body) (<span style="color: #a020f0;">catch</span> Exception e# (warn <span style="color: #8b2252;">"caught unexpected error: %s"</span> e#))))
 
 (<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">match-method</span> [s]
-  (<span style="color: #a020f0;">when</span> s
+  (<span style="color: #a020f0;">when</span> s 
     (debugging <span style="color: #8b2252;">"Matching Profit Multiplier Trade: "</span>
                (catch-un 
                 (<span style="color: #a020f0;">when-let</span> [it (<span style="color: #7a378b;">first</span> (<span style="color: #7a378b;">re-seq</span> method-regex (.replaceAll s <span style="color: #8b2252;">"[\\r\\n]+"</span> <span style="color: #8b2252;">" "</span>)))]
@@ -1552,45 +1623,62 @@ in the <a href="http://groups.google.com/group/clojure/browse_thread/thread/664a
                      <span style="color: #7a378b;">:tp1</span> (Double/parseDouble tp1)
                      <span style="color: #7a378b;">:tp2</span> (Double/parseDouble tp2)}))))))
 <span style="color: #b22222;">;;;;;;;;;;;;;;;;;;;;;;</span><span style="color: #b22222;">ea
+</span><span style="color: #b22222;">;;</span><span style="color: #b22222;">TODO: mql error 146
 </span>
-(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">timeout</span> [{<span style="color: #7a378b;">:keys</span> [order state end-time]}]
-  (<span style="color: #a020f0;">cond</span>
-   (market? order)
-   (<span style="color: #a020f0;">do</span> (<span style="color: #7a378b;">reset!</span> state <span style="color: #7a378b;">:break-even</span>) (out <span style="color: #8b2252;">"changed to break even"</span>))
-   (after? (now) end-time)
-   (<span style="color: #a020f0;">when-not</span> (e? (delete! order)) (exit <span style="color: #8b2252;">"order timed out"</span>))))
-
-(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">break-even</span>
-  [{<span style="color: #7a378b;">:keys</span> [tp1 price tp2 lots] <span style="color: #7a378b;">:as</span> order} state]
-  (<span style="color: #a020f0;">cond</span>
-   (close? order) (exit <span style="color: #8b2252;">"order is now closed"</span>)
-   (hit? order tp1) 
-   (<span style="color: #a020f0;">let</span> [half (<span style="color: #7a378b;">int</span> (<span style="color: #7a378b;">/</span> lots 2))]
-     (<span style="color: #a020f0;">if</span> (<span style="color: #7a378b;">=</span> half 0)
-       (<span style="color: #a020f0;">do</span> (close! order)
-           (exit <span style="color: #8b2252;">"Order lot size is 1, closed all positions"</span>))
-       (<span style="color: #a020f0;">do</span> (close! order half)
-           (modify! order {<span style="color: #7a378b;">:sl</span> price <span style="color: #7a378b;">:tp</span> tp2})
-           (exit <span style="color: #8b2252;">"closed %s lots"</span> half))))))
-
-(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">start</span> [{state <span style="color: #7a378b;">:state</span> order <span style="color: #7a378b;">:order</span> <span style="color: #7a378b;">:as</span> self} _]
-  (<span style="color: #a020f0;">cond</span>
-   (<span style="color: #7a378b;">=</span> @state <span style="color: #7a378b;">:break-even</span>) (<span style="color: #a020f0;">do</span> (break-even order state)
-                              (out <span style="color: #8b2252;">"switching to break even"</span>))
-   (<span style="color: #7a378b;">=</span> @state <span style="color: #7a378b;">:timeout</span>) (timeout self)))
+(<span style="color: #7a378b;">declare</span> timeout break-even trail)
 
 (<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">init</span> [{<span style="color: #7a378b;">:keys</span> [type sl price]}]
-  (iff (order! (atom-hash {<span style="color: #7a378b;">:type</span> type <span style="color: #7a378b;">:sl</span> sl <span style="color: #7a378b;">:price</span> price
+  (aif (order! (atom-hash {<span style="color: #7a378b;">:type</span> type <span style="color: #7a378b;">:sl</span> sl <span style="color: #7a378b;">:price</span> price
                            <span style="color: #7a378b;">:lots</span> (<span style="color: #7a378b;">*</span> (mode-minlot) 2)}))
        {<span style="color: #7a378b;">:end-time</span> (plus (now) (hours 12))
         <span style="color: #7a378b;">:state</span> (<span style="color: #7a378b;">atom</span> <span style="color: #7a378b;">:timeout</span>)
         <span style="color: #7a378b;">:order</span> it} 
        (out <span style="color: #8b2252;">"MQL error %s"</span> (<span style="color: #7a378b;">:e</span> it))))
 
+(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">start</span> [{state <span style="color: #7a378b;">:state</span> order <span style="color: #7a378b;">:order</span> <span style="color: #7a378b;">:as</span> self} args]
+  (<span style="color: #a020f0;">cond</span>
+   (close? order) (exit <span style="color: #8b2252;">"order is now closed"</span>)
+   (<span style="color: #7a378b;">=</span> @state <span style="color: #7a378b;">:timeout</span>) (timeout self)
+   (<span style="color: #7a378b;">=</span> @state <span style="color: #7a378b;">:break-even</span>) (break-even order args))) 
+
+(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">timeout</span> [{<span style="color: #7a378b;">:keys</span> [order state end-time]}]
+  (<span style="color: #a020f0;">cond</span>
+   <span style="color: #b22222;">;;</span><span style="color: #b22222;">changed to market
+</span>   (market? order)
+   (<span style="color: #a020f0;">do</span> (<span style="color: #7a378b;">reset!</span> state <span style="color: #7a378b;">:break-even</span>) (out <span style="color: #8b2252;">"changed to break even"</span>))
+   <span style="color: #b22222;">;;</span><span style="color: #b22222;">entry order reach sl 
+</span>   (<span style="color: #a020f0;">if</span> (sell? order) (<span style="color: #7a378b;">&gt;</span> (close) (<span style="color: #7a378b;">:sl</span> order)) (<span style="color: #7a378b;">&lt;</span> (close) (<span style="color: #7a378b;">:sl</span> order)))
+   <span style="color: #b22222;">;;</span><span style="color: #b22222;">TODO: reliable delete????
+</span>   (<span style="color: #a020f0;">do</span> (delete! order) (out <span style="color: #8b2252;">"entry order reached sl. deleting ..."</span>))
+   <span style="color: #b22222;">;;</span><span style="color: #b22222;">timed out
+</span>   (after? (now) end-time)
+   (awhen (delete! order) (exit <span style="color: #8b2252;">"order timed out"</span>))))
+
+(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">break-even</span>
+  [order {<span style="color: #7a378b;">:keys</span> [tp1 tp2]}]
+  (<span style="color: #a020f0;">when</span> (hit? order tp1)
+    (out <span style="color: #8b2252;">"closing to half ..."</span>)
+    (awhen (<span style="color: #a020f0;">-&gt;</span> (close! order (<span style="color: #7a378b;">int</span> (<span style="color: #7a378b;">/</span> (<span style="color: #7a378b;">:lots</span> order) 2)))
+               (modify! {<span style="color: #7a378b;">:sl</span> (<span style="color: #7a378b;">:price</span> order) <span style="color: #7a378b;">:tp</span> tp2}))
+           (exit <span style="color: #8b2252;">"finished break even - closing ..."</span>))))
+
+(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">hh</span> [a]
+  (<span style="color: #7a378b;">apply</span> max (<span style="color: #7a378b;">map</span> high (<span style="color: #7a378b;">range</span> 1 (<span style="color: #7a378b;">inc</span> a)))))
+(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">ll</span> [a]
+  (<span style="color: #7a378b;">apply</span> min (<span style="color: #7a378b;">map</span> low (<span style="color: #7a378b;">range</span> 1 (<span style="color: #7a378b;">inc</span> a)))))
+(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">trail</span>
+  <span style="color: #8b2252;">"initiate a trailing stop = hh3 or ll3"</span>
+  [order]
+  (modify! order
+           {<span style="color: #7a378b;">:sl</span> (<span style="color: #a020f0;">if</span> (sell? order)
+                  (<span style="color: #7a378b;">min</span> (<span style="color: #7a378b;">:sl</span> order) (hh 3))
+                  (<span style="color: #7a378b;">max</span> (<span style="color: #7a378b;">:sl</span> order) (ll 3)))}))
+
 <span style="color: #b22222;">;;</span><span style="color: #b22222;">TODO: stop a specific node
-</span>
-<span style="color: #b22222;">;;</span><span style="color: #b22222;">(def ea (run {:name "timeout" :symbol "EURUSD" :init init :start #'start} a))
-</span>
+</span>(<span style="color: #a020f0;">def</span> <span style="color: #0000ff;">a</span> nil)
+(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">trade-it</span> []
+  (<span style="color: #a020f0;">def</span> <span style="color: #0000ff;">ea</span> (run {<span style="color: #7a378b;">:name</span> <span style="color: #8b2252;">"timeout"</span> <span style="color: #7a378b;">:symbol</span> (<span style="color: #7a378b;">:symbol</span> a)
+                <span style="color: #7a378b;">:init</span> init <span style="color: #7a378b;">:start</span> #'start} a)))
 </pre></div>
 
 
@@ -1602,7 +1690,7 @@ in the <a href="http://groups.google.com/group/clojure/browse_thread/thread/664a
 <div id="postamble">
 <p class="author"> Author: Seth Burleigh
 </p>
-<p class="date"> Date: 2011-01-11 13:55:53 CST</p>
+<p class="date"> Date: 2011-01-13 16:47:22 CST</p>
 <p class="creator">HTML generated by org-mode 7.4 in emacs 23</p>
 </div>
 </div>
