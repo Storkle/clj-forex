@@ -764,11 +764,11 @@ Yes, currently it is not very development start friendly. That will change!
   ;;TODO: change
   (defn ask
     ([] (ask 0))
-    ([i] (iff (mode-ask (env :symbol)) it (throwf "MQL error %s" (:e it)))))
+    ([i] (aif (mode-ask (env :symbol)) it (throwf "MQL error %s" (:e it)))))
   ;;bid==close 
   (defn bid
     ([] (bid 0))
-    ([i] (iff (mode-bid (env :symbol)) it (throwf "MQL error %s" (:e it)))))
+    ([i] (aif (mode-bid (env :symbol)) it (throwf "MQL error %s" (:e it)))))
 #+end_src
 
 ** Util
@@ -880,9 +880,9 @@ Yes, currently it is not very development start friendly. That will change!
     `(spawn (fn [] (try (~func) (catch Exception e#
 				  (.printStackTrace e#) (severe e#))))))
 
-  (defonce *env* (atom {:timeframe 1440 :symbol "EURUSD"})) ;default +D1+, EURUSD
+  (defonce *env* (atom {:timeframe 240 :symbol "EURUSD"})) ;default +H4+, EURUSD
   (defn env [key] (key @*env*))
-  (defn env! [map]
+  (defn env! [map] 
     (swap! *env* #(merge % map))
     map)
 
@@ -1299,6 +1299,7 @@ Yes, currently it is not very development start friendly. That will change!
 	 (out "MQL error %s" (:e it))))
 
   (defn start [{state :state order :order :as self} args]
+    ;;(pr "HI")  
     (cond
      (close? order) (exit "order is now closed")
      (= @state :timeout) (timeout self)
@@ -1338,7 +1339,7 @@ Yes, currently it is not very development start friendly. That will change!
 		    (max (:sl order) (ll 3)))}))
 
   ;;TODO: stop a specific node
-  (def a nil)
+  (defonce a nil) 
   (defn trade-it []
     (def ea (run {:name "timeout" :symbol (:symbol a)
 		  :init init :start #'start} a)))
