@@ -848,10 +848,6 @@ Yes, currently it is not very development start friendly. That will change!
     [promise val]
     (promise val))
 
-  (defmacro awhen [test & body]
-    `(when-let [~'it ~test]
-       ~@body))
-
   (defmacro naive-var-local-cache-strategy [var] 
    `(let [cache# (atom {})]
       (reify PCachingStrategy
@@ -877,7 +873,7 @@ Yes, currently it is not very development start friendly. That will change!
 
   ;;todo: fix private!
   ;;todo: ignores all nils?
-  (defmacro wenv [[& args] & body]
+  (defmacro wenv [[& args] & body] 
     `(binding [forex.util.general/*env*
 	       (atom (merge @@~#'*env* (hash-map ~@args)))]
        ~@body))
