@@ -7,7 +7,7 @@ lang="en" xml:lang="en">
 <title>CLJ-FOREX</title>
 <meta http-equiv="Content-Type" content="text/html;charset=utf-8"/>
 <meta name="generator" content="Org-mode"/>
-<meta name="generated" content="2011-01-13 16:47:22 CST"/>
+<meta name="generated" content="2011-01-14 13:43:06 CST"/>
 <meta name="author" content="Seth Burleigh"/>
 <meta name="description" content=""/>
 <meta name="keywords" content=""/>
@@ -907,20 +907,28 @@ Yes, currently it is not very development start friendly. That will change!
 
 
 <span style="color: #b22222;">;;</span><span style="color: #b22222;">receive with errors
-</span>(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">receive!</span> [msg]
-  (<span style="color: #a020f0;">let</span> [spl (raw-receive-lst msg)]
-    (<span style="color: #a020f0;">if</span> (<span style="color: #7a378b;">=</span> (<span style="color: #7a378b;">first</span> spl) <span style="color: #8b2252;">"error"</span>)
-      (throwf <span style="color: #8b2252;">"MQL error %s"</span> (<span style="color: #7a378b;">second</span> spl))
-      (<span style="color: #228b22;">join</span> <span style="color: #8b2252;">" "</span>  spl))))
+</span><span style="color: #b22222;">;;</span><span style="color: #b22222;">TODO: error 4054 also occurs when we pass in invalid symbol
+</span><span style="color: #b22222;">;;</span><span style="color: #b22222;">distinguish from loading???
+</span>(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">receive-lst!</span>
+  ([msg] (receive-lst! msg nil))
+  ([msg try]
+     (<span style="color: #a020f0;">loop</span> [retries 0]
+       (<span style="color: #a020f0;">let</span> [spl (raw-receive-lst msg)]
+         (<span style="color: #a020f0;">if</span> (<span style="color: #7a378b;">=</span> (<span style="color: #7a378b;">first</span> spl) <span style="color: #8b2252;">"error"</span>)
+           (<span style="color: #a020f0;">let</span> [err (<span style="color: #a020f0;">try</span> (Integer/parseInt (<span style="color: #7a378b;">second</span> spl))
+                          (<span style="color: #a020f0;">catch</span> Exception e (<span style="color: #7a378b;">second</span> spl)))]
+             (<span style="color: #a020f0;">if</span> (<span style="color: #a020f0;">and</span> try (<span style="color: #7a378b;">&lt;</span> retries try) (<span style="color: #7a378b;">=</span> err 4054))
+               (<span style="color: #a020f0;">do</span> (Thread/sleep 300) (<span style="color: #a020f0;">recur</span> (<span style="color: #7a378b;">inc</span> retries)))
+               (throwf <span style="color: #8b2252;">"MQL error %s"</span> (<span style="color: #7a378b;">second</span> spl))))
+           spl)))))
+(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">receive!</span>
+  ([msg] (receive! msg nil))
+  ([msg try]
+     (<span style="color: #228b22;">join</span> <span style="color: #8b2252;">" "</span> (receive-lst! msg try))))
 
-(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">receive-lst!</span> [msg]
-  (<span style="color: #a020f0;">let</span> [spl (raw-receive-lst msg)]
-    (<span style="color: #a020f0;">if</span> (<span style="color: #7a378b;">=</span> (<span style="color: #7a378b;">first</span> spl) <span style="color: #8b2252;">"error"</span>)
-      (throwf <span style="color: #8b2252;">"MQL error %s"</span> (<span style="color: #7a378b;">second</span> spl))
-      spl)))
-
-(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">receive-double!</span> [msg]
-  (Double/parseDouble (receive! msg)))
+(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">receive-double!</span>
+  ([msg] (receive-double! msg nil))
+  ([msg try] (Double/parseDouble (receive! msg try))))
 
 <span style="color: #b22222;">;;</span><span style="color: #b22222;">receive with default instead of errors, returns error object for errors
 </span><span style="color: #b22222;">;;</span><span style="color: #b22222;">is customizable to default to errors!
@@ -1027,11 +1035,38 @@ Yes, currently it is not very development start friendly. That will change!
 <span style="color: #b22222;">;;</span><span style="color: #b22222;">TODO: change
 </span>(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">ask</span>
   ([] (ask 0))
-  ([i] (iff (mode-ask (env <span style="color: #7a378b;">:symbol</span>)) it (throwf <span style="color: #8b2252;">"MQL error %s"</span> (<span style="color: #7a378b;">:e</span> it)))))
+  ([i] (aif (mode-ask (env <span style="color: #7a378b;">:symbol</span>)) it (throwf <span style="color: #8b2252;">"MQL error %s"</span> (<span style="color: #7a378b;">:e</span> it)))))
 <span style="color: #b22222;">;;</span><span style="color: #b22222;">bid==close 
 </span>(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">bid</span>
   ([] (bid 0))
-  ([i] (iff (mode-bid (env <span style="color: #7a378b;">:symbol</span>)) it (throwf <span style="color: #8b2252;">"MQL error %s"</span> (<span style="color: #7a378b;">:e</span> it)))))
+  ([i] (aif (mode-bid (env <span style="color: #7a378b;">:symbol</span>)) it (throwf <span style="color: #8b2252;">"MQL error %s"</span> (<span style="color: #7a378b;">:e</span> it)))))
+
+(<span style="color: #a020f0;">defn-</span> <span style="color: #0000ff;">env?</span> [] (<span style="color: #a020f0;">and</span> (<span style="color: #7a378b;">string?</span> (env <span style="color: #7a378b;">:symbol</span>)) (<span style="color: #7a378b;">integer?</span> (env <span style="color: #7a378b;">:timeframe</span>))))
+(<span style="color: #a020f0;">defn-</span> <span style="color: #0000ff;">&gt;?</span> [a] (<span style="color: #a020f0;">or</span> (zero? a) (<span style="color: #7a378b;">pos?</span> a)))
+<span style="color: #b22222;">;;</span><span style="color: #b22222;">an example of acessing a custom ea 
+</span>(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">blazan-dynamic-stop</span>
+  ([params] (<span style="color: #7a378b;">fn</span> 
+              ([mode offset] (blazan-dynamic-stop params mode offset))
+              ([offset] (blazan-dynamic-stop params 0 offset))))
+  ([params mode] (<span style="color: #7a378b;">fn</span> [offset] (blazan-dynamic-stop params mode offset)))
+  ([params mode offset]
+     {<span style="color: #7a378b;">:pre</span> [(env?) (&gt;? offset) (&gt;? mode)
+            (<span style="color: #a020f0;">if-not</span> (<span style="color: #7a378b;">map?</span> params)
+              (<span style="color: #7a378b;">=</span> (<span style="color: #7a378b;">count</span> params) 4)
+              <span style="color: #b22222;">;;</span><span style="color: #b22222;">TODO: efficient testing of a map having keys? of types?
+</span>              (<span style="color: #a020f0;">and</span> (<span style="color: #7a378b;">:contract-step</span> params) (<span style="color: #7a378b;">:precision</span> params) (<span style="color: #7a378b;">:shift-bars</span> params)
+                   (<span style="color: #7a378b;">:bars-count</span> params)))]}
+     (receive-double! 
+      (<span style="color: #a020f0;">if</span> (<span style="color: #7a378b;">map?</span> params)
+        (<span style="color: #7a378b;">format</span> <span style="color: #8b2252;">"Custom_Blazan_Dynamic_Stop %s %s %s %s %s %s %s %s"</span>
+                (env <span style="color: #7a378b;">:symbol</span>) (env <span style="color: #7a378b;">:timeframe</span>)
+                mode offset
+                (<span style="color: #7a378b;">:contract-step</span> params) (<span style="color: #7a378b;">:precision</span> params)
+                (<span style="color: #7a378b;">:shift-bars</span> params) (<span style="color: #7a378b;">:bars-count</span> params))
+        (<span style="color: #7a378b;">format</span> <span style="color: #8b2252;">"Custom_Blazan_Dynamic_Stop %s %s %s %s %s"</span>
+                (env <span style="color: #7a378b;">:symbol</span>) (env <span style="color: #7a378b;">:timeframe</span>)
+                mode offset (<span style="color: #7a378b;">apply</span> str (<span style="color: #7a378b;">interpose</span> <span style="color: #8b2252;">" "</span> params))))
+      3)))
 </pre></div>
 
 
@@ -1161,9 +1196,9 @@ Yes, currently it is not very development start friendly. That will change!
   `(spawn (<span style="color: #7a378b;">fn</span> [] (<span style="color: #a020f0;">try</span> (~func) (<span style="color: #a020f0;">catch</span> Exception e#
                                 (.printStackTrace e#) (severe e#))))))
 
-(<span style="color: #a020f0;">defonce</span> <span style="color: #0000ff;">*env*</span> (<span style="color: #7a378b;">atom</span> {<span style="color: #7a378b;">:timeframe</span> 1440 <span style="color: #7a378b;">:symbol</span> <span style="color: #8b2252;">"EURUSD"</span>})) <span style="color: #b22222;">;</span><span style="color: #b22222;">default +D1+, EURUSD
+(<span style="color: #a020f0;">defonce</span> <span style="color: #0000ff;">*env*</span> (<span style="color: #7a378b;">atom</span> {<span style="color: #7a378b;">:timeframe</span> 240 <span style="color: #7a378b;">:symbol</span> <span style="color: #8b2252;">"EURUSD"</span>})) <span style="color: #b22222;">;</span><span style="color: #b22222;">default +H4+, EURUSD
 </span>(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">env</span> [key] (<span style="color: #7a378b;">key</span> @*env*))
-(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">env!</span> [map]
+(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">env!</span> [map] 
   (<span style="color: #7a378b;">swap!</span> *env* #(<span style="color: #7a378b;">merge</span> % map))
   map)
 
@@ -1507,6 +1542,7 @@ Yes, currently it is not very development start friendly. That will change!
 (<span style="color: #a020f0;">ns</span> forex.utils.mql-devel
   (<span style="color: #7a378b;">:use</span> utils.general))
 
+
 (<span style="color: #a020f0;">defmacro</span> <span style="color: #0000ff;">cond-out</span> [&amp; args]
   (<span style="color: #7a378b;">apply</span> str (<span style="color: #7a378b;">map</span> (<span style="color: #7a378b;">fn</span> [a]
                     (<span style="color: #a020f0;">let</span> [name (<span style="color: #7a378b;">str</span> a)]
@@ -1538,6 +1574,95 @@ Yes, currently it is not very development start friendly. That will change!
 </pre></div>
 
 
+
+
+<div class="org-src-container"><label class="org-src-name">forex-util-indicator-devel()</label><pre class="src src-clojure">
+<span style="color: #b22222;">;;</span><span style="color: #b22222;">this file allows one to automatically produce binding code for metatrader custom indicators
+</span>(<span style="color: #a020f0;">ns</span> forex.utils.mql-indicator-devel
+  (<span style="color: #7a378b;">:import</span> java.io.File))
+
+(<span style="color: #a020f0;">defmacro</span> <span style="color: #0000ff;">for+</span> [args &amp; body]
+  (<span style="color: #a020f0;">let</span> [a (partition-all 2 args)]
+    `(<span style="color: #7a378b;">map</span> (<span style="color: #7a378b;">fn</span> <span style="color: #0000ff;">~</span>(<span style="color: #7a378b;">vec</span> (<span style="color: #7a378b;">map</span> first a)) ~@body) ~@(<span style="color: #7a378b;">map</span> second a))))
+(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">throwf</span> [msg &amp; args]
+  (<span style="color: #a020f0;">throw</span> (Exception. (<span style="color: #7a378b;">apply</span> format msg args))))
+
+(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">args</span> [s]
+  (<span style="color: #7a378b;">map</span> rest (<span style="color: #7a378b;">re-seq</span> #<span style="color: #8b2252;">"extern\s+(\w+)\s+(\w+)"</span> s)))
+(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">buffers</span> [s]
+  (<span style="color: #7a378b;">count</span> (<span style="color: #7a378b;">re-seq</span> #<span style="color: #8b2252;">"SetIndexBuffer"</span> s)))
+
+(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">extract</span> [args]
+  (<span style="color: #a020f0;">let</span> [type-to-fn (<span style="color: #7a378b;">fn</span> [type]
+                     (<span style="color: #a020f0;">condp</span> = type
+                         <span style="color: #8b2252;">"int"</span> <span style="color: #8b2252;">"StrToInteger"</span>
+                         <span style="color: #8b2252;">"double"</span> <span style="color: #8b2252;">"StrToDouble"</span>
+                         <span style="color: #8b2252;">"string"</span> nil
+                         <span style="color: #8b2252;">"color"</span> <span style="color: #8b2252;">"StrToInteger"</span>
+                         (throwf <span style="color: #8b2252;">"unknown type %s"</span> type)))
+        user-extract (<span style="color: #7a378b;">apply</span> str
+                            (<span style="color: #7a378b;">interpose</span> <span style="color: #8b2252;">"\n"</span>
+                                       (for+ [[type name] args index (<span style="color: #7a378b;">iterate</span> inc 6)]
+                                             (<span style="color: #a020f0;">let</span> [type-fn (type-to-fn type)]
+                                               (<span style="color: #a020f0;">if</span> type-fn
+                                                 (<span style="color: #7a378b;">format</span> <span style="color: #8b2252;">"%s %s = %s(command[%s]);"</span> type name type-fn index)
+                                                 (<span style="color: #7a378b;">format</span> <span style="color: #8b2252;">"%s %s = command[%s];"</span> type name index))))))
+        always (<span style="color: #7a378b;">format</span> <span style="color: #8b2252;">"
+string symbol = command[2];
+int timeframe = StrToInteger(command[3]);
+int mode = StrToInteger(command[4]);
+int shift = StrToInteger(command[5]);"</span>)]
+    (<span style="color: #7a378b;">str</span> always <span style="color: #8b2252;">"\n"</span> user-extract)))
+
+(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">extension</span> [f] (<span style="color: #a020f0;">let</span> [e (<span style="color: #7a378b;">second</span> (.split (<span style="color: #a020f0;">if</span> (<span style="color: #7a378b;">instance?</span> File f) (.getName f) f) <span style="color: #8b2252;">"\\."</span>))] (<span style="color: #a020f0;">if</span> (<span style="color: #7a378b;">string?</span> e) (.trim e))))
+
+(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">to-test</span> [all]
+  (<span style="color: #7a378b;">format</span> <span style="color: #8b2252;">"%nstring process_INDICATORS(string commands[]) {%nstring ret = \"\";string command=commands[1];%n%s%nreturn(ret);}"</span>
+          (<span style="color: #7a378b;">apply</span> str
+                 <span style="color: #8b2252;">"if (command==\"0\") {\n}\n"</span>
+                 (<span style="color: #7a378b;">map</span> #(<span style="color: #7a378b;">format</span> <span style="color: #8b2252;">"else if (command==\"%s\") {%nprotocol_found=true;%nret = %s(commands);%n}%n"</span> (<span style="color: #7a378b;">:function-name</span> %) (<span style="color: #7a378b;">:function-name</span> %)) all))))
+
+
+(<span style="color: #a020f0;">defn-</span> <span style="color: #0000ff;">listify</span> [s] (<span style="color: #a020f0;">if-not</span> (<span style="color: #7a378b;">empty?</span> s) (<span style="color: #7a378b;">str</span> (<span style="color: #7a378b;">apply</span> str (<span style="color: #7a378b;">interpose</span> <span style="color: #8b2252;">","</span> s)) <span style="color: #8b2252;">","</span>) <span style="color: #8b2252;">""</span> ))
+(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">name-of</span> [f] (<span style="color: #7a378b;">first</span> (.split (.getName f) <span style="color: #8b2252;">"\\."</span>)))
+(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">iCustom</span>
+  <span style="color: #8b2252;">"given a file, generate mql4 binding code to the indicator in the flie"</span>
+  [f]
+  (<span style="color: #a020f0;">let</span> [name (.replaceAll (<span style="color: #7a378b;">first</span> (.split (.getName f) <span style="color: #8b2252;">"\\."</span>)) <span style="color: #8b2252;">" +"</span> <span style="color: #8b2252;">"_"</span>)
+        s (<span style="color: #7a378b;">slurp</span> f)
+        args (<span style="color: #7a378b;">map</span> #(<span style="color: #7a378b;">list</span> (<span style="color: #7a378b;">first</span> %) (<span style="color: #7a378b;">format</span> <span style="color: #8b2252;">"i_%s"</span> (<span style="color: #7a378b;">second</span> %))) (args s))
+        buffers (buffers s)]
+
+    (<span style="color: #a020f0;">when</span> (<span style="color: #a020f0;">and</span> s args buffers)
+      (<span style="color: #a020f0;">let</span> [custom (<span style="color: #7a378b;">format</span> <span style="color: #8b2252;">"double val = iCustom(symbol,timeframe,\"%s\",%smode,shift);"</span> <span style="color: #b22222;">;</span><span style="color: #b22222;">
+</span>                                             (name-of f) (listify (<span style="color: #7a378b;">map</span> second args))) 
+            extract (extract args)
+
+            return (<span style="color: #7a378b;">format</span>
+                    <span style="color: #8b2252;">"
+int err = GetLastError();
+if(err!=0)
+  return(\"error \" + err);
+return(val); 
+}"</span>)
+            function-name (<span style="color: #7a378b;">format</span> <span style="color: #8b2252;">"Custom_%s"</span> name)
+            function-header (<span style="color: #7a378b;">format</span> <span style="color: #8b2252;">"string %s (string command[]) {"</span> function-name)] 
+        {<span style="color: #7a378b;">:file</span> f <span style="color: #7a378b;">:file-name</span> name <span style="color: #7a378b;">:function-name</span> function-name <span style="color: #7a378b;">:args</span> args <span style="color: #7a378b;">:buffers</span> buffers
+         <span style="color: #7a378b;">:code</span>  (<span style="color: #7a378b;">format</span> <span style="color: #8b2252;">"%s %s %s %s"</span> function-header extract custom return)}))))
+
+(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">iCustom-all</span> [dir out]
+  (<span style="color: #a020f0;">let</span> [files (.listFiles (File. dir))
+        customs (<span style="color: #a020f0;">for</span> [f files <span style="color: #7a378b;">:when</span> (<span style="color: #7a378b;">=</span> (extension f) <span style="color: #8b2252;">"mq4"</span>)] (iCustom f))]
+    (spit out (<span style="color: #7a378b;">format</span> <span style="color: #8b2252;">"bool protocol_found = false;%n%s\n%s"</span> (<span style="color: #7a378b;">apply</span> str (<span style="color: #7a378b;">interpose</span> <span style="color: #8b2252;">"\n\n"</span> (<span style="color: #7a378b;">map</span> <span style="color: #7a378b;">:code</span> customs)))
+                      (to-test customs)))))
+
+
+<span style="color: #b22222;">;;</span><span style="color: #b22222;">example usage - first param is custom indicator folder, second is output file
+</span>(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">do-it</span> []
+  (iCustom-all <span style="color: #8b2252;">"/home/seth/.wine/dosdevices/c:/Program Files/FXCM MT4 powered by BT/experts/indicators/"</span> <span style="color: #8b2252;">"/home/seth/.wine/dosdevices/c:/Program Files/FXCM MT4 powered by BT/experts/include/INDICATORS.mqh"</span>))
+</pre></div>
+
+
 </div>
 </div>
 
@@ -1562,6 +1687,9 @@ Yes, currently it is not very development start friendly. That will change!
   (<span style="color: #7a378b;">:require</span>
    [forex.backend.mql.socket-service <span style="color: #7a378b;">:as</span> backend])) 
 
+
+<span style="color: #b22222;">;;</span><span style="color: #b22222;">(defn do-it []  ((blazan-dynamic-stop [150 70 1 10000]) 100))
+</span>
 (<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">pip-price</span>
   ([] (pip-price (env <span style="color: #7a378b;">:symbol</span>)))
   ([symbol] (mode-tickvalue symbol)))
@@ -1648,8 +1776,8 @@ Yes, currently it is not very development start friendly. That will change!
    (<span style="color: #a020f0;">do</span> (<span style="color: #7a378b;">reset!</span> state <span style="color: #7a378b;">:break-even</span>) (out <span style="color: #8b2252;">"changed to break even"</span>))
    <span style="color: #b22222;">;;</span><span style="color: #b22222;">entry order reach sl 
 </span>   (<span style="color: #a020f0;">if</span> (sell? order) (<span style="color: #7a378b;">&gt;</span> (close) (<span style="color: #7a378b;">:sl</span> order)) (<span style="color: #7a378b;">&lt;</span> (close) (<span style="color: #7a378b;">:sl</span> order)))
-   <span style="color: #b22222;">;;</span><span style="color: #b22222;">TODO: reliable delete????
-</span>   (<span style="color: #a020f0;">do</span> (delete! order) (out <span style="color: #8b2252;">"entry order reached sl. deleting ..."</span>))
+                                        <span style="color: #b22222;">;</span><span style="color: #b22222;">TODO: reliable delete????
+</span>   (awhen (delete! order) (out <span style="color: #8b2252;">"entry order reached sl. deleting ..."</span>))
    <span style="color: #b22222;">;;</span><span style="color: #b22222;">timed out
 </span>   (after? (now) end-time)
    (awhen (delete! order) (exit <span style="color: #8b2252;">"order timed out"</span>))))
@@ -1658,8 +1786,8 @@ Yes, currently it is not very development start friendly. That will change!
   [order {<span style="color: #7a378b;">:keys</span> [tp1 tp2]}]
   (<span style="color: #a020f0;">when</span> (hit? order tp1)
     (out <span style="color: #8b2252;">"closing to half ..."</span>)
-    (awhen (<span style="color: #a020f0;">-&gt;</span> (close! order (<span style="color: #7a378b;">int</span> (<span style="color: #7a378b;">/</span> (<span style="color: #7a378b;">:lots</span> order) 2)))
-               (modify! {<span style="color: #7a378b;">:sl</span> (<span style="color: #7a378b;">:price</span> order) <span style="color: #7a378b;">:tp</span> tp2}))
+    (awhen (<span style="color: #a020f0;">-&gt;</span> (modify! order {<span style="color: #7a378b;">:sl</span> (<span style="color: #7a378b;">:price</span> order) <span style="color: #7a378b;">:tp</span> tp2})
+               (close! (<span style="color: #7a378b;">int</span> (<span style="color: #7a378b;">/</span> (<span style="color: #7a378b;">:lots</span> order) 2))))
            (exit <span style="color: #8b2252;">"finished break even - closing ..."</span>))))
 
 (<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">hh</span> [a]
@@ -1675,7 +1803,7 @@ Yes, currently it is not very development start friendly. That will change!
                   (<span style="color: #7a378b;">max</span> (<span style="color: #7a378b;">:sl</span> order) (ll 3)))}))
 
 <span style="color: #b22222;">;;</span><span style="color: #b22222;">TODO: stop a specific node
-</span>(<span style="color: #a020f0;">def</span> <span style="color: #0000ff;">a</span> nil)
+</span>(<span style="color: #a020f0;">defonce</span> <span style="color: #0000ff;">a</span> nil) 
 (<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">trade-it</span> []
   (<span style="color: #a020f0;">def</span> <span style="color: #0000ff;">ea</span> (run {<span style="color: #7a378b;">:name</span> <span style="color: #8b2252;">"timeout"</span> <span style="color: #7a378b;">:symbol</span> (<span style="color: #7a378b;">:symbol</span> a)
                 <span style="color: #7a378b;">:init</span> init <span style="color: #7a378b;">:start</span> #'start} a)))
@@ -1690,7 +1818,7 @@ Yes, currently it is not very development start friendly. That will change!
 <div id="postamble">
 <p class="author"> Author: Seth Burleigh
 </p>
-<p class="date"> Date: 2011-01-13 16:47:22 CST</p>
+<p class="date"> Date: 2011-01-14 13:43:06 CST</p>
 <p class="creator">HTML generated by org-mode 7.4 in emacs 23</p>
 </div>
 </div>
