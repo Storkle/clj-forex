@@ -1299,7 +1299,6 @@ Yes, currently it is not very development start friendly. That will change!
 	 (out "MQL error %s" (:e it))))
 
   (defn start [{state :state order :order :as self} args]
-    ;;(pr "HI")  
     (cond
      (close? order) (exit "order is now closed")
      (= @state :timeout) (timeout self)
@@ -1312,8 +1311,8 @@ Yes, currently it is not very development start friendly. That will change!
      (do (reset! state :break-even) (out "changed to break even"))
      ;;entry order reach sl 
      (if (sell? order) (> (close) (:sl order)) (< (close) (:sl order)))
-     ;;TODO: reliable delete????
-     (do (delete! order) (out "entry order reached sl. deleting ..."))
+					  ;TODO: reliable delete????
+     (awhen (delete! order) (out "entry order reached sl. deleting ..."))
      ;;timed out
      (after? (now) end-time)
      (awhen (delete! order) (exit "order timed out"))))
@@ -1322,8 +1321,8 @@ Yes, currently it is not very development start friendly. That will change!
     [order {:keys [tp1 tp2]}]
     (when (hit? order tp1)
       (out "closing to half ...")
-      (awhen (-> (close! order (int (/ (:lots order) 2)))
-		 (modify! {:sl (:price order) :tp tp2}))
+      (awhen (-> (modify! order {:sl (:price order) :tp tp2})
+		 (close! (int (/ (:lots order) 2))))
 	     (exit "finished break even - closing ..."))))
 
   (defn hh [a]
