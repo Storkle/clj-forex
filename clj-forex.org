@@ -215,7 +215,7 @@ Yes, currently it is not very development start friendly. That will change!
   (ns forex.module.account.core
     (:use utils.general emacs utils.fiber.spawn
 	  forex.util.general
-	  forex.module.error.common))
+	  forex.module.error))
 
   (def- order
     {:buy 0 :sell 1 :buy-limit 2 :sell-limit 3 :buy-stop 4 :sell-stop 5})
