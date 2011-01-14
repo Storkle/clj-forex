@@ -655,20 +655,28 @@ Yes, currently it is not very development start friendly. That will change!
 
 
   ;;receive with errors
-  (defn receive! [msg]
-    (let [spl (raw-receive-lst msg)]
-      (if (= (first spl) "error")
-	(throwf "MQL error %s" (second spl))
-	(join " "  spl))))
+  ;;TODO: error 4054 also occurs when we pass in invalid symbol
+  ;;distinguish from loading???
+  (defn receive-lst!
+    ([msg] (receive-lst! msg nil))
+    ([msg try]
+       (loop [retries 0]
+	 (let [spl (raw-receive-lst msg)]
+	   (if (= (first spl) "error")
+	     (let [err (try (Integer/parseInt (second spl))
+			    (catch Exception e (second spl)))]
+	       (if (and try (< retries try) (= err 4054))
+		 (do (Thread/sleep 300) (recur (inc retries)))
+		 (throwf "MQL error %s" (second spl))))
+	     spl)))))
+  (defn receive!
+    ([msg] (receive! msg nil))
+    ([msg try]
+       (join " " (receive-lst! msg try))))
 
-  (defn receive-lst! [msg]
-    (let [spl (raw-receive-lst msg)]
-      (if (= (first spl) "error")
-	(throwf "MQL error %s" (second spl))
-	spl)))
-
-  (defn receive-double! [msg]
-    (Double/parseDouble (receive! msg)))
+  (defn receive-double!
+    ([msg] (receive-double! msg nil))
+    ([msg try] (Double/parseDouble (receive! msg try))))
 
   ;;receive with default instead of errors, returns error object for errors
   ;;is customizable to default to errors!
@@ -769,6 +777,33 @@ Yes, currently it is not very development start friendly. That will change!
   (defn bid
     ([] (bid 0))
     ([i] (aif (mode-bid (env :symbol)) it (throwf "MQL error %s" (:e it)))))
+
+  (defn- env? [] (and (string? (env :symbol)) (integer? (env :timeframe))))
+  (defn- >? [a] (or (zero? a) (pos? a)))
+  ;;an example of acessing a custom ea 
+  (defn blazan-dynamic-stop
+    ([params] (fn 
+		([mode offset] (blazan-dynamic-stop params mode offset))
+		([offset] (blazan-dynamic-stop params 0 offset))))
+    ([params mode] (fn [offset] (blazan-dynamic-stop params mode offset)))
+    ([params mode offset]
+       {:pre [(env?) (>? offset) (>? mode)
+	      (if-not (map? params)
+		(= (count params) 4)
+		;;TODO: efficient testing of a map having keys? of types?
+		(and (:contract-step params) (:precision params) (:shift-bars params)
+		     (:bars-count params)))]}
+       (receive-double! 
+	(if (map? params)
+	  (format "Custom_Blazan_Dynamic_Stop %s %s %s %s %s %s %s %s"
+		  (env :symbol) (env :timeframe)
+		  mode offset
+		  (:contract-step params) (:precision params)
+		  (:shift-bars params) (:bars-count params))
+	  (format "Custom_Blazan_Dynamic_Stop %s %s %s %s %s"
+		  (env :symbol) (env :timeframe)
+		  mode offset (apply str (interpose " " params))))
+	3)))
 #+end_src
 
 ** Util
@@ -1182,6 +1217,7 @@ Yes, currently it is not very development start friendly. That will change!
   (ns forex.utils.mql-devel
     (:use utils.general))
 
+
   (defmacro cond-out [& args]
     (apply str (map (fn [a]
 		      (let [name (str a)]
@@ -1211,6 +1247,93 @@ Yes, currently it is not very development start friendly. That will change!
    OrderClose
    OrderModify)
 #+end_src
+
+#+srcname:forex-util-indicator-devel
+#+begin_src clojure :tangle src/forex/util/mql_indicator_devel.clj
+  ;;this file allows one to automatically produce binding code for metatrader custom indicators
+  (ns forex.utils.mql-indicator-devel
+    (:import java.io.File))
+  
+  (defmacro for+ [args & body]
+    (let [a (partition-all 2 args)]
+      `(map (fn ~(vec (map first a)) ~@body) ~@(map second a))))
+  (defn throwf [msg & args]
+    (throw (Exception. (apply format msg args))))
+  
+  (defn args [s]
+    (map rest (re-seq #"extern\s+(\w+)\s+(\w+)" s)))
+  (defn buffers [s]
+    (count (re-seq #"SetIndexBuffer" s)))
+  
+  (defn extract [args]
+    (let [type-to-fn (fn [type]
+                       (condp = type
+                           "int" "StrToInteger"
+                           "double" "StrToDouble"
+                           "string" nil
+                           "color" "StrToInteger"
+                           (throwf "unknown type %s" type)))
+          user-extract (apply str
+                              (interpose "\n"
+                                         (for+ [[type name] args index (iterate inc 6)]
+                                               (let [type-fn (type-to-fn type)]
+                                                 (if type-fn
+                                                   (format "%s %s = %s(command[%s]);" type name type-fn index)
+                                                   (format "%s %s = command[%s];" type name index))))))
+          always (format "
+  string symbol = command[2];
+  int timeframe = StrToInteger(command[3]);
+  int mode = StrToInteger(command[4]);
+  int shift = StrToInteger(command[5]);")]
+      (str always "\n" user-extract)))
+  
+  (defn extension [f] (let [e (second (.split (if (instance? File f) (.getName f) f) "\\."))] (if (string? e) (.trim e))))
+  
+  (defn to-test [all]
+    (format "%nstring process_INDICATORS(string commands[]) {%nstring ret = \"\";string command=commands[1];%n%s%nreturn(ret);}"
+            (apply str
+                   "if (command==\"0\") {\n}\n"
+                   (map #(format "else if (command==\"%s\") {%nprotocol_found=true;%nret = %s(commands);%n}%n" (:function-name %) (:function-name %)) all))))
+  
+  
+  (defn- listify [s] (if-not (empty? s) (str (apply str (interpose "," s)) ",") "" ))
+  (defn name-of [f] (first (.split (.getName f) "\\.")))
+  (defn iCustom
+    "given a file, generate mql4 binding code to the indicator in the flie"
+    [f]
+    (let [name (.replaceAll (first (.split (.getName f) "\\.")) " +" "_")
+          s (slurp f)
+          args (map #(list (first %) (format "i_%s" (second %))) (args s))
+          buffers (buffers s)]
+   
+      (when (and s args buffers)
+        (let [custom (format "double val = iCustom(symbol,timeframe,\"%s\",%smode,shift);" ;
+                                               (name-of f) (listify (map second args))) 
+              extract (extract args)
+             
+              return (format
+                      "
+  int err = GetLastError();
+  if(err!=0)
+    return(\"error \" + err);
+  return(val); 
+  }")
+              function-name (format "Custom_%s" name)
+              function-header (format "string %s (string command[]) {" function-name)] 
+          {:file f :file-name name :function-name function-name :args args :buffers buffers
+           :code  (format "%s %s %s %s" function-header extract custom return)}))))
+  
+  (defn iCustom-all [dir out]
+    (let [files (.listFiles (File. dir))
+          customs (for [f files :when (= (extension f) "mq4")] (iCustom f))]
+      (spit out (format "bool protocol_found = false;%n%s\n%s" (apply str (interpose "\n\n" (map :code customs)))
+                        (to-test customs)))))
+  
+  
+  ;;example usage - first param is custom indicator folder, second is output file
+  (defn do-it []
+    (iCustom-all "/home/seth/.wine/dosdevices/c:/Program Files/FXCM MT4 powered by BT/experts/indicators/" "/home/seth/.wine/dosdevices/c:/Program Files/FXCM MT4 powered by BT/experts/include/INDICATORS.mqh"))
+#+end_src
 ** User 
 #+srcname:forex_user
 #+begin_src clojure :tangle src/forex_user.clj
@@ -1224,6 +1347,9 @@ Yes, currently it is not very development start friendly. That will change!
 	  [clj-time.core :exclude [extend start]])
     (:require
      [forex.backend.mql.socket-service :as backend])) 
+
+
+  ;;(defn do-it []  ((blazan-dynamic-stop [150 70 1 10000]) 100))
 
   (defn pip-price
     ([] (pip-price (env :symbol)))

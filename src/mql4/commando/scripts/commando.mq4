@@ -6,6 +6,7 @@
 #include <zmq_bind.mqh>
 #include <utils.mqh>
 #include <ACCOUNT.mqh>
+#include <INDICATORS.mqh>
 //#include <PROTOCOL.mqh>
 
 //+------------------------------------------------------------------+
@@ -104,13 +105,18 @@ string process_bars_relative(string &req[]) {
   return(iTime(symbol,timeframe,from)+" "+ret);
 }
 
+
 string protocol(string&request[]) {
   GetLastError(); //filter out any non relative errors?
   string command = request[1];
   string ret = "";
-  
+   
+    ret = process_INDICATORS(request);
+    if (protocol_found==true) {
+      protocol_found=false;
+    }
     //GET BARS
-   if (command=="bars_relative")
+   else if (command=="bars_relative")
     {
       ret = process_bars_relative(request);
     } else if (command=="bars_absolute") {
@@ -209,7 +215,9 @@ string protocol(string&request[]) {
 
 
  
- int alive_counter=0;   
+ int alive_counter=0; 
+ int ping_alive = 1800; //ping every 60*30, or 30 minutes
+  
 int loop () { 
   Print("Entering Commando Loop");
   while(true) { 
@@ -229,7 +237,7 @@ int loop () {
         alive_counter=0;
         break;  
       }  
-      if (alive_counter>=60) {
+      if (alive_counter>=ping_alive) {
         alive_counter=0;
         log("pinging ... we are alive and waiting!");
       } else {
@@ -265,7 +273,7 @@ int start()
   ObjectSetText("label", "COMMANDO", 10, "Times New Roman", Blue);
   WindowRedraw();
   fileName = Symbol()+"_"+Period();
-   handle = FileOpen(fileName, FILE_CSV|FILE_WRITE, " ");
+  handle = FileOpen(fileName, FILE_CSV|FILE_WRITE, " ");
   if (handle<=0) {
     Print("error in opening file. exiting!");
     return(-1);
