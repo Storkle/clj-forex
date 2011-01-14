@@ -33,17 +33,8 @@ format. Therefore, i use the below code, along with the latest git repository
 for org-mode (needed!). I then hit f8 to detangle all my changes to my org file.
 f9 can be used to jump from source code to location in org file. 
 #+begin_src emacs-lisp
+  ;;change to location of your clj-forex.org
   (defvar clj-forex-file "/home/seth/Dropbox/.rep/clj-forex/clj-forex.org")
-  (defvar  org-bracket-link-analytic-regexp)
-  (setq org-bracket-link-analytic-regexp 
-          (concat ";;[ ]*"
-           "\\[\\["
-           "\\(\\(" (mapconcat 'regexp-quote org-link-types "\\|") "\\):\\)?"
-           "\\([^]]+\\)"
-           "\\]"
-           "\\(\\[" "\\([^]]+\\)" "\\]\\)?"
-           "\\]"
-   ))
   
   (defmacro with-file (file &rest body)
     "open up file in a buffer, and set current buffer to it"
