@@ -7,7 +7,7 @@ lang="en" xml:lang="en">
 <title>CLJ-FOREX</title>
 <meta http-equiv="Content-Type" content="text/html;charset=utf-8"/>
 <meta name="generator" content="Org-mode"/>
-<meta name="generated" content="2011-01-14 13:43:06 CST"/>
+<meta name="generated" content="2011-01-14 14:41:39 CST"/>
 <meta name="author" content="Seth Burleigh"/>
 <meta name="description" content=""/>
 <meta name="keywords" content=""/>
@@ -211,17 +211,8 @@ f9 can be used to jump from source code to location in org file.
 </p>
 
 
-<pre class="src src-emacs-lisp">(<span style="color: #a020f0;">defvar</span> <span style="color: #a0522d;">clj-forex-file</span> <span style="color: #8b2252;">"/home/seth/Dropbox/.rep/clj-forex/clj-forex.org"</span>)
-(<span style="color: #a020f0;">defvar</span>  <span style="color: #a0522d;">org-bracket-link-analytic-regexp</span>)
-(setq org-bracket-link-analytic-regexp 
-        (concat <span style="color: #8b2252;">";;[ ]*"</span>
-         <span style="color: #8b2252;">"\\[\\["</span>
-         <span style="color: #8b2252;">"</span><span style="color: #8b2252; font-weight: bold;">\\</span><span style="color: #8b2252; font-weight: bold;">(</span><span style="color: #8b2252; font-weight: bold;">\\</span><span style="color: #8b2252; font-weight: bold;">(</span><span style="color: #8b2252;">"</span> (mapconcat 'regexp-quote org-link-types <span style="color: #8b2252;">"</span><span style="color: #8b2252; font-weight: bold;">\\</span><span style="color: #8b2252; font-weight: bold;">|</span><span style="color: #8b2252;">"</span>) <span style="color: #8b2252;">"</span><span style="color: #8b2252; font-weight: bold;">\\</span><span style="color: #8b2252; font-weight: bold;">)</span><span style="color: #8b2252;">:</span><span style="color: #8b2252; font-weight: bold;">\\</span><span style="color: #8b2252; font-weight: bold;">)</span><span style="color: #8b2252;">?"</span>
-         <span style="color: #8b2252;">"</span><span style="color: #8b2252; font-weight: bold;">\\</span><span style="color: #8b2252; font-weight: bold;">(</span><span style="color: #8b2252;">[</span><span style="color: #8b2252;">^</span><span style="color: #8b2252;">]]+</span><span style="color: #8b2252; font-weight: bold;">\\</span><span style="color: #8b2252; font-weight: bold;">)</span><span style="color: #8b2252;">"</span>
-         <span style="color: #8b2252;">"\\]"</span>
-         <span style="color: #8b2252;">"</span><span style="color: #8b2252; font-weight: bold;">\\</span><span style="color: #8b2252; font-weight: bold;">(</span><span style="color: #8b2252;">\\["</span> <span style="color: #8b2252;">"</span><span style="color: #8b2252; font-weight: bold;">\\</span><span style="color: #8b2252; font-weight: bold;">(</span><span style="color: #8b2252;">[</span><span style="color: #8b2252;">^</span><span style="color: #8b2252;">]]+</span><span style="color: #8b2252; font-weight: bold;">\\</span><span style="color: #8b2252; font-weight: bold;">)</span><span style="color: #8b2252;">"</span> <span style="color: #8b2252;">"\\]</span><span style="color: #8b2252; font-weight: bold;">\\</span><span style="color: #8b2252; font-weight: bold;">)</span><span style="color: #8b2252;">?"</span>
-         <span style="color: #8b2252;">"\\]"</span>
- ))
+<pre class="src src-emacs-lisp"><span style="color: #b22222;">;;</span><span style="color: #b22222;">change to location of your clj-forex.org
+</span>(<span style="color: #a020f0;">defvar</span> <span style="color: #a0522d;">clj-forex-file</span> <span style="color: #8b2252;">"/home/seth/Dropbox/.rep/clj-forex/clj-forex.org"</span>)
 
 (<span style="color: #a020f0;">defmacro</span> <span style="color: #0000ff;">with-file</span> (file <span style="color: #228b22;">&amp;rest</span> body)
   <span style="color: #8b2252;">"open up file in a buffer, and set current buffer to it"</span>
@@ -443,7 +434,7 @@ Yes, currently it is not very development start friendly. That will change!
 (<span style="color: #a020f0;">ns</span> forex.module.account.core
   (<span style="color: #7a378b;">:use</span> utils.general emacs utils.fiber.spawn
         forex.util.general
-        forex.module.error.common))
+        forex.module.error))
 
 (<span style="color: #a020f0;">def-</span> <span style="color: #0000ff;">order</span>
   {<span style="color: #7a378b;">:buy</span> 0 <span style="color: #7a378b;">:sell</span> 1 <span style="color: #7a378b;">:buy-limit</span> 2 <span style="color: #7a378b;">:sell-limit</span> 3 <span style="color: #7a378b;">:buy-stop</span> 4 <span style="color: #7a378b;">:sell-stop</span> 5})
@@ -504,12 +495,12 @@ Yes, currently it is not very development start friendly. That will change!
 
 <div class="org-src-container"><label class="org-src-name">account-common()</label><pre class="src src-clojure">
 <span style="color: #b22222;">;;</span><span style="color: #b22222;">TODO: unit test everything
-</span>(<span style="color: #a020f0;">ns</span> forex.module.account.common
+</span>(<span style="color: #a020f0;">ns</span> forex.module.account
   (<span style="color: #7a378b;">:use</span> utils.general emacs  
         forex.util.general
-        forex.module.error.common
-        forex.module.indicator.common)
-  (<span style="color: #7a378b;">:require</span> forex.module.error.common [forex.module.error.common <span style="color: #7a378b;">:as</span> err])
+        forex.module.error
+        forex.module.indicator)
+  (<span style="color: #7a378b;">:require</span> forex.module.error[forex.module.error <span style="color: #7a378b;">:as</span> err])
   (<span style="color: #7a378b;">:require</span>  [forex.module.account.core <span style="color: #7a378b;">:as</span> core]))
 
 (<span style="color: #a020f0;">defn-</span> <span style="color: #0000ff;">&gt;?</span> [a] (<span style="color: #a020f0;">and</span> (<span style="color: #7a378b;">number?</span> a) (<span style="color: #7a378b;">&gt;=</span> a 0)))
@@ -759,15 +750,15 @@ Yes, currently it is not very development start friendly. That will change!
 
 
 <div class="org-src-container"><label class="org-src-name">ea-common()</label><pre class="src src-clojure">
-(<span style="color: #a020f0;">ns</span> forex.module.ea.common
+(<span style="color: #a020f0;">ns</span> forex.module.ea
   (<span style="color: #7a378b;">:use</span> utils.general forex.util.general
         utils.fiber.spawn clojure.contrib.core)
   (<span style="color: #7a378b;">:require</span> [clj-time.core <span style="color: #7a378b;">:as</span> t])
   (<span style="color: #7a378b;">:use</span>
    forex.util.log
-   forex.module.error.common
-   forex.module.indicator.common
-   forex.module.account.common))
+   forex.module.error
+   forex.module.indicator
+   forex.module.account))
 (<span style="color: #a020f0;">defn-</span> <span style="color: #0000ff;">get-fn</span> [a] (<span style="color: #a020f0;">if</span> (<span style="color: #7a378b;">var?</span> a) (<span style="color: #7a378b;">var-get</span> a) a))  
 <span style="color: #b22222;">;;</span><span style="color: #b22222;">##ea implementation
 </span>(<span style="color: #a020f0;">defonce</span> <span style="color: #0000ff;">*eas*</span> (<span style="color: #7a378b;">atom</span> []))
@@ -894,7 +885,7 @@ Yes, currently it is not very development start friendly. That will change!
 
 
 <div class="org-src-container"><label class="org-src-name">error-common()</label><pre class="src src-clojure">
-(<span style="color: #a020f0;">ns</span> forex.module.error.common
+(<span style="color: #a020f0;">ns</span> forex.module.error
   (<span style="color: #7a378b;">:require</span> [forex.backend.mql.socket-service <span style="color: #7a378b;">:as</span> s])
   (<span style="color: #7a378b;">:use</span> utils.general emacs 
         forex.util.general))
@@ -994,13 +985,13 @@ Yes, currently it is not very development start friendly. That will change!
 
 
 <div class="org-src-container"><label class="org-src-name">indicator-common()</label><pre class="src src-clojure">
-(<span style="color: #a020f0;">ns</span> forex.module.indicator.common
+(<span style="color: #a020f0;">ns</span> forex.module.indicator
   (<span style="color: #7a378b;">:use</span>
    utils.general 
    forex.util.general
-   forex.module.account.common
-   forex.module.error.common)
-  (<span style="color: #7a378b;">:require</span> [forex.module.error.common <span style="color: #7a378b;">:as</span> s]))
+   forex.module.account
+   forex.module.error)
+  (<span style="color: #7a378b;">:require</span> [forex.module.error <span style="color: #7a378b;">:as</span> s]))
 
 <span style="color: #b22222;">;;</span><span style="color: #b22222;">high low open close
 </span>(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">get-rel-data</span> [<span style="color: #228b22;">^String</span> symbol <span style="color: #228b22;">^Integer</span> timeframe <span style="color: #228b22;">^Integer</span> from <span style="color: #228b22;">^Integer</span> to]
@@ -1679,17 +1670,14 @@ return(val);
 (<span style="color: #a020f0;">ns</span> forex-user
   (<span style="color: #7a378b;">:use</span> forex.util.general utils.general
         forex.util.log) 
-  (<span style="color: #7a378b;">:use</span> forex.module.error.common
-        forex.module.ea.common
-        forex.module.indicator.common
-        forex.module.account.common
+  (<span style="color: #7a378b;">:use</span> forex.module.error
+        forex.module.ea
+        forex.module.indicator
+        forex.module.account
         [clj-time.core <span style="color: #7a378b;">:exclude</span> [extend start]])
   (<span style="color: #7a378b;">:require</span>
    [forex.backend.mql.socket-service <span style="color: #7a378b;">:as</span> backend])) 
 
-
-<span style="color: #b22222;">;;</span><span style="color: #b22222;">(defn do-it []  ((blazan-dynamic-stop [150 70 1 10000]) 100))
-</span>
 (<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">pip-price</span>
   ([] (pip-price (env <span style="color: #7a378b;">:symbol</span>)))
   ([symbol] (mode-tickvalue symbol)))
@@ -1818,7 +1806,7 @@ return(val);
 <div id="postamble">
 <p class="author"> Author: Seth Burleigh
 </p>
-<p class="date"> Date: 2011-01-14 13:43:06 CST</p>
+<p class="date"> Date: 2011-01-14 14:41:39 CST</p>
 <p class="creator">HTML generated by org-mode 7.4 in emacs 23</p>
 </div>
 </div>
