@@ -404,7 +404,7 @@ Yes, currently it is not very development start friendly. That will change!
 	    :market? market?*
 	    :entry? entry?*})
 
-  (extend-type forex.module.error.common.MqlError
+  (extend-type forex.module.error.MqlError
     POrder
     (order! [this] this)
     (delete! [this] this)
@@ -514,8 +514,8 @@ Yes, currently it is not very development start friendly. That will change!
 	  utils.fiber.spawn clojure.contrib.core)
     (:require [clj-time.core :as t])
     (:use
-     forex.util.log
-     forex.module.error
+     forex.util.log 
+     forex.module.error 
      forex.module.indicator
      forex.module.account))
   (defn- get-fn [a] (if (var? a) (var-get a) a))  
@@ -726,8 +726,8 @@ Yes, currently it is not very development start friendly. That will change!
     (:use
      utils.general 
      forex.util.general
-     forex.module.account
-     forex.module.error)
+     forex.module.account 
+     forex.module.error) 
     (:require [forex.module.error :as s]))
 
   ;;high low open close
