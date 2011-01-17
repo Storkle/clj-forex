@@ -268,10 +268,10 @@ Yes, currently it is not very development start friendly. That will change!
   (ns forex.module.account
     (:use utils.general emacs  
 	  forex.util.general
-	  forex.module.error
-	  forex.module.indicator)
-    (:require forex.module.error[forex.module.error :as err])
+	  forex.module.error)
+    (:require forex.module.error [forex.module.error :as err])
     (:require  [forex.module.account.core :as core]))
+
 
   (defn- >? [a] (and (number? a) (>= a 0)))
 
@@ -297,11 +297,11 @@ Yes, currently it is not very development start friendly. That will change!
     (market? [this]) (entry? [this]))
 
   (defn- order-close-time* [{id :id}]
-    (is (string? id))
+    (is? (string? id))
     ;;we dont need to know mql4 error codes for order close time
     (aif (core/order-close-time id) it -1))
   (defn- order-type*  [order]
-    (is (string? (:id order)))
+    (is? (string? (:id order)))
     (default
       (aif (core/order-type (:id order))
 	   (value-to-order-type (int it)))))
@@ -314,9 +314,10 @@ Yes, currently it is not very development start friendly. That will change!
   (defn- close!*
     ([o] (close! o 0))
     ([{:keys [price lots slip id] :as order} new-lots]
-       (is (and (string? id) (and price (pos? price))
-		(and (number? lots) (>= lots 0))))
-       (is (>= (- lots new-lots) 0))
+       (is? [(string? id)
+	     [price (pos? price)]
+	     [(number? lots) (>= lots 0)]])
+       (is? (>= (- lots new-lots) 0))
        (if-not (= new-lots lots)
 	 (aif (core/order-close id (- lots new-lots) price slip :blue)
 	      (merge order {:lots new-lots})
@@ -327,8 +328,8 @@ Yes, currently it is not very development start friendly. That will change!
     (let [sl (or sl (:sl order))
 	  tp (or tp (:tp order))
 	  price (or price (:price order))]
-      (is (and sl tp price
-	       (>? sl) (>? tp) (pos? price)))
+      (is? [sl tp price
+	    (>? sl) (>? tp) (pos? price)])
       (if-not (and (= sl (:sl order))
 		   (= tp (:tp order)))
 	(aif (core/order-modify (:id order) price sl tp)
@@ -339,12 +340,12 @@ Yes, currently it is not very development start friendly. That will change!
   ;;TOOD: how do we get map with defaults?
   (defn- verify-order [{:keys [slip symbol type price tp sl lots]
 			:or {slip 3 sl 0 tp 0}}]
-    (is (and (number? slip) (> slip 0) (integer? slip))
-	"invalid order slip %s" slip)
-    (is (and (keyword? type) (number? lots)
-	     (number? tp) (number? sl) (number? price))) 
-    (is (and (string? symbol) (> lots 0)
-	     (>= tp 0) (>= sl 0) (>= price 0)))  
+    (is? [(number? slip) (> slip 0) (integer? slip)]
+	 "invalid order slip %s" slip)
+    (is? [ (keyword? type) (number? lots)
+	   (number? tp) (number? sl) (number? price)]) 
+    (is? [ (string? symbol) (> lots 0)
+	   (>= tp 0) (>= sl 0) (>= price 0)])  
     (cond
       (or (= type :sell) (= type :sell-limit) (= type :sell-stop))
       (is (or (and (zero? sl) (zero? tp))
@@ -505,6 +506,14 @@ Yes, currently it is not very development start friendly. That will change!
     (if (re-find #"(?i)demo" (account-server))
       true
       false))
+
+  (defn sell? [{type :type}]
+    (or (= type :sell) (= type :sell-stop) (= type :sell-limit)))
+  (defn buy? [{type :type}]
+    (or (= type :buy) (= type :buy-stop) (= type :buy-limit)))
+  (defn lot
+    ([num] (lot num (env :symbol)))
+    ([num symbol] (round num (decimal-places (mode-minlot symbol)))))
 #+end_src
 *** Ea
 #+srcname:ea-common
@@ -513,12 +522,30 @@ Yes, currently it is not very development start friendly. That will change!
     (:use utils.general forex.util.general
 	  utils.fiber.spawn clojure.contrib.core)
     (:require [clj-time.core :as t])
-    (:use
-     forex.util.log 
+    (:use emacs
+     forex.util.log  
      forex.module.error 
      forex.module.indicator
-     forex.module.account))
-  (defn- get-fn [a] (if (var? a) (var-get a) a))  
+     forex.module.account)) 
+  (defn- get-fn [a] (if (var? a) (var-get a) a))
+  (defonce *ea* nil)
+  (defonce *args* nil)
+  (defmacro with-ea [[name ea] & body]
+    `(let [ea# ~ea]
+       (debugging (format "%s %s:" ~name (:name ea#))
+		  (binding [*ea* ea# *args* (:args ea#)]
+		    (wenv {:symbol (:symbol ea#) :timeframe (:timeframe ea#)}
+			  ~@body)))))
+
+  (deferror *ea-stop* [*clj-forex-error*] [message]
+    {:msg (str "ea stop: " message)})
+
+
+  (defn exit
+    ([msg] (raise *ea-stop* msg))
+    ([msg & args] (raise *ea-stop* (if (string? msg)
+				     (apply format msg args)
+				     (concat [msg] args)))))
   ;;##ea implementation
   (defonce *eas* (atom []))
   (defn every [pred coll]
@@ -546,80 +573,105 @@ Yes, currently it is not very development start friendly. That will change!
 	  (catch Exception e#
 	    (severe "%s - caught unexpected error %s" ~prefix e#))))
 
+  (require 'clojure.contrib.error-kit)
+  ;;TODO; how to create unbound var for error-kit???
+
   (defn run-by-tick [{:keys [symbol timeframe name deinit init start] :as ea}]
-    (debugging
-     (format "%s: " (:name ea))
-     (wenv (:symbol symbol :timeframe timeframe)
-	   (try
-	     (loop [prev-close nil]
-	       (sleep 1)
-	       (when-not (match (? 0) "stop" true) 
-		 (let [new-close (close)]
-		   (when-not (= new-close prev-close)
-		     (let [func (get-fn start)]
-		       (if (fn? func)
-			 (func (:vars ea) (:args ea))
-			 (warn "%s is not a function. start cannot be called" func))))
-		   (recur new-close)))) 
-	     (catch Exception e 
-	       (severe "caught exception %s ... stopping ea" e)
-	       (.printStackTrace e))
-	     (finally
-	      (warn "stopping ea ...")
-	      (catch-unexpected
-	       "deinit" 
-	       (let [de (get-fn deinit)]
-		 (if (fn? de)
-		   (de)
-		   (throwf "deinit is not a funcion %s" de)))))))))
+    (with-ea ["" ea]
+      (clojure.contrib.error-kit/with-handler
+       (try
+	 (loop [prev-close nil]
+	   (sleep 1)
+	   (when-not (match (? 0) "stop" true) 
+	     (let [new-close (close)]
+	       (when-not (= new-close prev-close)
+		 (let [func (get-fn start)]
+		   (if (fn? func)
+		     (func (:args ea))
+		     (warn "%s is not a function. start cannot be called" func))))
+	       (recur new-close)))) 
+	 (catch Exception e 
+	   (severe "caught exception %s ... stopping ea" e)
+	   (.printStackTrace e))
+	 (finally
+	  (warn "stopping ea ...")
+	  (catch-unexpected
+	   "deinit" 
+	   (let [de (get-fn deinit)]
+	     (if (fn? de)
+	       (de)
+	       (throwf "deinit is not a funcion %s" de))))))
+       (clojure.contrib.error-kit/handle *ea-stop* []))))
 
   (defn- timeframe? [a] (number? a))
   (defrecord EA [name init deinit start symbol timeframe args pid run vars])
 
-  (defn new-ea [{:keys [name init deinit start symbol timeframe run vars]
-		 :or {init (constantly {})
-		      deinit (constantly true)
-		      timeframe (env :timeframe)
-		      run run-by-tick}} args]
-    (is (and (fn? (get-fn init)) (fn? (get-fn deinit)) (string? name)
-	     (string? symbol) (fn? run) (timeframe? timeframe)))
-    (EA. (format "%s %s, %s" name symbol timeframe)
-	 init deinit start symbol timeframe (or  args {}) nil
-	 run (or vars {}))) 
+  (defn new-ea
+    ([] (new-ea {}))
+    ([{:keys [ns symbol timeframe run args] :or {symbol (env :symbol)
+						 run run-by-tick
+						 timeframe (env :timeframe)}}]
+       (let [ns (cond
+		 (nil? ns) *ns*
+		 (symbol? ns) (find-ns ns)
+		 (string? ns) (find-ns (symbol ns))
+		 true ns)]
+	 (is? (ns? ns))
+	 (let [name (str (ns-name ns))
+	       start (ns-symbol 'start ns)
+	       init (or (let [fn (ns-symbol 'init ns)]
+			  (if (get-fn fn) fn))
+			(constantly {}))
+	       deinit (or (let [fn (ns-symbol 'deinit ns)]
+			    (if (get-fn fn) fn))
+			  (constantly true))]
+	   (is? [(fn? (get-fn init)) (fn? (get-fn deinit)) (string? name)
+		 (string? symbol) (fn? run) (timeframe? timeframe)])
+	   (EA. (format "%s %s, %s" name symbol timeframe)
+		init deinit start symbol timeframe (or args {})
+		nil run (ns-vars ns))))))
+
+  ;;how to get it to access actual var? as long as we dont use set!
   (defmethod clojure.core/print-method EA [o w]
-    (.write w (format "<EA \"%s\" %s %s |%s|>"
-		      (:name o)
-		      (if (pid? (:pid o)) true false)                 
-		      (:args o) (:vars o))))
+    (.write w  (format "<EA \"%s\" %s %s |%s|>"
+		       (:name o)
+		       (if (pid? (:pid o)) true false)                 
+		       (:args o) (:vars o))))
 
   ;;TODO: pid without spawn!!
-  (defonce *ea* nil)
-  (defn run-start [ea]
-    (binding [*ea* ea] 
-      (let [new-ea (merge ea {:pid (spawn #((:run ea) ea))})]
-	(swap! *eas* conj new-ea)
-	new-ea)))
 
+
+  (defn run-start [ea]
+    (with-ea ["START" ea]
+      (with-bindings (:vars ea)
+	(let [new-ea (merge ea {:pid (spawn #((:run ea) ea))})]
+	  (swap! *eas* conj new-ea)
+	  new-ea))))
+
+
+  ;;TODO: check return type
   (defn run-init [ea]
-    (debugging (format "INIT %s: " (:name ea))
-	       (binding [*ea* ea]
-		 (wenv (:symbol (:symbol ea) :timeframe (:timeframe ea))
-		       (let [result ((get-fn (:init ea)) (:args ea))]
-			 (if result
-			   (merge ea {:vars (merge {} result)})))))))
+    (with-ea ["INIT" ea]
+      (let [result ((get-fn (:init ea)) (:args ea))]
+	(if result
+	  (merge ea {:vars (merge (:vars ea) result)})))))
 
   (defn run-all [ea]
-    (binding [*ea* ea]
+    (with-ea ["ALL" ea]
       (let [new-ea (run-init ea)]
-       (if (instance? EA new-ea)
-	 (run-start new-ea) 
-	 (warn "EA %s failed to start - returned nil from INIT" (:name ea))))))
+	(if (instance? EA new-ea)
+	  (run-start new-ea) 
+	  (warn "failed to start - returned nil from init" (:name ea))))))
 
-  (defn run [ea args]
-    (run-all (new-ea ea args)))
+  (defn run
+    ([] (run *ns* {}))
+    ([args] (run *ns* args))
+    ([ns args]
+       (run-all (new-ea {:ns ns :args args :symbol (:symbol args)
+			 :period (:period args)}))))
 
   (defn sym [] (:symbol *ea*))
-  (defn period [] (:period *ea*))
+  (defn period [] (:timeframe *ea*))
   ;;TODO: wait till it stops and delete
   (defn stop [ea]
     (let [stop-it (fn [e]
@@ -629,6 +681,8 @@ Yes, currently it is not very development start friendly. That will change!
       (if (map? ea)
 	(stop-it ea)
 	(map stop-it ea))))
+
+  (defn clear-eas [] (count (reset! *eas* (filter alive? @*eas*))))
 #+end_src
 *** Error
 #+srcname:error-common 
@@ -726,10 +780,9 @@ Yes, currently it is not very development start friendly. That will change!
     (:use
      utils.general 
      forex.util.general
-     forex.module.account 
-     forex.module.error) 
-    (:require [forex.module.error :as s]))
-
+     forex.module.account
+     forex.module.error)   
+    (:require [forex.module.error :as s])) 
   ;;high low open close
   (defn get-rel-data [^String symbol ^Integer timeframe ^Integer from ^Integer to]
     (is  (>= to from) "in get-data, from/to is invalid")
@@ -751,7 +804,7 @@ Yes, currently it is not very development start friendly. That will change!
     ([] (high 0)) 
     ([i] (Double/parseDouble (nth (rel i) 1))))
   (defn open 
-    ([] (open 0))
+    ([] (open 0)) 
     ([i] (Double/parseDouble (nth (rel i) 3))))
   (defn low
     ([] (low 0))
@@ -776,7 +829,9 @@ Yes, currently it is not very development start friendly. That will change!
     ([params] (fn 
 		([mode offset] (blazan-dynamic-stop params mode offset))
 		([offset] (blazan-dynamic-stop params 0 offset))))
-    ([params mode] (fn [offset] (blazan-dynamic-stop params mode offset)))
+    ([params mode] (fn
+		     ([offset] (blazan-dynamic-stop params mode offset))
+		     ([] (blazan-dynamic-stop params mode  0))))
     ([params mode offset]
        {:pre [(env?) (>? offset) (>? mode)
 	      (if-not (map? params)
@@ -795,6 +850,14 @@ Yes, currently it is not very development start friendly. That will change!
 		  (env :symbol) (env :timeframe)
 		  mode offset (apply str (interpose " " params))))
 	3)))
+
+  (defn hit? [order val]
+    (cond
+     (sell? order)
+     (<= (close) val)
+     (buy? order)
+     (>= (close) val )
+     true (throwf "invalid order type %s" order)))
 #+end_src
 
 ** Util
@@ -802,9 +865,31 @@ Yes, currently it is not very development start friendly. That will change!
 #+srcname:forex-util-general
 #+begin_src clojure :tangle src/forex/util/general.clj
   (ns forex.util.general
-    (:use utils.general forex.util.spawn forex.util.log)
+    (:use emacs utils.general forex.util.spawn forex.util.log)
+    (:require clojure.contrib.error-kit)
     (:import (org.joda.time DateTime DateTimeZone Instant)))
+  ;;TODO: memoize pow?
 
+  (defn round [num places]
+    (let [multiplier (Math/pow 10 places)]
+      (/ (int (* num multiplier)) multiplier)))
+  (defn ns? [a] (instance? clojure.lang.Namespace a))
+  (defn decimal-places [num]
+    (let [^String s (reverse (second (.split (str (double num)) "\\.")))
+	  c (count s)]
+      (loop [c (nth s 0) i 0]
+	(cond
+	 (or (= i c) (not (= c \0)))
+	 (- (count s) i)
+	 true
+	 (recur (nth s (inc i)) (inc i))))))
+
+  (defn ns-symbol
+    ([symbol] (ns-symbol symbol *ns*))
+    ([symbol ns] (ns-symbol symbol ns nil))
+    ([symbol ns default]
+       (let [var ((ns-interns ns) symbol)]
+	 (if (and (var? var) (var-get var)) var default))))
 
   (deftype AtomHash [val]
     Object
@@ -912,12 +997,48 @@ Yes, currently it is not very development start friendly. That will change!
     (swap! *env* #(merge % map))
     map)
 
-  ;;todo: fix private!
-  ;;todo: ignores all nils?
-  (defmacro wenv [[& args] & body] 
+
+  (defmacro wenv [map & body] 
     `(binding [forex.util.general/*env*
-	       (atom (merge @@~#'*env* (hash-map ~@args)))]
+	       (atom (merge @@~#'*env* ~map))]
        ~@body))
+
+  ;;aliases for error kit
+  (defn ns-export [from-ns]  
+    (count (doall (map (fn [[sym var]]
+			 (let [var-obj (if (.hasRoot var)
+					 (intern *ns* sym (var-get var))
+					 (intern *ns* sym))]
+			   (when var-obj
+			     (alter-meta! var-obj
+					  (fn [old] (merge (meta var) old)))
+			     var-obj)))
+		       (ns-publics from-ns)))))
+
+  (defmacro eval-when [& args]
+    (eval `(do ~@args)) nil)
+
+  (eval-when
+   (require 'clojure.contrib.error-kit)
+   (ns-export (find-ns 'clojure.contrib.error-kit)))
+
+  (deferror *clj-forex-error* [] [message] 
+    {:msg (str "clj-forex error: " message) 
+     :unhandled (throw-msg Exception)})
+
+  (defn throwf [msg] (raise *clj-forex-error* msg))
+
+  (defmacro is?
+    [val & message]
+    (if (vector? val)
+      `(do ~@(map (fn [test] `(is? ~test ~@message)) val))
+      `(let [result# ~val]
+	 (if (not result#)
+	   (throwf  ~(or (and (first message)
+			      `(format ~@message))
+			 (format "assertion %s failed"
+				 (str val))))
+	   result#))))
 #+end_src 
 *** Log
 #+srcname:forex-util-log 
@@ -929,8 +1050,7 @@ Yes, currently it is not very development start friendly. That will change!
     (:use emacs utils.general))
 
   ;;TODO: minor mode
-  (defvar log-dir "%h/.forex"
-    "Directory of logging")
+  (defvar log-dir "%h/.forex")
 
   (defn- formatter []
     (let [d (java.util.Date.)]
@@ -1328,22 +1448,100 @@ Yes, currently it is not very development start friendly. That will change!
 ** User 
 #+srcname:forex_user
 #+begin_src clojure :tangle src/forex_user.clj
-  (ns forex-user
-    (:use forex.util.general utils.general
-	  forex.util.log) 
-    (:use forex.module.error
-	  forex.module.ea
-	  forex.module.indicator
-	  forex.module.account
-	  [clj-time.core :exclude [extend start]])
-    (:require
-     [forex.backend.mql.socket-service :as backend])) 
+  (clojure.core/use 'nstools.ns)
+  (ns+ forex-user
+       (:like forex.default)
+       (:use utils.general))
+  ;;TODO: mql error 146
 
+  ;;forex_user is the ns in which customization will occur
+#+end_src
+
+** Templates
+#+source: template
+#+begin_src clojure :tangle src/forex/default.clj
+  (ns forex.default
+  (:use forex.util.general emacs
+	forex.util.log) 
+  (:use forex.module.error
+	forex.module.ea
+	forex.module.indicator
+	forex.module.account
+	[clj-time.core :exclude [extend start]])
+  (:require
+   [forex.backend.mql.socket-service :as backend]))
+#+end_src
+
+** Examples
+#+source: timeout-ea
+#+begin_src clojure :tangle src/forex/examples/timeout_ea.clj
+  ;;forex.examples.timeout-ea : ea which manages the orders of a trade
+  (clojure.core/use 'nstools.ns)
+  (ns+ forex.examples.timeout-ea
+       (:like forex.default)
+       (:use utils.general
+	     forex.examples.timeout-ea.utils))
+   ;;ea vars 
+  (defvar state (atom :timeout))
+  (defvar end-time)
+  (defvar order) 
+  ;;  
+  ;;TODO: when we order, and modify fails, how do we get the error? later :)...
+  (defn init [{:keys [type sl price]}]
+    (aif (order! (atom-hash {:type type :sl sl :price price
+			     :lots (* (mode-minlot) 2)}))
+	 {#'end-time (plus (now) (hours 12))
+	  #'order it} 
+	 (out "MQL error %s" (:e it))))
+  (declare timeout break-even trail)
+  (defn start [args]
+    (cond
+     (close? order) (exit "order is now closed")
+     (= @state :timeout) (timeout args)
+     (= @state :break-even) (break-even args))) 
+
+
+  (defn timeout [_]
+    (cond
+     ;;changed to market
+     (market? order)
+     (do (reset! state :break-even) (out "changed to break even"))
+     ;;entry order reach sl 
+     (if (sell? order) (> (close) (:sl order)) (< (close) (:sl order)))
+					  ;TODO: reliable delete????
+     (awhen (delete! order) (out "entry order reached sl. deleting ..."))
+     ;;timed out
+     (after? (now) end-time)
+     (awhen (delete! order) (exit "order timed out"))))
+
+  (defn break-even [{:keys [tp2 tp1]}]
+    (when (hit? order tp1)
+      (out "closing to half ...")
+      (awhen (-> (modify! order {:sl (:price order) :tp tp2})
+		 (close! (lot (/ (:lots order) 2))))
+	     (exit "finished break even - closing ..."))))
+
+  (defn hh [a]
+    (apply max (map high (range 1 (inc a)))))
+  (defn ll [a]
+    (apply min (map low (range 1 (inc a)))))
+  (defn trail [_]
+    (modify! order 
+	     {:sl (if (sell? order)
+		    (min (:sl order) (hh 3))
+		    (max (:sl order) (ll 3)))}))
+#+end_src
+
+#+source: timeout-ea-utils
+#+begin_src clojure :tangle src/forex/examples/timeout_ea/utils.clj
+  (clojure.core/use 'nstools.ns)
+  (ns+ forex.examples.timeout-ea.utils
+       (:like forex.default)
+       (:use utils.general))
   (defn pip-price
     ([] (pip-price (env :symbol)))
     ([symbol] (mode-tickvalue symbol)))
   ;;TODO: mql err on point? no way! we should throw an error
-  (defn clear-eas [] (count (reset! *eas* (filter alive? @*eas*))))
 
   (defn point 
     ([] (point (env :symbol)))
@@ -1357,19 +1555,6 @@ Yes, currently it is not very development start friendly. That will change!
     ([val] (price-of val (env :symbol)))
     ([val symbol]
        (* (pip-price symbol) (pips val)))) 
-  (defn exit [& args] 
-    (throwf (apply format args)))
-  (defn sell? [{type :type}]
-    (or (= type :sell) (= type :sell-stop) (= type :sell-limit)))
-  (defn buy? [{type :type}]
-    (or (= type :buy) (= type :buy-stop) (= type :buy-limit)))
-  (defn hit? [order val]
-    (cond
-     (sell? order)
-     (<= (close) val)
-     (buy? order)
-     (>= (close) val )
-     true (throwf "invalid order type %s" order)))
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
   (def method-regex
     (re-pattern (.replaceAll
@@ -1399,63 +1584,4 @@ Yes, currently it is not very development start friendly. That will change!
 		       :sl (Double/parseDouble stop)
 		       :tp1 (Double/parseDouble tp1)
 		       :tp2 (Double/parseDouble tp2)}))))))
-  ;;;;;;;;;;;;;;;;;;;;;;ea
-  ;;TODO: mql error 146
-
-  (declare timeout break-even trail)
-
-  (defn init [{:keys [type sl price]}]
-    (aif (order! (atom-hash {:type type :sl sl :price price
-			     :lots (* (mode-minlot) 2)}))
-	 {:end-time (plus (now) (hours 12))
-	  :state (atom :timeout)
-	  :order it} 
-	 (out "MQL error %s" (:e it))))
-
-  (defn start [{state :state order :order :as self} args]
-    (cond
-     (close? order) (exit "order is now closed")
-     (= @state :timeout) (timeout self)
-     (= @state :break-even) (break-even order args))) 
-
-  (defn timeout [{:keys [order state end-time]}]
-    (cond
-     ;;changed to market
-     (market? order)
-     (do (reset! state :break-even) (out "changed to break even"))
-     ;;entry order reach sl 
-     (if (sell? order) (> (close) (:sl order)) (< (close) (:sl order)))
-					  ;TODO: reliable delete????
-     (awhen (delete! order) (out "entry order reached sl. deleting ..."))
-     ;;timed out
-     (after? (now) end-time)
-     (awhen (delete! order) (exit "order timed out"))))
-
-  (defn break-even
-    [order {:keys [tp1 tp2]}]
-    (when (hit? order tp1)
-      (out "closing to half ...")
-      (awhen (-> (modify! order {:sl (:price order) :tp tp2})
-		 (close! (int (/ (:lots order) 2))))
-	     (exit "finished break even - closing ..."))))
-
-  (defn hh [a]
-    (apply max (map high (range 1 (inc a)))))
-  (defn ll [a]
-    (apply min (map low (range 1 (inc a)))))
-  (defn trail
-    "initiate a trailing stop = hh3 or ll3"
-    [order]
-    (modify! order
-	     {:sl (if (sell? order)
-		    (min (:sl order) (hh 3))
-		    (max (:sl order) (ll 3)))}))
-
-  ;;TODO: stop a specific node
-  (defonce a nil) 
-  (defn trade-it []
-    (def ea (run {:name "timeout" :symbol (:symbol a)
-		  :init init :start #'start} a)))
 #+end_src
-
-
