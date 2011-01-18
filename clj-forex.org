@@ -513,7 +513,10 @@ Yes, currently it is not very development start friendly. That will change!
     (or (= type :buy) (= type :buy-stop) (= type :buy-limit)))
   (defn lot
     ([num] (lot num (env :symbol)))
-    ([num symbol] (round num (decimal-places (mode-minlot symbol)))))
+    ([num symbol]
+       (let [a (BigDecimal/valueOf num)
+	     b (BigDecimal/valueOf (mode-minlot symbol))]
+	 (* b (.intValue (/ a b))))))
 #+end_src
 *** Ea
 #+srcname:ea-common
@@ -647,7 +650,6 @@ Yes, currently it is not very development start friendly. That will change!
 	(let [new-ea (merge ea {:pid (spawn #((:run ea) ea))})]
 	  (swap! *eas* conj new-ea)
 	  new-ea))))
-
 
   ;;TODO: check return type
   (defn run-init [ea]
@@ -1481,7 +1483,7 @@ Yes, currently it is not very development start friendly. That will change!
        (:like forex.default)
        (:use utils.general
 	     forex.examples.timeout-ea.utils))
-   ;;ea vars 
+   ;;ea vars  
   (defvar state (atom :timeout))
   (defvar end-time)
   (defvar order) 
