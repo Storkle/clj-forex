@@ -529,15 +529,15 @@ Yes, currently it is not very development start friendly. That will change!
      forex.util.log  
      forex.module.error 
      forex.module.indicator
-     forex.module.account)) 
+     forex.module.account))  
   (defn- get-fn [a] (if (var? a) (var-get a) a))
   (defonce *ea* nil)
-  (defonce *args* nil)
-  (defmacro with-ea [[name ea] & body]
+  (defonce *args* nil) 
+  (defmacro with-ea [[ea & name] & body]
     `(let [ea# ~ea]
-       (debugging (format "%s %s:" ~name (:name ea#))
+       (debugging (format "%s %s:" ~(or (first name) "") (:name ea#))
 		  (binding [*ea* ea# *args* (:args ea#)]
-		    (wenv {:symbol (:symbol ea#) :timeframe (:timeframe ea#)}
+		    (wenv {:symbol (:symbol ea#) :period (:period ea#)}
 			  ~@body)))))
 
   (deferror *ea-stop* [*clj-forex-error*] [message]
@@ -579,47 +579,47 @@ Yes, currently it is not very development start friendly. That will change!
   (require 'clojure.contrib.error-kit)
   ;;TODO; how to create unbound var for error-kit???
 
-  (defn run-by-tick [{:keys [symbol timeframe name deinit init start] :as ea}]
-    (with-ea ["" ea]
-      (clojure.contrib.error-kit/with-handler
-       (try
-	 (loop [prev-close nil]
-	   (sleep 1)
-	   (when-not (match (? 0) "stop" true) 
-	     (let [new-close (close)]
-	       (when-not (= new-close prev-close)
-		 (let [func (get-fn start)]
-		   (if (fn? func)
-		     (func (:args ea))
-		     (warn "%s is not a function. start cannot be called" func))))
-	       (recur new-close)))) 
-	 (catch Exception e 
-	   (severe "caught exception %s ... stopping ea" e)
-	   (.printStackTrace e))
-	 (finally
-	  (warn "stopping ea ...")
-	  (catch-unexpected
-	   "deinit" 
-	   (let [de (get-fn deinit)]
-	     (if (fn? de)
-	       (de)
-	       (throwf "deinit is not a funcion %s" de))))))
-       (clojure.contrib.error-kit/handle *ea-stop* []))))
+  (defn run-by-tick [{:keys [deinit init start] :as ea}]
+    (with-ea [ea]
+      (try
+	(clojure.contrib.error-kit/with-handler
+	  (loop [prev-close nil]
+	    (sleep 1)
+	    (when-not (match (? 0) "stop" true) 
+	      (let [new-close (close)]
+		(when-not (= new-close prev-close)
+		  (let [func (get-fn start)]
+		    (if (fn? func)
+		      (func (:args ea))
+		      (warn "%s is not a function. start cannot be called" func))))
+		(recur new-close))))
+	  (clojure.contrib.error-kit/handle *ea-stop* [message] (out "stopping ea ... %s" message))) 
+	(catch Exception e 
+	  (severe "stopping ea... caught exception %s" e)
+	  (.printStackTrace e))
+	(finally
+	 (info "running deinit ...")
+	 (catch-unexpected
+	  "deinit" 
+	  (let [de (get-fn deinit)]
+	    (if (fn? de)
+	      (de)
+	      (warn "deinit %s is not a function. ignoring ...." de))))))))
 
   (defn- timeframe? [a] (number? a))
-  (defrecord EA [name init deinit start symbol timeframe args pid run vars])
+  (defrecord EA [name init deinit start symbol period args pid run vars])
 
   (defn new-ea
     ([] (new-ea {}))
-    ([{:keys [ns symbol timeframe run args] :or {symbol (env :symbol)
+    ([{:keys [ns symbol period run args] :or {symbol (env :symbol)
 						 run run-by-tick
-						 timeframe (env :timeframe)}}]
+						 period (env :period)}}]
        (let [ns (cond
 		 (nil? ns) *ns*
 		 (symbol? ns) (find-ns ns)
 		 (string? ns) (find-ns (symbol ns))
 		 true ns)]
-	 (is? (ns? ns))
+	 (is? (ns? ns)) 
 	 (let [name (str (ns-name ns))
 	       start (ns-symbol 'start ns)
 	       init (or (let [fn (ns-symbol 'init ns)]
@@ -629,9 +629,9 @@ Yes, currently it is not very development start friendly. That will change!
 			    (if (get-fn fn) fn))
 			  (constantly true))]
 	   (is? [(fn? (get-fn init)) (fn? (get-fn deinit)) (string? name)
-		 (string? symbol) (fn? run) (timeframe? timeframe)])
-	   (EA. (format "%s %s, %s" name symbol timeframe)
-		init deinit start symbol timeframe (or args {})
+		 (string? symbol) (fn? run) (timeframe? period)])
+	   (EA. (format "%s %s, %s" name symbol period)
+		init deinit start symbol period (or args {})
 		nil run (ns-vars ns))))))
 
   ;;how to get it to access actual var? as long as we dont use set!
@@ -645,7 +645,7 @@ Yes, currently it is not very development start friendly. That will change!
 
 
   (defn run-start [ea]
-    (with-ea ["START" ea]
+    (with-ea [ea "START"]
       (with-bindings (:vars ea)
 	(let [new-ea (merge ea {:pid (spawn #((:run ea) ea))})]
 	  (swap! *eas* conj new-ea)
@@ -653,13 +653,13 @@ Yes, currently it is not very development start friendly. That will change!
 
   ;;TODO: check return type
   (defn run-init [ea]
-    (with-ea ["INIT" ea]
+    (with-ea [ea "INIT"]
       (let [result ((get-fn (:init ea)) (:args ea))]
 	(if result
 	  (merge ea {:vars (merge (:vars ea) result)})))))
 
   (defn run-all [ea]
-    (with-ea ["ALL" ea]
+    (with-ea [ea "ALL"]
       (let [new-ea (run-init ea)]
 	(if (instance? EA new-ea)
 	  (run-start new-ea) 
@@ -669,11 +669,13 @@ Yes, currently it is not very development start friendly. That will change!
     ([] (run *ns* {}))
     ([args] (run *ns* args))
     ([ns args]
-       (run-all (new-ea {:ns ns :args args :symbol (:symbol args)
-			 :period (:period args)}))))
+       ;;todo: not default, no nil
+       (run-all (new-ea {:ns ns :args args
+			 :symbol (or (:symbol args) (env :symbol))
+			 :period (or (:period args) (env :period))}))))
 
   (defn sym [] (:symbol *ea*))
-  (defn period [] (:timeframe *ea*))
+  (defn period [] (:period *ea*))
   ;;TODO: wait till it stops and delete
   (defn stop [ea]
     (let [stop-it (fn [e]
@@ -786,21 +788,21 @@ Yes, currently it is not very development start friendly. That will change!
      forex.module.error)   
     (:require [forex.module.error :as s])) 
   ;;high low open close
-  (defn get-rel-data [^String symbol ^Integer timeframe ^Integer from ^Integer to]
-    (is  (>= to from) "in get-data, from/to is invalid")
+  (defn get-rel-data [^String symbol ^Integer period ^Integer from ^Integer to]
+    (is?  (>= to from) "in get-data, from/to is invalid")
     (loop [dat nil retries 0]
       (if (> retries 3) (throwf "MQL error %s" (second dat)))
       (let [data (s/raw-receive-lst (format "bars_relative %s %s %s %s"
-					symbol timeframe from to))]
+					symbol period from to))]
 	(if (= (first data) "error") 
 	  (do (sleep 0.4) (recur data (+ retries 1)))
 	  data)))) 
 
   (defn- rel [i]
     (let [sym (env :symbol)
-	  time (env :timeframe)]
-      (is (and (string? sym) (integer? time)))
-      (get-rel-data sym time i i)))
+	  period (env :period)]
+      (is? (and (string? sym) (integer? period)))
+      (get-rel-data sym period i i)))
 
   (defn high
     ([] (high 0)) 
@@ -824,7 +826,7 @@ Yes, currently it is not very development start friendly. That will change!
     ([] (bid 0))
     ([i] (aif (mode-bid (env :symbol)) it (throwf "MQL error %s" (:e it)))))
 
-  (defn- env? [] (and (string? (env :symbol)) (integer? (env :timeframe))))
+  (defn- env? [] (and (string? (env :symbol)) (integer? (env :period))))
   (defn- >? [a] (or (zero? a) (pos? a)))
   ;;an example of acessing a custom ea 
   (defn blazan-dynamic-stop
@@ -844,12 +846,12 @@ Yes, currently it is not very development start friendly. That will change!
        (receive-double! 
 	(if (map? params)
 	  (format "Custom_Blazan_Dynamic_Stop %s %s %s %s %s %s %s %s"
-		  (env :symbol) (env :timeframe)
+		  (env :symbol) (env :period)
 		  mode offset
 		  (:contract-step params) (:precision params)
 		  (:shift-bars params) (:bars-count params))
 	  (format "Custom_Blazan_Dynamic_Stop %s %s %s %s %s"
-		  (env :symbol) (env :timeframe)
+		  (env :symbol) (env :period)
 		  mode offset (apply str (interpose " " params))))
 	3)))
 
@@ -993,7 +995,7 @@ Yes, currently it is not very development start friendly. That will change!
     `(spawn (fn [] (try (~func) (catch Exception e#
 				  (.printStackTrace e#) (severe e#))))))
 
-  (defonce *env* (atom {:timeframe 240 :symbol "EURUSD"})) ;default +H4+, EURUSD
+  (defonce *env* (atom {:period 240 :symbol "EURUSD"})) ;default +H4+, EURUSD
   (defn env [key] (key @*env*))
   (defn env! [map] 
     (swap! *env* #(merge % map))
@@ -1483,7 +1485,7 @@ Yes, currently it is not very development start friendly. That will change!
        (:like forex.default)
        (:use utils.general
 	     forex.examples.timeout-ea.utils))
-   ;;ea vars  
+   ;;ea vars   
   (defvar state (atom :timeout))
   (defvar end-time)
   (defvar order) 
@@ -1511,7 +1513,7 @@ Yes, currently it is not very development start friendly. That will change!
      ;;entry order reach sl 
      (if (sell? order) (> (close) (:sl order)) (< (close) (:sl order)))
 					  ;TODO: reliable delete????
-     (awhen (delete! order) (out "entry order reached sl. deleting ..."))
+     (awhen (delete! order) (exit "entry order reached sl. deleting ..."))
      ;;timed out
      (after? (now) end-time)
      (awhen (delete! order) (exit "order timed out"))))
@@ -1521,7 +1523,7 @@ Yes, currently it is not very development start friendly. That will change!
       (out "closing to half ...")
       (awhen (-> (modify! order {:sl (:price order) :tp tp2})
 		 (close! (lot (/ (:lots order) 2))))
-	     (exit "finished break even - closing ..."))))
+	     (exit "finished break even"))))
 
   (defn hh [a]
     (apply max (map high (range 1 (inc a)))))

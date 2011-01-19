@@ -7,7 +7,7 @@ lang="en" xml:lang="en">
 <title>CLJ-FOREX</title>
 <meta http-equiv="Content-Type" content="text/html;charset=utf-8"/>
 <meta name="generator" content="Org-mode"/>
-<meta name="generated" content="2011-01-17 17:07:42 CST"/>
+<meta name="generated" content="2011-01-19 17:23:20 CST"/>
 <meta name="author" content="Seth Burleigh"/>
 <meta name="description" content=""/>
 <meta name="keywords" content=""/>
@@ -745,7 +745,10 @@ Yes, currently it is not very development start friendly. That will change!
   (<span style="color: #a020f0;">or</span> (<span style="color: #7a378b;">=</span> type <span style="color: #7a378b;">:buy</span>) (<span style="color: #7a378b;">=</span> type <span style="color: #7a378b;">:buy-stop</span>) (<span style="color: #7a378b;">=</span> type <span style="color: #7a378b;">:buy-limit</span>)))
 (<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">lot</span>
   ([num] (lot num (env <span style="color: #7a378b;">:symbol</span>)))
-  ([num symbol] (round num (decimal-places (mode-minlot symbol)))))
+  ([num symbol]
+     (<span style="color: #a020f0;">let</span> [a (BigDecimal/valueOf num)
+           b (BigDecimal/valueOf (mode-minlot symbol))]
+       (<span style="color: #7a378b;">*</span> b (.intValue (<span style="color: #7a378b;">/</span> a b))))))
 </pre></div>
 
 
@@ -769,15 +772,15 @@ Yes, currently it is not very development start friendly. That will change!
    forex.util.log  
    forex.module.error 
    forex.module.indicator
-   forex.module.account)) 
+   forex.module.account))  
 (<span style="color: #a020f0;">defn-</span> <span style="color: #0000ff;">get-fn</span> [a] (<span style="color: #a020f0;">if</span> (<span style="color: #7a378b;">var?</span> a) (<span style="color: #7a378b;">var-get</span> a) a))
 (<span style="color: #a020f0;">defonce</span> <span style="color: #0000ff;">*ea*</span> nil)
-(<span style="color: #a020f0;">defonce</span> <span style="color: #0000ff;">*args*</span> nil)
-(<span style="color: #a020f0;">defmacro</span> <span style="color: #0000ff;">with-ea</span> [[name ea] &amp; body]
+(<span style="color: #a020f0;">defonce</span> <span style="color: #0000ff;">*args*</span> nil) 
+(<span style="color: #a020f0;">defmacro</span> <span style="color: #0000ff;">with-ea</span> [[ea &amp; name] &amp; body]
   `(<span style="color: #a020f0;">let</span> [ea# ~ea]
-     (debugging (<span style="color: #7a378b;">format</span> <span style="color: #8b2252;">"%s %s:"</span> ~name (<span style="color: #7a378b;">:name</span> ea#))
+     (debugging (<span style="color: #7a378b;">format</span> <span style="color: #8b2252;">"%s %s:"</span> ~(<span style="color: #a020f0;">or</span> (<span style="color: #7a378b;">first</span> name) <span style="color: #8b2252;">""</span>) (<span style="color: #7a378b;">:name</span> ea#))
                 (<span style="color: #a020f0;">binding</span> [*ea* ea# *args* (<span style="color: #7a378b;">:args</span> ea#)]
-                  (wenv {<span style="color: #7a378b;">:symbol</span> (<span style="color: #7a378b;">:symbol</span> ea#) <span style="color: #7a378b;">:timeframe</span> (<span style="color: #7a378b;">:timeframe</span> ea#)}
+                  (wenv {<span style="color: #7a378b;">:symbol</span> (<span style="color: #7a378b;">:symbol</span> ea#) <span style="color: #7a378b;">:period</span> (<span style="color: #7a378b;">:period</span> ea#)}
                         ~@body)))))
 
 (deferror *ea-stop* [*clj-forex-error*] [message]
@@ -819,47 +822,47 @@ Yes, currently it is not very development start friendly. That will change!
 (<span style="color: #7a378b;">require</span> 'clojure.contrib.error-kit)
 <span style="color: #b22222;">;;</span><span style="color: #b22222;">TODO; how to create unbound var for error-kit???
 </span>
-(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">run-by-tick</span> [{<span style="color: #7a378b;">:keys</span> [symbol timeframe name deinit init start] <span style="color: #7a378b;">:as</span> ea}]
-  (with-ea [<span style="color: #8b2252;">""</span> ea]
-    (clojure.contrib.error-kit/with-handler
-     (<span style="color: #a020f0;">try</span>
-       (<span style="color: #a020f0;">loop</span> [prev-close nil]
-         (sleep 1)
-         (<span style="color: #a020f0;">when-not</span> (match (? 0) <span style="color: #8b2252;">"stop"</span> true) 
-           (<span style="color: #a020f0;">let</span> [new-close (close)]
-             (<span style="color: #a020f0;">when-not</span> (<span style="color: #7a378b;">=</span> new-close prev-close)
-               (<span style="color: #a020f0;">let</span> [func (get-fn start)]
-                 (<span style="color: #a020f0;">if</span> (<span style="color: #7a378b;">fn?</span> func)
-                   (func (<span style="color: #7a378b;">:args</span> ea))
-                   (warn <span style="color: #8b2252;">"%s is not a function. start cannot be called"</span> func))))
-             (<span style="color: #a020f0;">recur</span> new-close)))) 
-       (<span style="color: #a020f0;">catch</span> Exception e 
-         (severe <span style="color: #8b2252;">"caught exception %s ... stopping ea"</span> e)
-         (.printStackTrace e))
-       (<span style="color: #a020f0;">finally</span>
-        (warn <span style="color: #8b2252;">"stopping ea ..."</span>)
-        (catch-unexpected
-         <span style="color: #8b2252;">"deinit"</span> 
-         (<span style="color: #a020f0;">let</span> [de (get-fn deinit)]
-           (<span style="color: #a020f0;">if</span> (<span style="color: #7a378b;">fn?</span> de)
-             (de)
-             (throwf <span style="color: #8b2252;">"deinit is not a funcion %s"</span> de))))))
-     (clojure.contrib.error-kit/handle *ea-stop* []))))
+(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">run-by-tick</span> [{<span style="color: #7a378b;">:keys</span> [deinit init start] <span style="color: #7a378b;">:as</span> ea}]
+  (with-ea [ea]
+    (<span style="color: #a020f0;">try</span>
+      (clojure.contrib.error-kit/with-handler
+        (<span style="color: #a020f0;">loop</span> [prev-close nil]
+          (sleep 1)
+          (<span style="color: #a020f0;">when-not</span> (match (? 0) <span style="color: #8b2252;">"stop"</span> true) 
+            (<span style="color: #a020f0;">let</span> [new-close (close)]
+              (<span style="color: #a020f0;">when-not</span> (<span style="color: #7a378b;">=</span> new-close prev-close)
+                (<span style="color: #a020f0;">let</span> [func (get-fn start)]
+                  (<span style="color: #a020f0;">if</span> (<span style="color: #7a378b;">fn?</span> func)
+                    (func (<span style="color: #7a378b;">:args</span> ea))
+                    (warn <span style="color: #8b2252;">"%s is not a function. start cannot be called"</span> func))))
+              (<span style="color: #a020f0;">recur</span> new-close))))
+        (clojure.contrib.error-kit/handle *ea-stop* [message] (out <span style="color: #8b2252;">"stopping ea ... %s"</span> message))) 
+      (<span style="color: #a020f0;">catch</span> Exception e 
+        (severe <span style="color: #8b2252;">"stopping ea... caught exception %s"</span> e)
+        (.printStackTrace e))
+      (<span style="color: #a020f0;">finally</span>
+       (info <span style="color: #8b2252;">"running deinit ..."</span>)
+       (catch-unexpected
+        <span style="color: #8b2252;">"deinit"</span> 
+        (<span style="color: #a020f0;">let</span> [de (get-fn deinit)]
+          (<span style="color: #a020f0;">if</span> (<span style="color: #7a378b;">fn?</span> de)
+            (de)
+            (warn <span style="color: #8b2252;">"deinit %s is not a function. ignoring ...."</span> de))))))))
 
 (<span style="color: #a020f0;">defn-</span> <span style="color: #0000ff;">timeframe?</span> [a] (<span style="color: #7a378b;">number?</span> a))
-(<span style="color: #a020f0;">defrecord</span> <span style="color: #0000ff;">EA</span> [name init deinit start symbol timeframe args pid run vars])
+(<span style="color: #a020f0;">defrecord</span> <span style="color: #0000ff;">EA</span> [name init deinit start symbol period args pid run vars])
 
 (<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">new-ea</span>
   ([] (new-ea {}))
-  ([{<span style="color: #7a378b;">:keys</span> [ns symbol timeframe run args] <span style="color: #7a378b;">:or</span> {symbol (env <span style="color: #7a378b;">:symbol</span>)
+  ([{<span style="color: #7a378b;">:keys</span> [ns symbol period run args] <span style="color: #7a378b;">:or</span> {symbol (env <span style="color: #7a378b;">:symbol</span>)
                                                run run-by-tick
-                                               timeframe (env <span style="color: #7a378b;">:timeframe</span>)}}]
+                                               period (env <span style="color: #7a378b;">:period</span>)}}]
      (<span style="color: #a020f0;">let</span> [ns (<span style="color: #a020f0;">cond</span>
                (<span style="color: #7a378b;">nil?</span> ns) *ns*
                (<span style="color: #7a378b;">symbol?</span> ns) (<span style="color: #7a378b;">find-ns</span> ns)
                (<span style="color: #7a378b;">string?</span> ns) (<span style="color: #7a378b;">find-ns</span> (<span style="color: #7a378b;">symbol</span> ns))
                true ns)]
-       (is? (ns? ns))
+       (is? (ns? ns)) 
        (<span style="color: #a020f0;">let</span> [name (<span style="color: #7a378b;">str</span> (<span style="color: #7a378b;">ns-name</span> ns))
              start (ns-symbol 'start ns)
              init (<span style="color: #a020f0;">or</span> (<span style="color: #a020f0;">let</span> [fn (ns-symbol 'init ns)]
@@ -869,9 +872,9 @@ Yes, currently it is not very development start friendly. That will change!
                           (<span style="color: #a020f0;">if</span> (get-fn fn) fn))
                         (<span style="color: #7a378b;">constantly</span> true))]
          (is? [(<span style="color: #7a378b;">fn?</span> (get-fn init)) (<span style="color: #7a378b;">fn?</span> (get-fn deinit)) (<span style="color: #7a378b;">string?</span> name)
-               (<span style="color: #7a378b;">string?</span> symbol) (<span style="color: #7a378b;">fn?</span> run) (timeframe? timeframe)])
-         (EA. (<span style="color: #7a378b;">format</span> <span style="color: #8b2252;">"%s %s, %s"</span> name symbol timeframe)
-              init deinit start symbol timeframe (<span style="color: #a020f0;">or</span> args {})
+               (<span style="color: #7a378b;">string?</span> symbol) (<span style="color: #7a378b;">fn?</span> run) (timeframe? period)])
+         (EA. (<span style="color: #7a378b;">format</span> <span style="color: #8b2252;">"%s %s, %s"</span> name symbol period)
+              init deinit start symbol period (<span style="color: #a020f0;">or</span> args {})
               nil run (ns-vars ns))))))
 
 <span style="color: #b22222;">;;</span><span style="color: #b22222;">how to get it to access actual var? as long as we dont use set!
@@ -885,22 +888,21 @@ Yes, currently it is not very development start friendly. That will change!
 </span>
 
 (<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">run-start</span> [ea]
-  (with-ea [<span style="color: #8b2252;">"START"</span> ea]
+  (with-ea [ea <span style="color: #8b2252;">"START"</span>]
     (<span style="color: #7a378b;">with-bindings</span> (<span style="color: #7a378b;">:vars</span> ea)
       (<span style="color: #a020f0;">let</span> [new-ea (<span style="color: #7a378b;">merge</span> ea {<span style="color: #7a378b;">:pid</span> (spawn #((<span style="color: #7a378b;">:run</span> ea) ea))})]
         (<span style="color: #7a378b;">swap!</span> *eas* conj new-ea)
         new-ea))))
 
-
 <span style="color: #b22222;">;;</span><span style="color: #b22222;">TODO: check return type
 </span>(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">run-init</span> [ea]
-  (with-ea [<span style="color: #8b2252;">"INIT"</span> ea]
+  (with-ea [ea <span style="color: #8b2252;">"INIT"</span>]
     (<span style="color: #a020f0;">let</span> [result ((get-fn (<span style="color: #7a378b;">:init</span> ea)) (<span style="color: #7a378b;">:args</span> ea))]
       (<span style="color: #a020f0;">if</span> result
         (<span style="color: #7a378b;">merge</span> ea {<span style="color: #7a378b;">:vars</span> (<span style="color: #7a378b;">merge</span> (<span style="color: #7a378b;">:vars</span> ea) result)})))))
 
 (<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">run-all</span> [ea]
-  (with-ea [<span style="color: #8b2252;">"ALL"</span> ea]
+  (with-ea [ea <span style="color: #8b2252;">"ALL"</span>]
     (<span style="color: #a020f0;">let</span> [new-ea (run-init ea)]
       (<span style="color: #a020f0;">if</span> (<span style="color: #7a378b;">instance?</span> EA new-ea)
         (run-start new-ea) 
@@ -910,11 +912,13 @@ Yes, currently it is not very development start friendly. That will change!
   ([] (run *ns* {}))
   ([args] (run *ns* args))
   ([ns args]
-     (run-all (new-ea {<span style="color: #7a378b;">:ns</span> ns <span style="color: #7a378b;">:args</span> args <span style="color: #7a378b;">:symbol</span> (<span style="color: #7a378b;">:symbol</span> args)
-                       <span style="color: #7a378b;">:period</span> (<span style="color: #7a378b;">:period</span> args)}))))
+     <span style="color: #b22222;">;;</span><span style="color: #b22222;">todo: not default, no nil
+</span>     (run-all (new-ea {<span style="color: #7a378b;">:ns</span> ns <span style="color: #7a378b;">:args</span> args
+                       <span style="color: #7a378b;">:symbol</span> (<span style="color: #a020f0;">or</span> (<span style="color: #7a378b;">:symbol</span> args) (env <span style="color: #7a378b;">:symbol</span>))
+                       <span style="color: #7a378b;">:period</span> (<span style="color: #a020f0;">or</span> (<span style="color: #7a378b;">:period</span> args) (env <span style="color: #7a378b;">:period</span>))}))))
 
 (<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">sym</span> [] (<span style="color: #7a378b;">:symbol</span> *ea*))
-(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">period</span> [] (<span style="color: #7a378b;">:timeframe</span> *ea*))
+(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">period</span> [] (<span style="color: #7a378b;">:period</span> *ea*))
 <span style="color: #b22222;">;;</span><span style="color: #b22222;">TODO: wait till it stops and delete
 </span>(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">stop</span> [ea]
   (<span style="color: #a020f0;">let</span> [stop-it (<span style="color: #7a378b;">fn</span> [e]
@@ -1049,21 +1053,21 @@ Yes, currently it is not very development start friendly. That will change!
    forex.module.error)   
   (<span style="color: #7a378b;">:require</span> [forex.module.error <span style="color: #7a378b;">:as</span> s])) 
 <span style="color: #b22222;">;;</span><span style="color: #b22222;">high low open close
-</span>(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">get-rel-data</span> [<span style="color: #228b22;">^String</span> symbol <span style="color: #228b22;">^Integer</span> timeframe <span style="color: #228b22;">^Integer</span> from <span style="color: #228b22;">^Integer</span> to]
-  (<span style="color: #228b22;">is</span>  (<span style="color: #7a378b;">&gt;=</span> to from) <span style="color: #8b2252;">"in get-data, from/to is invalid"</span>)
+</span>(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">get-rel-data</span> [<span style="color: #228b22;">^String</span> symbol <span style="color: #228b22;">^Integer</span> period <span style="color: #228b22;">^Integer</span> from <span style="color: #228b22;">^Integer</span> to]
+  (is?  (<span style="color: #7a378b;">&gt;=</span> to from) <span style="color: #8b2252;">"in get-data, from/to is invalid"</span>)
   (<span style="color: #a020f0;">loop</span> [dat nil retries 0]
     (<span style="color: #a020f0;">if</span> (<span style="color: #7a378b;">&gt;</span> retries 3) (throwf <span style="color: #8b2252;">"MQL error %s"</span> (<span style="color: #7a378b;">second</span> dat)))
     (<span style="color: #a020f0;">let</span> [data (s/raw-receive-lst (<span style="color: #7a378b;">format</span> <span style="color: #8b2252;">"bars_relative %s %s %s %s"</span>
-                                      symbol timeframe from to))]
+                                      symbol period from to))]
       (<span style="color: #a020f0;">if</span> (<span style="color: #7a378b;">=</span> (<span style="color: #7a378b;">first</span> data) <span style="color: #8b2252;">"error"</span>) 
         (<span style="color: #a020f0;">do</span> (sleep 0.4) (<span style="color: #a020f0;">recur</span> data (<span style="color: #7a378b;">+</span> retries 1)))
         data)))) 
 
 (<span style="color: #a020f0;">defn-</span> <span style="color: #0000ff;">rel</span> [i]
   (<span style="color: #a020f0;">let</span> [sym (env <span style="color: #7a378b;">:symbol</span>)
-        time (env <span style="color: #7a378b;">:timeframe</span>)]
-    (<span style="color: #228b22;">is</span> (<span style="color: #a020f0;">and</span> (<span style="color: #7a378b;">string?</span> sym) (<span style="color: #7a378b;">integer?</span> time)))
-    (get-rel-data sym time i i)))
+        period (env <span style="color: #7a378b;">:period</span>)]
+    (is? (<span style="color: #a020f0;">and</span> (<span style="color: #7a378b;">string?</span> sym) (<span style="color: #7a378b;">integer?</span> period)))
+    (get-rel-data sym period i i)))
 
 (<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">high</span>
   ([] (high 0)) 
@@ -1087,7 +1091,7 @@ Yes, currently it is not very development start friendly. That will change!
   ([] (bid 0))
   ([i] (aif (mode-bid (env <span style="color: #7a378b;">:symbol</span>)) it (throwf <span style="color: #8b2252;">"MQL error %s"</span> (<span style="color: #7a378b;">:e</span> it)))))
 
-(<span style="color: #a020f0;">defn-</span> <span style="color: #0000ff;">env?</span> [] (<span style="color: #a020f0;">and</span> (<span style="color: #7a378b;">string?</span> (env <span style="color: #7a378b;">:symbol</span>)) (<span style="color: #7a378b;">integer?</span> (env <span style="color: #7a378b;">:timeframe</span>))))
+(<span style="color: #a020f0;">defn-</span> <span style="color: #0000ff;">env?</span> [] (<span style="color: #a020f0;">and</span> (<span style="color: #7a378b;">string?</span> (env <span style="color: #7a378b;">:symbol</span>)) (<span style="color: #7a378b;">integer?</span> (env <span style="color: #7a378b;">:period</span>))))
 (<span style="color: #a020f0;">defn-</span> <span style="color: #0000ff;">&gt;?</span> [a] (<span style="color: #a020f0;">or</span> (zero? a) (<span style="color: #7a378b;">pos?</span> a)))
 <span style="color: #b22222;">;;</span><span style="color: #b22222;">an example of acessing a custom ea 
 </span>(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">blazan-dynamic-stop</span>
@@ -1107,12 +1111,12 @@ Yes, currently it is not very development start friendly. That will change!
      (receive-double! 
       (<span style="color: #a020f0;">if</span> (<span style="color: #7a378b;">map?</span> params)
         (<span style="color: #7a378b;">format</span> <span style="color: #8b2252;">"Custom_Blazan_Dynamic_Stop %s %s %s %s %s %s %s %s"</span>
-                (env <span style="color: #7a378b;">:symbol</span>) (env <span style="color: #7a378b;">:timeframe</span>)
+                (env <span style="color: #7a378b;">:symbol</span>) (env <span style="color: #7a378b;">:period</span>)
                 mode offset
                 (<span style="color: #7a378b;">:contract-step</span> params) (<span style="color: #7a378b;">:precision</span> params)
                 (<span style="color: #7a378b;">:shift-bars</span> params) (<span style="color: #7a378b;">:bars-count</span> params))
         (<span style="color: #7a378b;">format</span> <span style="color: #8b2252;">"Custom_Blazan_Dynamic_Stop %s %s %s %s %s"</span>
-                (env <span style="color: #7a378b;">:symbol</span>) (env <span style="color: #7a378b;">:timeframe</span>)
+                (env <span style="color: #7a378b;">:symbol</span>) (env <span style="color: #7a378b;">:period</span>)
                 mode offset (<span style="color: #7a378b;">apply</span> str (<span style="color: #7a378b;">interpose</span> <span style="color: #8b2252;">" "</span> params))))
       3)))
 
@@ -1274,7 +1278,7 @@ Yes, currently it is not very development start friendly. That will change!
   `(spawn (<span style="color: #7a378b;">fn</span> [] (<span style="color: #a020f0;">try</span> (~func) (<span style="color: #a020f0;">catch</span> Exception e#
                                 (.printStackTrace e#) (severe e#))))))
 
-(<span style="color: #a020f0;">defonce</span> <span style="color: #0000ff;">*env*</span> (<span style="color: #7a378b;">atom</span> {<span style="color: #7a378b;">:timeframe</span> 240 <span style="color: #7a378b;">:symbol</span> <span style="color: #8b2252;">"EURUSD"</span>})) <span style="color: #b22222;">;</span><span style="color: #b22222;">default +H4+, EURUSD
+(<span style="color: #a020f0;">defonce</span> <span style="color: #0000ff;">*env*</span> (<span style="color: #7a378b;">atom</span> {<span style="color: #7a378b;">:period</span> 240 <span style="color: #7a378b;">:symbol</span> <span style="color: #8b2252;">"EURUSD"</span>})) <span style="color: #b22222;">;</span><span style="color: #b22222;">default +H4+, EURUSD
 </span>(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">env</span> [key] (<span style="color: #7a378b;">key</span> @*env*))
 (<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">env!</span> [map] 
   (<span style="color: #7a378b;">swap!</span> *env* #(<span style="color: #7a378b;">merge</span> % map))
@@ -1844,7 +1848,7 @@ return(val);
      (<span style="color: #7a378b;">:like</span> forex.default)
      (<span style="color: #7a378b;">:use</span> utils.general
            forex.examples.timeout-ea.utils))
- <span style="color: #b22222;">;;</span><span style="color: #b22222;">ea vars 
+ <span style="color: #b22222;">;;</span><span style="color: #b22222;">ea vars   
 </span>(<span style="color: #a020f0;">defvar</span> <span style="color: #0000ff;">state</span> (<span style="color: #7a378b;">atom</span> <span style="color: #7a378b;">:timeout</span>))
 (<span style="color: #a020f0;">defvar</span> <span style="color: #0000ff;">end-time</span>)
 (<span style="color: #a020f0;">defvar</span> <span style="color: #0000ff;">order</span>) 
@@ -1872,7 +1876,7 @@ return(val);
    <span style="color: #b22222;">;;</span><span style="color: #b22222;">entry order reach sl 
 </span>   (<span style="color: #a020f0;">if</span> (sell? order) (<span style="color: #7a378b;">&gt;</span> (close) (<span style="color: #7a378b;">:sl</span> order)) (<span style="color: #7a378b;">&lt;</span> (close) (<span style="color: #7a378b;">:sl</span> order)))
                                         <span style="color: #b22222;">;</span><span style="color: #b22222;">TODO: reliable delete????
-</span>   (awhen (delete! order) (out <span style="color: #8b2252;">"entry order reached sl. deleting ..."</span>))
+</span>   (awhen (delete! order) (exit <span style="color: #8b2252;">"entry order reached sl. deleting ..."</span>))
    <span style="color: #b22222;">;;</span><span style="color: #b22222;">timed out
 </span>   (after? (now) end-time)
    (awhen (delete! order) (exit <span style="color: #8b2252;">"order timed out"</span>))))
@@ -1882,7 +1886,7 @@ return(val);
     (out <span style="color: #8b2252;">"closing to half ..."</span>)
     (awhen (<span style="color: #a020f0;">-&gt;</span> (modify! order {<span style="color: #7a378b;">:sl</span> (<span style="color: #7a378b;">:price</span> order) <span style="color: #7a378b;">:tp</span> tp2})
                (close! (lot (<span style="color: #7a378b;">/</span> (<span style="color: #7a378b;">:lots</span> order) 2))))
-           (exit <span style="color: #8b2252;">"finished break even - closing ..."</span>))))
+           (exit <span style="color: #8b2252;">"finished break even"</span>))))
 
 (<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">hh</span> [a]
   (<span style="color: #7a378b;">apply</span> max (<span style="color: #7a378b;">map</span> high (<span style="color: #7a378b;">range</span> 1 (<span style="color: #7a378b;">inc</span> a)))))
@@ -1958,7 +1962,7 @@ return(val);
 <div id="postamble">
 <p class="author"> Author: Seth Burleigh
 </p>
-<p class="date"> Date: 2011-01-17 17:07:42 CST</p>
+<p class="date"> Date: 2011-01-19 17:23:20 CST</p>
 <p class="creator">HTML generated by org-mode 7.4 in emacs 23</p>
 </div>
 </div>
