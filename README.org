@@ -1,0 +1,43 @@
+* Installation
+Supported Platforms: 
+Windowx and Linux x86
+
+** Step 1 - getting mql4 command script to work
+It is assumed linux users have metatrader running under wine. If not, see
+http://appdb.winehq.org/objectManager.php?sClass=version&iId=2893&iTestingId=22068
+
+navigate to src/mql4/zmq. Add include directory files to metatrader includes.
+Navigate to src/mql4/commando. Add include directory files to metatrader includes
+and scripts to metatrader scripts.
+
+Click on downloads for clj-forex. Download mql4_libs.zip. 
+
+Window users should place
+zmq_bind.dll under libs in metatrader and libzmq.dll under c:/windows/system32. They should
+also install http://www.microsoft.com/downloads/en/details.aspx?familyid=A5C84275-3B97-4AB7-A40D-3802B2AF5FC2&displaylang=en
+
+Linux users should place zmq_bind.dll under libs of metatrader. They should then install
+zeromq 2.0.10 from  http://www.zeromq.org/intro:get-the-software
+
+Now open metatrader and run commando script. If it doesnt exit, you are good!
+Notice that you cant close the script after it has run - you can force it, but
+that would be bad. The appropriate way to close it is to send "KILL" 
+from clojure side.
+
+** Step2 - getting clj-forex to work
+Notice that there is some bug in jzmq on windows that causes an error to be thrown
+if no commando scripts are up and running - so for now, make sure a commando script is
+running before attempting to send data on the socket!
+
+Currently, since there is no release, installation requires a couple of steps.
+OK - download Clojure Box, install org-mode from git repository (necessary).
+
+Open up clj-forex.org and hit C-c C-v t (org-babel-tangle). Now, in the toplevel directory, type in
+
+lein deps
+
+lein native-deps
+
+lein swank
+
+Open up emacs, do slime-connect, and then open up timeout_ea.clj, compile that, and then you can type in (backend/start) and then go (close), and other stuff... later tutorial....
