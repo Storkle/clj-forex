@@ -1,3 +1,7 @@
+* Intro
+clj-forex does not yet have a release, but it can still do some cool things.
+See clj-forex.html and scroll down to the examples section. So if you just want to try
+it out, instructions to install are below
 * Installation
 Supported Platforms: 
 Windowx and Linux x86
