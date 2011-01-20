@@ -1,6 +1,6 @@
 #+TITLE: CLJ-FOREX
 #+Author: Seth Burleigh
-#+Babel: :comments link :noweb yes
+#+Babel: :comments link :noweb yes :mkdirp yes
   
 * Introduction
 ** What is forex?
