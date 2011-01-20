@@ -26,7 +26,7 @@ int deinit()
 //+------------------------------------------------------------------+
 //| expert start function                                            |
 //+------------------------------------------------------------------+
-
+//NOTICE: it doesn matter which end binds or which ends connect. in general, the most stable end should bind since only one socket can bind.
 int start()
 {
   Print("using zeromq version "+z_version_string());
@@ -36,17 +36,23 @@ int start()
   client = z_socket(context,ZMQ_PUB); //client: sends queries 
   server = z_socket(context,ZMQ_SUB); //server: receives queries
   z_subscribe(server,"cat");
-  //z_set_sockopt(server,ZMQ_SUBSCRIBE,"",0);
-  
+ 
   if(z_bind(server,"tcp://127.0.0.1:2027")==-1) 
     return(-1);  
   if(z_connect(client,"tcp://127.0.0.1:2027")==-1)
     return(-1); 
+    
   z_send(client,"cat I am a message");
-  z_recv(server,recv);
+  string message = z_recv(server);
+  Print("test1: message received is "+message +" and length is "+z_msg_len(recv)+" and "+StringLen(message));
   
-  string message = z_msg(recv);
-  Print("message received is "+message +" and length is "+z_msg_len(recv)+" and "+StringLen(message));
+  z_unsubscribe(server,"cat");
+  z_send(client,"cat i am a message");
+  Print("test2: received "+z_recv(server,ZMQ_NOBLOCK));
+  
+  z_subscribe(server,"");
+  z_send(client,"cat i am a message");
+  Print("test3: received "+z_recv(server));
   return(0);
 }
 //+------------------------------------------------------------------+

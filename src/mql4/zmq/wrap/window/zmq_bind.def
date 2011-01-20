@@ -1,7 +1,9 @@
 LIBRARY "zmq_bind"
 EXPORTS 
+_zmq_setsockopt
 _zmq_poll
 _zmq_new_poll
+
 _zmsg_new
 _zmq_msg_init_data
 _zmq_msg_data
