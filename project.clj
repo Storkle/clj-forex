@@ -10,7 +10,7 @@
 		 [org.clojars.starry/clj-forex-indicators "0.1"]]   
   :dev-dependencies [[native-deps "1.0.5"]
 		     [swank-clojure "1.3.0-SNAPSHOT"]] 
-  :native-dependencies [[org.clojars.starry/jzmq-native-deps "2.0.10"]]
+  :native-dependencies [[org.clojars.starry/jzmq-native-deps "2.0.10.1"]]
   ;; :jvm-opts      ["-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=8030"]
   ;;:main forex.binding
   ;;:aot :all
