@@ -12,14 +12,12 @@ int init()
 //| expert deinitialization function                                 |
 //+------------------------------------------------------------------+
 int client,server,context;
-int recv;
 
 //TODO: the below is needed or else you might get some nice memory leaks!
 int deinit()
 {
   z_close(client);
   z_close(server);
-  z_msg_close(recv);
   z_term(context);
   return(0);
 }
@@ -30,8 +28,7 @@ int deinit()
 int start()
 {
   Print("using zeromq version "+z_version_string());
-  recv = z_msg_empty();
-   
+  
   context = z_init(1);
   client = z_socket(context,ZMQ_PUB); //client: sends queries 
   server = z_socket(context,ZMQ_SUB); //server: receives queries
@@ -44,7 +41,7 @@ int start()
     
   z_send(client,"cat I am a message");
   string message = z_recv(server);
-  Print("test1: message received is "+message +" and length is "+z_msg_len(recv)+" and "+StringLen(message));
+  Print("test1: message received is "+message);
   
   z_unsubscribe(server,"cat");
   z_send(client,"cat i am a message");
