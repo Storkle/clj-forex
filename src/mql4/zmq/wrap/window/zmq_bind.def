@@ -1,5 +1,7 @@
 LIBRARY "zmq_bind"
 EXPORTS 
+_zmq_poll
+_zmq_new_poll
 _zmsg_new
 _zmq_msg_init_data
 _zmq_msg_data
@@ -13,7 +15,6 @@ _zmq_bind
 _zmq_connect
 _zmq_send
 _zmq_recv
-_zmq_setsockopt
 _zmq_strerror
 _zmq_errno
 _zmq_version

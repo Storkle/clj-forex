@@ -52,10 +52,6 @@ int WINAPI wine_zmq_term (void* context) {
 }
 
 //polling
-///used for freeing poller
-void wine_free (void*ptr) {
-  free(ptr);
-}
 
 //timeout in milliseconds
 int WINAPI wine_zmq_poll(zmq_pollitem_t*items,int nitems,int timeout) {
@@ -90,7 +86,6 @@ int WINAPI wine_zmq_send(void*socket,zmq_msg_t*msg,int flags) {
 int WINAPI wine_zmq_recv(void*socket,zmq_msg_t* msg,int flags) {
  return zmq_recv(socket,msg,flags);  
 }
-
 int WINAPI wine_zmq_setsockopt (void *socket, int option_name, const void *option_value, int option_len) {
   return zmq_setsockopt(socket,option_name,option_value,option_len);
 }

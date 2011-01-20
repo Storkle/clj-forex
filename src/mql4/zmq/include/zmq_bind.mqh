@@ -17,10 +17,14 @@ int z_poll(int poller,int timeout) {
 int z_new_poll (int socket)  {
   return(_zmq_new_poll(socket));
 }
+
+/*TODO: how do we actually freee a pointer in memory - i tried it with free(ptr) , and it crashed :(
 void z_free_poller (int poller) {
   if (poller!=0) 
     _zmq_free(poller);
 }
+*/
+
 
 //version
 string z_version_string() {

@@ -1,6 +1,5 @@
 @ stdcall _zmq_new_poll (ptr)  wine_new_poll
 @ stdcall _zmq_poll (ptr long long)  wine_zmq_poll
-@ stdcall _zmq_free (ptr) wine_free 
 
 @ stdcall _zmq_version(ptr ptr ptr) wine_zmq_version
 
