@@ -266,96 +266,96 @@ Yes, currently it is not very development start friendly. That will change!
     (receive-double (format "OrderLots %s" ticket)))
 #+end_src
 
-#+srcname:account-core
+#+srcname:account-utils
 #+begin_src clojure :tangle src/forex/module/account/utils.clj
-(ns forex.module.account.utils
-  (:use utils.general emacs  
-        forex.util.general
-        forex.module.error)
-;;  (:require forex.module.error [forex.module.error :as err])
-  (:require  [forex.module.account.core :as core]))
+  (ns forex.module.account.utils
+    (:use utils.general emacs  
+	  forex.util.general
+	  forex.module.error)
+  ;;  (:require forex.module.error [forex.module.error :as err])
+    (:require  [forex.module.account.core :as core]))
 
 
-;;account common
-(defn- sym [a] (symbol (camel-to-dash a)))
-(defmacro- single [name] `(defn ~(sym name) [] (receive! ~name)))
-(defmacro- double-single [name] `(defn ~(sym name) [] (receive-double! ~name)))
-(defmacro- singles [& names] `(do ~@(map (fn [a] `(single ~a)) names)))
-(defmacro- double-singles [& names] `(do ~@(map (fn [a] `(double-single ~a)) names)))
+  ;;account common
+  (defn- sym [a] (symbol (camel-to-dash a)))
+  (defmacro- single [name] `(defn ~(sym name) [] (receive! ~name)))
+  (defmacro- double-single [name] `(defn ~(sym name) [] (receive-double! ~name)))
+  (defmacro- singles [& names] `(do ~@(map (fn [a] `(single ~a)) names)))
+  (defmacro- double-singles [& names] `(do ~@(map (fn [a] `(double-single ~a)) names)))
 
-;;none of the below singles or double-singles should throw a mql error - therefore, it is a bug if they do
-(singles 
- "AccountCurrency"
- "AccountCompany"
- "AccountServer" 
- "AccountName"
- "AccountNumber")
+  ;;none of the below singles or double-singles should throw a mql error - therefore, it is a bug if they do
+  (singles 
+   "AccountCurrency"
+   "AccountCompany"
+   "AccountServer" 
+   "AccountName"
+   "AccountNumber")
 
-(double-singles
- "AccountCredit"
- "AccountBalance"
- "AccountEquity"
- "AccountFreeMargin"
- "AccountLeverage"
- "AccountMargin"
- "AccountProfit"
- "OrdersTotal")
-;;
+  (double-singles
+   "AccountCredit"
+   "AccountBalance"
+   "AccountEquity"
+   "AccountFreeMargin"
+   "AccountLeverage"
+   "AccountMargin"
+   "AccountProfit"
+   "OrdersTotal")
+  ;;
 
-(defmacro- define-market-info [& args]
-  `(do ~@(map (fn [[name num]]
-                `(defn ~(symbolicate "mode-" name)
-                   ([] (~(symbolicate "mode-" name) (env :symbol)))
-                   ([symbol#]
-                      (core/market-info symbol# ~num))))
-              (group args))))
+  (defmacro- define-market-info [& args]
+    `(do ~@(map (fn [[name num]]
+		  `(defn ~(symbolicate "mode-" name)
+		     ([] (~(symbolicate "mode-" name) (env :symbol)))
+		     ([symbol#]
+			(core/market-info symbol# ~num))))
+		(group args))))
 
-(define-market-info
-  low 1
-  high 2
-  time 5
-  bid 9
-  ask 10
-  point 11
-  digits 12
-  spread 13
-  stoplevel 14
-  lotsize 15
-  tickvalue 16
-  ticksize 17
-  swaplong 18
-  swapshort 19
-  starting 20
-  expiration 21
-  trade-allowed 22
-  minlot 23
-  lotstep 24
-  maxlot 25
-  swaptype 26
-  profitcalcmode 27
-  margincalcmode 28
-  margininit 29
-  marginmaintenance 30
-  marginhedged 31
-  marginrequired 32
-  freezelevel 33)
+  (define-market-info
+    low 1
+    high 2
+    time 5
+    bid 9
+    ask 10
+    point 11
+    digits 12
+    spread 13
+    stoplevel 14
+    lotsize 15
+    tickvalue 16
+    ticksize 17
+    swaplong 18
+    swapshort 19
+    starting 20
+    expiration 21
+    trade-allowed 22
+    minlot 23
+    lotstep 24
+    maxlot 25
+    swaptype 26
+    profitcalcmode 27
+    margincalcmode 28
+    margininit 29
+    marginmaintenance 30
+    marginhedged 31
+    marginrequired 32
+    freezelevel 33)
 
-(defn demo? []
-  (if (re-find #"(?i)demo" (account-server))
-    true
-    false))
+  (defn demo? []
+    (if (re-find #"(?i)demo" (account-server))
+      true
+      false))
 
-(defn sell? [{type :type}]
-  (or (= type :sell) (= type :sell-stop) (= type :sell-limit)))
-(defn buy? [{type :type}]
-  (or (= type :buy) (= type :buy-stop) (= type :buy-limit)))
-(defn lot
-  ([num] (lot num (env :symbol)))
-  ([num symbol]
-     (let [a (BigDecimal/valueOf num)
-           b (BigDecimal/valueOf (mode-minlot symbol))]
-       (* b (.intValue (/ a b))))))
-
+  (defn sell? [{type :type}]
+    (or (= type :sell) (= type :sell-stop) (= type :sell-limit)))
+  (defn buy? [{type :type}]
+    (or (= type :buy) (= type :buy-stop) (= type :buy-limit)))
+  (defn- to-big [num] (BigDecimal/valueOf (if (integer? num) (double num) num)))
+  (defn lot 
+    ([num] (lot num (env :symbol)))
+    ([num symbol]
+       (let [a (to-big num)
+	     b (to-big (mode-minlot symbol))]
+	 (* b (.intValue (/ a b))))))
 #+end_src
 
 #+srcname:account-common
