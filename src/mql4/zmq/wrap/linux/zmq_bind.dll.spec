@@ -1,3 +1,8 @@
+@ stdcall _zmq_send_double_array (ptr long ptr long)  wine_zmq_send_double_array
+@ stdcall _zmq_send_int_array (ptr long ptr long) wine_zmq_send_int_array
+
+
+
 @ stdcall _zmq_new_poll (ptr)  wine_new_poll
 @ stdcall _zmq_poll (ptr long long)  wine_zmq_poll
 

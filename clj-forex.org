@@ -521,16 +521,17 @@ Yes, currently it is not very development start friendly. That will change!
 *** Ea
 #+srcname:ea-common
 #+begin_src clojure :tangle src/forex/module/ea.clj
-  (ns forex.module.ea
+  (ns forex.module.ea 
     (:use utils.general forex.util.general
 	  utils.fiber.spawn clojure.contrib.core)
+    (:import clojure.lang.Atom)
     (:require [clj-time.core :as t])
     (:use emacs
      forex.util.log  
      forex.module.error 
      forex.module.indicator
      forex.module.account))  
-  (defn- get-fn [a] (if (var? a) (var-get a) a))
+  (defn- get-fn [a] (if (var? a) (var-get a) a)) 
   (defonce *ea* nil)
   (defonce *args* nil) 
   (defmacro with-ea [[ea & name] & body]
@@ -643,10 +644,15 @@ Yes, currently it is not very development start friendly. That will change!
 
   ;;TODO: pid without spawn!!
 
-
   (defn run-start [ea]
     (with-ea [ea "START"]
-      (with-bindings (:vars ea)
+      (with-bindings
+	(apply hash-map
+	       (mapcat (fn [[key val]] (list key
+					     (if (instance? clojure.lang.Atom val)
+					       (atom @val)
+					       val)))
+		       (:vars ea)))
 	(let [new-ea (merge ea {:pid (spawn #((:run ea) ea))})]
 	  (swap! *eas* conj new-ea)
 	  new-ea))))
@@ -710,11 +716,11 @@ Yes, currently it is not very development start friendly. That will change!
     ([msg] (receive-lst! msg nil))
     ([msg try]
        (loop [retries 0]
-	 (let [spl (raw-receive-lst msg)]
+	 (let [spl (raw-receive-lst msg)] 
 	   (if (= (first spl) "error")
 	     (let [err (try (Integer/parseInt (second spl))
 			    (catch Exception e (second spl)))]
-	       (if (and try (< retries try) (= err 4054))
+	       (if (and try (< retries try) (or (= err 4066) (= err 4054)))
 		 (do (Thread/sleep 300) (recur (inc retries)))
 		 (throwf "MQL error %s" (second spl))))
 	     spl)))))
@@ -786,7 +792,15 @@ Yes, currently it is not very development start friendly. That will change!
      forex.util.general
      forex.module.account
      forex.module.error)   
-    (:require [forex.module.error :as s])) 
+    (:require [forex.module.error :as s]))
+
+  (def +m1+ 1)
+  (def +m5+ 5)
+  (def +m15+ 15)
+  (def +h1+ 60)
+  (def +h4+ 240)
+  (def +d1+ (* 24 +h1+))
+
   ;;high low open close
   (defn get-rel-data [^String symbol ^Integer period ^Integer from ^Integer to]
     (is?  (>= to from) "in get-data, from/to is invalid")
@@ -828,7 +842,43 @@ Yes, currently it is not very development start friendly. That will change!
 
   (defn- env? [] (and (string? (env :symbol)) (integer? (env :period))))
   (defn- >? [a] (or (zero? a) (pos? a)))
-  ;;an example of acessing a custom ea 
+  ;;an example of acessing a custom ea
+
+  (defn moving-averages
+    ([method] (fn
+		([period] (moving-averages method period))
+		([period offset] (moving-averages method period offset))))
+    ([method period] (moving-averages method period 0))
+    ([method period offset]
+       {:pre [(env?) (or (>? offset) (nil? offset))
+	      (number? method) (>? period)]}
+       (if offset (receive-double! 
+		   (format "Custom_Moving_Averages %s %s %s %s %s 0 %s"
+			   (env :symbol) (env :period) ;;period/method
+			   0 offset period method)
+		   3)
+	   (fn this 
+	     ([offset] (moving-averages method period offset))
+	     ([] (this 0)))))) 
+  (def sma (moving-averages 0))
+  (def ema (moving-averages 1))
+  (def smma (moving-averages 2))
+  (def lwma (moving-averages 3))
+
+
+  (defn rsi
+    ([period] (rsi period 0))
+    ([period offset]
+       {:pre [(env?) (or (>? offset) (nil? offset)) (number? period)]}
+       (if offset
+	(receive-double! 
+	 (format "Custom_RSI %s %s %s %s %s"
+		 (env :symbol) (env :period)
+		 0 offset period)
+	 3)
+	(fn this ([offset] (rsi period offset)) ([] (this 0))))))
+
+
   (defn blazan-dynamic-stop
     ([params] (fn 
 		([mode offset] (blazan-dynamic-stop params mode offset))
@@ -837,22 +887,12 @@ Yes, currently it is not very development start friendly. That will change!
 		     ([offset] (blazan-dynamic-stop params mode offset))
 		     ([] (blazan-dynamic-stop params mode  0))))
     ([params mode offset]
-       {:pre [(env?) (>? offset) (>? mode)
-	      (if-not (map? params)
-		(= (count params) 4)
-		;;TODO: efficient testing of a map having keys? of types?
-		(and (:contract-step params) (:precision params) (:shift-bars params)
-		     (:bars-count params)))]}
+       {:pre [(env?) (>? offset) (>? mode) 
+	      (= (count params) 4)]}
        (receive-double! 
-	(if (map? params)
-	  (format "Custom_Blazan_Dynamic_Stop %s %s %s %s %s %s %s %s"
-		  (env :symbol) (env :period)
-		  mode offset
-		  (:contract-step params) (:precision params)
-		  (:shift-bars params) (:bars-count params))
-	  (format "Custom_Blazan_Dynamic_Stop %s %s %s %s %s"
-		  (env :symbol) (env :period)
-		  mode offset (apply str (interpose " " params))))
+	(format "Custom_Blazan_Dynamic_Stop %s %s %s %s %s"
+		(env :symbol) (env :period)
+		mode offset (apply str (interpose " " params)))
 	3)))
 
   (defn hit? [order val]
@@ -1030,7 +1070,7 @@ Yes, currently it is not very development start friendly. That will change!
     {:msg (str "clj-forex error: " message) 
      :unhandled (throw-msg Exception)})
 
-  (defn throwf [msg] (raise *clj-forex-error* msg))
+  (defn throwf [msg & args] (raise *clj-forex-error* (apply format msg args)))
 
   (defmacro is?
     [val & message]
@@ -1295,11 +1335,13 @@ Yes, currently it is not very development start friendly. That will change!
 	     (.register p sock))
 	 p)))
 
+  ;;TODO: now just a string socket!
   (defrecord Socket [socket]
     PSocket
     (raw [this] (:socket this))
     (snd [this msg flags] (.send socket (.getBytes msg) flags))
-    (recv [this flags] (String. (.recv socket flags)))
+    (recv [this flags] (when-let [it (.recv socket flags)]
+			 (String. it)))
     (recv [this] (recv this 0)) 
     (close [this] (.close socket))
     (bind [this address] (.bind socket address))
@@ -1589,3 +1631,4 @@ Yes, currently it is not very development start friendly. That will change!
 		       :tp1 (Double/parseDouble tp1)
 		       :tp2 (Double/parseDouble tp2)}))))))
 #+end_src
+ 

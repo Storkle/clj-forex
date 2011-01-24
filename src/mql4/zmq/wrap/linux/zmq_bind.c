@@ -1,6 +1,27 @@
 #include <windows.h>
 #include <zmq.h>
 #include <errno.h>
+#include <stdio.h>
+
+int WINAPI wine_zmq_send_double_array (double* array,int size, void*socket,int flags) {
+  
+
+  zmq_msg_t reply;
+  zmq_msg_init_size (&reply, sizeof(double)*size);
+  memcpy ((void *) zmq_msg_data (&reply), array, sizeof(double)*size);
+
+  int ret = zmq_send (socket, &reply, flags);
+  zmq_msg_close (&reply);  
+  return ret; 
+}
+int WINAPI wine_zmq_send_int_array (int* array,int size, void*socket,int flags) {
+  zmq_msg_t reply;
+  zmq_msg_init_size (&reply, sizeof(int)*size);
+  memcpy ((void *) zmq_msg_data (&reply), array, sizeof(int)*size);
+  int ret = zmq_send (socket, &reply, flags);
+  zmq_msg_close (&reply);  
+  return ret; 
+}
 
 
 
