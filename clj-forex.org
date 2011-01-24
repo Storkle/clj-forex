@@ -597,6 +597,16 @@ Yes, currently it is not very development start friendly. That will change!
     ([msg & args] (raise *ea-stop* (if (string? msg)
 				     (apply format msg args)
 				     (concat [msg] args)))))
+
+
+  (defn- copy-atoms [map]
+    (apply hash-map
+	   (mapcat (fn [[key val]]
+		     (list key
+			   (if (instance? clojure.lang.Atom val)
+			     (atom @val)
+			     val)))
+		   map)))
   ;;##ea implementation
   (defonce *eas* (atom []))
   (defn every [pred coll]
@@ -680,7 +690,8 @@ Yes, currently it is not very development start friendly. That will change!
 		 (string? symbol) (fn? run) (timeframe? period)])
 	   (EA. (format "%s %s, %s" name symbol period)
 		init deinit start symbol period (or args {})
-		nil run (ns-vars ns))))))
+		nil run
+		(copy-atoms (ns-vars ns)))))))
 
   ;;how to get it to access actual var? as long as we dont use set!
   (defmethod clojure.core/print-method EA [o w]
@@ -693,13 +704,7 @@ Yes, currently it is not very development start friendly. That will change!
 
   (defn run-start [ea]
     (with-ea [ea "START"]
-      (with-bindings
-	(apply hash-map
-	       (mapcat (fn [[key val]] (list key
-					     (if (instance? clojure.lang.Atom val)
-					       (atom @val)
-					       val)))
-		       (:vars ea)))
+      (with-bindings (:vars ea)
 	(let [new-ea (merge ea {:pid (spawn #((:run ea) ea))})]
 	  (swap! *eas* conj new-ea)
 	  new-ea))))
