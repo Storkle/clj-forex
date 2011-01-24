@@ -369,6 +369,18 @@ Yes, currently it is not very development start friendly. That will change!
     (:require forex.module.error [forex.module.error :as err])
     (:require  [forex.module.account.core :as core]))
 
+  (defvar *account-warn-on-mql-error* true)
+
+  (defn- account-warn [it]
+    (if *account-info-on-mql-error*
+      (do (warn "MQL Order Error %s" (:e it)) it)
+      it))
+  (defmacro- with-order [order & body]
+    `(let [o# ~order]
+       (if-not (= (:lots o#) 0)
+	 (do ~@body)
+	 (do (warn "attempting to change order %s with zero lots" o#)
+	     o#))))
 
   (defn- >? [a] (and (number? a) (>= a 0)))
 
@@ -396,7 +408,7 @@ Yes, currently it is not very development start friendly. That will change!
   (defn- order-close-time* [{id :id}]
     (is? (string? id))
     ;;we dont need to know mql4 error codes for order close time
-    (aif (core/order-close-time id) it -1))
+    (aif (core/order-close-time id) it -1)) ;;TODO: return 0 instead?
   (defn- order-type*  [order]
     (is? (string? (:id order)))
     (default
@@ -404,46 +416,43 @@ Yes, currently it is not very development start friendly. That will change!
 	   (value-to-order-type (int it)))))
 
   (defn- delete!* [{id :id lots :lots :as o}]
-    (if-not (= lots 0)
-      (aif (core/order-delete id) (merge o {:lots 0}) it)
-      o))
+    (with-order o
+      (if-not (= lots 0)
+	(aif (core/order-delete id) (merge o {:lots 0}) it)
+	o)))
 
-  (defvar *account-warn-on-mql-error* true)
-
-  (defn- account-warn [it]
-    (if *account-info-on-mql-error*
-      (do (warn "MQL Order Error %s" (:e it)) it)
-      it))
 
   (defn- close!*
     ([o] (close! o 0))
     ([{:keys [price lots slip id symbol] :as order} new-lots]
-       (is? [(string? id) (string? symbol) 
-	     [price (pos? price)]
-	     [(number? lots) (>= lots 0)]])
-       (is? (>= (- lots new-lots) 0))
-       (if-not (= new-lots lots)
-	 (aif (core/order-close id (- lots new-lots)
-				(if (sell? order)
-				  (ask symbol)
-				  (bid symbol))
-				slip :blue)
-	      (merge order {:lots new-lots})
-	      (account-warn it))
-	 order)))
+       (with-order order
+	 (is? [(string? id) (string? symbol) 
+	       [price (pos? price)]
+	       [(number? lots) (>= lots 0)]])
+	 (is? (>= (- lots new-lots) 0))
+	 (if-not (= new-lots lots)
+	   (aif (core/order-close id (- lots new-lots)
+				  (if (sell? order)
+				    (ask symbol)
+				    (bid symbol))
+				  slip :blue)
+		(merge order {:lots new-lots})
+		(account-warn it))
+	   order))))
 
   (defn- modify!* [order {:keys [sl tp price]}]
-    (let [sl (or sl (:sl order))
-	  tp (or tp (:tp order))
-	  price (or price (:price order))]
-      (is? [sl tp price 
-	    (>? sl) (>? tp) (pos? price)])
-      (if-not (and (= sl (:sl order))
-		   (= tp (:tp order)))
-	(aif (core/order-modify (:id order) price sl tp)
-	     (merge order {:sl sl :tp tp :price price})
-	     (account-warn it))
-	order)))
+    (with-order  order
+      (let [sl (or sl (:sl order))
+	    tp (or tp (:tp order))
+	    price (or price (:price order))]
+	(is? [sl tp price 
+	      (>? sl) (>? tp) (pos? price)])
+	(if-not (and (= sl (:sl order))
+		     (= tp (:tp order)))
+	  (aif (core/order-modify (:id order) price sl tp)
+	       (merge order {:sl sl :tp tp :price price})
+	       (account-warn it))
+	  order))))
 
   ;;TOOD: how do we get map with defaults?
   (defn- verify-order [{:keys [slip symbol type price tp sl lots]
@@ -474,18 +483,22 @@ Yes, currently it is not very development start friendly. That will change!
   ;;TODO: what happens if second modify fails? how can programmer find this out?
   (defn- order!* [{:keys [symbol type price tp sl lots slip]
 		   :as order
-		   :or { symbol (env :symbol) slip 3 sl 0 tp 0}}]
+		   :or { symbol (env :symbol)}}]
     (let [price (or price (if (sell? order) (bid symbol) (ask symbol)))
-	  order (merge {:symbol symbol
-			:sl sl :tp tp :slip slip} (merge order {:price price}))]
-     (verify-order order)
-     (aif (core/order-send symbol type lots price 0 0 slip)
-	  (let [o (merge {:slip slip :symbol symbol} (merge order {:id it}))]
-	    ;;now, use modify to change sl and tp
-	    (aif (modify!* o {:sl sl :tp tp})
-		 (merge {:sl sl :tp tp} o)
-		 (do (account-warn it) o)))
-	  (account-warn it))))
+	  order (merge
+		 {:symbol symbol
+		  :id ""
+		  :sl 0 :tp 0 :slip 3}
+		 (merge order {:price price}))]
+      (with-order order  
+	(verify-order order)
+	(aif (core/order-send symbol type lots price 0 0 slip)
+	     (let [o (merge {:slip slip :symbol symbol} (merge order {:id it}))]
+	       ;;now, use modify to change sl and tp
+	       (aif (modify!* o {:sl sl :tp tp})
+		    (merge {:sl sl :tp tp} o)
+		    (do (account-warn it) o)))
+	     (account-warn it)))))
 
   (defn- open?* [order] 
     (default (= (order-close-time order) 0)))
