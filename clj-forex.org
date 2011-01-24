@@ -200,7 +200,7 @@ Yes, currently it is not very development start friendly. That will change!
 	    result result
 	    true (throwf "invalid result received %s" result))))))
 #+end_src
-** Module
+** Module 
 *** Account
 #+srcname:account-core
 #+begin_src clojure :tangle src/forex/module/account/core.clj
