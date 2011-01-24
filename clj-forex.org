@@ -1,7 +1,7 @@
 #+TITLE: CLJ-FOREX
 #+Author: Seth Burleigh
 #+Babel: :comments link :noweb yes :mkdirp yes
-  
+   
 * Introduction
 ** What is forex?
 Forex is a currency trading market. But you probably know all about forex, since you're here! If not, read up on it! \\
@@ -262,13 +262,107 @@ Yes, currently it is not very development start friendly. That will change!
   (defn order-lots [ticket]
     (receive-double (format "OrderLots %s" ticket)))
 #+end_src
+
+#+srcname:account-core
+#+begin_src clojure :tangle src/forex/module/account/utils.clj
+(ns forex.module.account.utils
+  (:use utils.general emacs  
+        forex.util.general
+        forex.module.error)
+;;  (:require forex.module.error [forex.module.error :as err])
+  (:require  [forex.module.account.core :as core]))
+
+
+;;account common
+(defn- sym [a] (symbol (camel-to-dash a)))
+(defmacro- single [name] `(defn ~(sym name) [] (receive! ~name)))
+(defmacro- double-single [name] `(defn ~(sym name) [] (receive-double! ~name)))
+(defmacro- singles [& names] `(do ~@(map (fn [a] `(single ~a)) names)))
+(defmacro- double-singles [& names] `(do ~@(map (fn [a] `(double-single ~a)) names)))
+
+;;none of the below singles or double-singles should throw a mql error - therefore, it is a bug if they do
+(singles 
+ "AccountCurrency"
+ "AccountCompany"
+ "AccountServer" 
+ "AccountName"
+ "AccountNumber")
+
+(double-singles
+ "AccountCredit"
+ "AccountBalance"
+ "AccountEquity"
+ "AccountFreeMargin"
+ "AccountLeverage"
+ "AccountMargin"
+ "AccountProfit"
+ "OrdersTotal")
+;;
+
+(defmacro- define-market-info [& args]
+  `(do ~@(map (fn [[name num]]
+                `(defn ~(symbolicate "mode-" name)
+                   ([] (~(symbolicate "mode-" name) (env :symbol)))
+                   ([symbol#]
+                      (core/market-info symbol# ~num))))
+              (group args))))
+
+(define-market-info
+  low 1
+  high 2
+  time 5
+  bid 9
+  ask 10
+  point 11
+  digits 12
+  spread 13
+  stoplevel 14
+  lotsize 15
+  tickvalue 16
+  ticksize 17
+  swaplong 18
+  swapshort 19
+  starting 20
+  expiration 21
+  trade-allowed 22
+  minlot 23
+  lotstep 24
+  maxlot 25
+  swaptype 26
+  profitcalcmode 27
+  margincalcmode 28
+  margininit 29
+  marginmaintenance 30
+  marginhedged 31
+  marginrequired 32
+  freezelevel 33)
+
+(defn demo? []
+  (if (re-find #"(?i)demo" (account-server))
+    true
+    false))
+
+(defn sell? [{type :type}]
+  (or (= type :sell) (= type :sell-stop) (= type :sell-limit)))
+(defn buy? [{type :type}]
+  (or (= type :buy) (= type :buy-stop) (= type :buy-limit)))
+(defn lot
+  ([num] (lot num (env :symbol)))
+  ([num symbol]
+     (let [a (BigDecimal/valueOf num)
+           b (BigDecimal/valueOf (mode-minlot symbol))]
+       (* b (.intValue (/ a b))))))
+
+#+end_src
+
 #+srcname:account-common
 #+begin_src clojure :tangle src/forex/module/account.clj
   ;;TODO: unit test everything
   (ns forex.module.account
     (:use utils.general emacs  
 	  forex.util.general
-	  forex.module.error)
+	  forex.module.indicator
+	  forex.module.error forex.module.account.utils)
     (:require forex.module.error [forex.module.error :as err])
     (:require  [forex.module.account.core :as core]))
 
@@ -313,13 +407,17 @@ Yes, currently it is not very development start friendly. That will change!
 
   (defn- close!*
     ([o] (close! o 0))
-    ([{:keys [price lots slip id] :as order} new-lots]
-       (is? [(string? id)
+    ([{:keys [price lots slip id symbol] :as order} new-lots]
+       (is? [(string? id) (string? symbol) 
 	     [price (pos? price)]
 	     [(number? lots) (>= lots 0)]])
        (is? (>= (- lots new-lots) 0))
        (if-not (= new-lots lots)
-	 (aif (core/order-close id (- lots new-lots) price slip :blue)
+	 (aif (core/order-close id (- lots new-lots)
+				(if (sell? order)
+				  (ask symbol)
+				  (bid symbol))
+				slip :blue)
 	      (merge order {:lots new-lots})
 	      it)
 	 order)))
@@ -328,7 +426,7 @@ Yes, currently it is not very development start friendly. That will change!
     (let [sl (or sl (:sl order))
 	  tp (or tp (:tp order))
 	  price (or price (:price order))]
-      (is? [sl tp price
+      (is? [sl tp price 
 	    (>? sl) (>? tp) (pos? price)])
       (if-not (and (= sl (:sl order))
 		   (= tp (:tp order)))
@@ -364,15 +462,19 @@ Yes, currently it is not very development start friendly. That will change!
   ;;TODO: change to make reliable and to work for ECN brokers and such
   ;;see http://forum.mql4.com/36608
   (defn- order!* [{:keys [symbol type price tp sl lots slip]
-			  :as order :or {symbol (env :symbol) slip 3 sl 0 tp 0}}]
-    (verify-order (merge {:symbol symbol} order))
-    (aif (core/order-send symbol type lots price 0 0 slip)
-	 (let [o (merge {:slip slip :symbol symbol} (merge order {:id it}))]
-	   ;;now, use modify to change sl and tp
-	   (aif (modify!* o {:sl sl :tp tp})
-		(merge {:sl sl :tp tp} o)
-		o))
-	 it))
+		   :as order
+		   :or { symbol (env :symbol) slip 3 sl 0 tp 0}}]
+    (let [price (or price (if (sell? order) (bid symbol) (ask symbol)))
+	  order (merge {:symbol symbol
+			:sl sl :tp tp :slip slip} (merge order {:price price}))]
+     (verify-order order)
+     (aif (core/order-send symbol type lots price 0 0 slip)
+	  (let [o (merge {:slip slip :symbol symbol} (merge order {:id it}))]
+	    ;;now, use modify to change sl and tp
+	    (aif (modify!* o {:sl sl :tp tp})
+		 (merge {:sl sl :tp tp} o)
+		 o))
+	  it)))
 
   (defn- open?* [order] 
     (default (= (order-close-time order) 0)))
@@ -437,86 +539,6 @@ Yes, currently it is not very development start friendly. That will change!
 	(on [s syms]
 	    (let [sym  (symbol (camel-to-dash s))]
 	      (intern *ns* sym (var-get (intern core-ns sym))))))))
-
-  ;;account common
-  (defn- sym [a] (symbol (camel-to-dash a)))
-  (defmacro- single [name] `(defn ~(sym name) [] (receive! ~name)))
-  (defmacro- double-single [name] `(defn ~(sym name) [] (receive-double! ~name)))
-  (defmacro- singles [& names] `(do ~@(map (fn [a] `(single ~a)) names)))
-  (defmacro- double-singles [& names] `(do ~@(map (fn [a] `(double-single ~a)) names)))
-
-  ;;none of the below singles or double-singles should throw a mql error - therefore, it is a bug if they do
-  (singles 
-   "AccountCurrency"
-   "AccountCompany"
-   "AccountServer" 
-   "AccountName"
-   "AccountNumber")
-
-  (double-singles
-   "AccountCredit"
-   "AccountBalance"
-   "AccountEquity"
-   "AccountFreeMargin"
-   "AccountLeverage"
-   "AccountMargin"
-   "AccountProfit"
-   "OrdersTotal")
-  ;;
-
-  (defmacro- define-market-info [& args]
-    `(do ~@(map (fn [[name num]]
-		  `(defn ~(symbolicate "mode-" name)
-		     ([] (~(symbolicate "mode-" name) (env :symbol)))
-		     ([symbol#]
-			(core/market-info symbol# ~num))))
-		(group args))))
-
-  (define-market-info
-    low 1
-    high 2
-    time 5
-    bid 9
-    ask 10
-    point 11
-    digits 12
-    spread 13
-    stoplevel 14
-    lotsize 15
-    tickvalue 16
-    ticksize 17
-    swaplong 18
-    swapshort 19
-    starting 20
-    expiration 21
-    trade-allowed 22
-    minlot 23
-    lotstep 24
-    maxlot 25
-    swaptype 26
-    profitcalcmode 27
-    margincalcmode 28
-    margininit 29
-    marginmaintenance 30
-    marginhedged 31
-    marginrequired 32
-    freezelevel 33)
-
-  (defn demo? []
-    (if (re-find #"(?i)demo" (account-server))
-      true
-      false))
-
-  (defn sell? [{type :type}]
-    (or (= type :sell) (= type :sell-stop) (= type :sell-limit)))
-  (defn buy? [{type :type}]
-    (or (= type :buy) (= type :buy-stop) (= type :buy-limit)))
-  (defn lot
-    ([num] (lot num (env :symbol)))
-    ([num symbol]
-       (let [a (BigDecimal/valueOf num)
-	     b (BigDecimal/valueOf (mode-minlot symbol))]
-	 (* b (.intValue (/ a b))))))
 #+end_src
 *** Ea
 #+srcname:ea-common
@@ -790,7 +812,7 @@ Yes, currently it is not very development start friendly. That will change!
     (:use
      utils.general 
      forex.util.general
-     forex.module.account
+     forex.module.account.utils
      forex.module.error)   
     (:require [forex.module.error :as s]))
 
@@ -832,9 +854,13 @@ Yes, currently it is not very development start friendly. That will change!
     ([i] (Double/parseDouble (nth (rel (off i)) 4))))
 
   ;;TODO: change
-  (defn ask [] (aif (mode-ask (env :symbol)) it (throwf "MQL error %s" (:e it))))
+  (defn ask
+    ([] (ask (env :symbol)))
+    ([symbol] (aif (mode-ask symbol) it (throwf "MQL error %s" (:e it)))))
   ;;bid==close 
-  (defn bid [] (aif (mode-bid (env :symbol)) it (throwf "MQL error %s" (:e it))))
+  (defn bid
+    ([] (bid (env :symbol)))
+    ([symbol] (aif (mode-bid symbol) it (throwf "MQL error %s" (:e it)))))
 
   (defn- env? [] (and (string? (env :symbol)) (integer? (env :period))))
   (defn- >? [a] (or (zero? a) (pos? a)))
@@ -862,6 +888,17 @@ Yes, currently it is not very development start friendly. That will change!
   (def lwma (moving-averages 3))
 
   ;;todo - check for valif params - above 1?
+  (defn cci
+    ([period] (cci period 0))
+    ([period offset]
+       {:pre [(env?) (or (>? offset) (nil? offset)) (number? period)]}
+       (if offset
+	(receive-double! 
+	 (format "Custom_CCI %s %s %s %s %s"
+		 (env :symbol) (env :period)
+		 0 (off offset) period)
+	 3)
+	(fn this ([offset] (cci period offset)) ([] (this 0))))))
   (defn rsi
     ([period] (rsi period 0))
     ([period offset]
@@ -889,7 +926,7 @@ Yes, currently it is not very development start friendly. That will change!
 	(format "Custom_Blazan_Dynamic_Stop %s %s %s %s %s"
 		(env :symbol) (env :period)
 		mode (off offset) (apply str (interpose " " params)))
-	3)))
+	3))) 
 
   (defn hit? [order val]
     (cond
@@ -1508,7 +1545,7 @@ Yes, currently it is not very development start friendly. That will change!
   (:use forex.module.error
 	forex.module.ea
 	forex.module.indicator
-	forex.module.account
+	forex.module.account forex.module.account.utils
 	[clj-time.core :exclude [extend start]])
   (:require
    [forex.backend.mql.socket-service :as backend]))
