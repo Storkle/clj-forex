@@ -529,7 +529,7 @@ Yes, currently it is not very development start friendly. That will change!
     (:use emacs
      forex.util.log  
      forex.module.error 
-     forex.module.indicator
+     forex.module.indicator 
      forex.module.account))  
   (defn- get-fn [a] (if (var? a) (var-get a) a)) 
   (defonce *ea* nil)
@@ -817,28 +817,24 @@ Yes, currently it is not very development start friendly. That will change!
 	  period (env :period)]
       (is? (and (string? sym) (integer? period)))
       (get-rel-data sym period i i)))
-
+  (defn- off [a] (+ (or (env :i) 0) a))
   (defn high
     ([] (high 0)) 
-    ([i] (Double/parseDouble (nth (rel i) 1))))
+    ([i] (Double/parseDouble (nth (rel (off i)) 1))))
   (defn open 
     ([] (open 0)) 
-    ([i] (Double/parseDouble (nth (rel i) 3))))
+    ([i] (Double/parseDouble (nth (rel (off i)) 3))))
   (defn low
     ([] (low 0))
-    ([i] (Double/parseDouble (nth (rel i) 2))))
+    ([i] (Double/parseDouble (nth (rel (off i)) 2))))
   (defn close
     ([] (close 0))
-    ([i] (Double/parseDouble (nth (rel i) 4))))
+    ([i] (Double/parseDouble (nth (rel (off i)) 4))))
 
   ;;TODO: change
-  (defn ask
-    ([] (ask 0))
-    ([i] (aif (mode-ask (env :symbol)) it (throwf "MQL error %s" (:e it)))))
+  (defn ask [] (aif (mode-ask (env :symbol)) it (throwf "MQL error %s" (:e it))))
   ;;bid==close 
-  (defn bid
-    ([] (bid 0))
-    ([i] (aif (mode-bid (env :symbol)) it (throwf "MQL error %s" (:e it)))))
+  (defn bid [] (aif (mode-bid (env :symbol)) it (throwf "MQL error %s" (:e it))))
 
   (defn- env? [] (and (string? (env :symbol)) (integer? (env :period))))
   (defn- >? [a] (or (zero? a) (pos? a)))
@@ -855,7 +851,7 @@ Yes, currently it is not very development start friendly. That will change!
        (if offset (receive-double! 
 		   (format "Custom_Moving_Averages %s %s %s %s %s 0 %s"
 			   (env :symbol) (env :period) ;;period/method
-			   0 offset period method)
+			   0 (off offset) period method)
 		   3)
 	   (fn this 
 	     ([offset] (moving-averages method period offset))
@@ -865,7 +861,7 @@ Yes, currently it is not very development start friendly. That will change!
   (def smma (moving-averages 2))
   (def lwma (moving-averages 3))
 
-
+  ;;todo - check for valif params - above 1?
   (defn rsi
     ([period] (rsi period 0))
     ([period offset]
@@ -874,7 +870,7 @@ Yes, currently it is not very development start friendly. That will change!
 	(receive-double! 
 	 (format "Custom_RSI %s %s %s %s %s"
 		 (env :symbol) (env :period)
-		 0 offset period)
+		 0 (off offset) period)
 	 3)
 	(fn this ([offset] (rsi period offset)) ([] (this 0))))))
 
@@ -892,7 +888,7 @@ Yes, currently it is not very development start friendly. That will change!
        (receive-double! 
 	(format "Custom_Blazan_Dynamic_Stop %s %s %s %s %s"
 		(env :symbol) (env :period)
-		mode offset (apply str (interpose " " params)))
+		mode (off offset) (apply str (interpose " " params)))
 	3)))
 
   (defn hit? [order val]
