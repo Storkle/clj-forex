@@ -371,9 +371,9 @@ Yes, currently it is not very development start friendly. That will change!
 
   (defvar *account-warn-on-mql-error* true)
 
-  (defn- account-warn [it]
-    (if *account-info-on-mql-error*
-      (do (warn "MQL Order Error %s" (:e it)) it)
+  (defn- account-warn [it order]
+    (if *account-warn-on-mql-error* 
+      (do (warn "MQL error %s on order %s" (:e it) order) it)
       it))
   (defmacro- with-order [order & body]
     `(let [o# ~order]
@@ -437,7 +437,7 @@ Yes, currently it is not very development start friendly. That will change!
 				    (bid symbol))
 				  slip :blue)
 		(merge order {:lots new-lots})
-		(account-warn it))
+		(account-warn it order))
 	   order))))
 
   (defn- modify!* [order {:keys [sl tp price]}]
@@ -451,7 +451,7 @@ Yes, currently it is not very development start friendly. That will change!
 		     (= tp (:tp order)))
 	  (aif (core/order-modify (:id order) price sl tp)
 	       (merge order {:sl sl :tp tp :price price})
-	       (account-warn it))
+	       (account-warn it order))
 	  order))))
 
   ;;TOOD: how do we get map with defaults?
@@ -464,23 +464,24 @@ Yes, currently it is not very development start friendly. That will change!
     (is? [ (string? symbol) (> lots 0)
 	   (>= tp 0) (>= sl 0) (>= price 0)])  
     (cond
-      (or (= type :sell) (= type :sell-limit) (= type :sell-stop))
-      (is (or (and (zero? sl) (zero? tp))
+     (or (= type :sell) (= type :sell-limit) (= type :sell-stop))
+     (is? (or (and (zero? sl) (zero? tp))
 	      (and (zero? sl) tp (< tp price))
 	      (and (zero? tp) sl (> sl price))
 	      (and (< tp sl) (< tp price) (> sl price)))
 	  "invalid %s order with sl/tp %s/%s with price of %s" type sl tp price)
-      (or (= type :buy) (= type :buy-limit) (= type :buy-stop))
-      (is (or (and (zero? sl) (zero? tp))
+     (or (= type :buy) (= type :buy-limit) (= type :buy-stop))
+     (is? (or (and (zero? sl) (zero? tp))
 	      (and (zero? sl) tp (> tp price))
 	      (and (zero? tp) sl (< sl price))
 	      (and (> tp sl) (> tp price) (< sl price)))
 	  "invalid %s order with sl/tp %s/%s with price of %s" type sl tp price)
-      true (throwf "invalid %s order with sl/tp %s/%s with price of %s"
-		   type sl tp price))) 
+     true (throwf "invalid %s order with sl/tp %s/%s with price of %s"
+		  type sl tp price))) 
   ;;TODO: change to make reliable and to work for ECN brokers and such
   ;;see http://forum.mql4.com/36608
   ;;TODO: what happens if second modify fails? how can programmer find this out?
+
   (defn- order!* [{:keys [symbol type price tp sl lots slip]
 		   :as order
 		   :or { symbol (env :symbol)}}]
@@ -497,8 +498,8 @@ Yes, currently it is not very development start friendly. That will change!
 	       ;;now, use modify to change sl and tp
 	       (aif (modify!* o {:sl sl :tp tp})
 		    (merge {:sl sl :tp tp} o)
-		    (do (account-warn it) o)))
-	     (account-warn it)))))
+		    (do (account-warn it o) o)))
+	     (account-warn it order)))))
 
   (defn- open?* [order] 
     (default (= (order-close-time order) 0)))
@@ -1097,11 +1098,12 @@ Yes, currently it is not very development start friendly. That will change!
 				  (.printStackTrace e#) (severe e#))))))
 
   (defonce *env* (atom {:period 240 :symbol "EURUSD"})) ;default +H4+, EURUSD
-  (defn env [key] (key @*env*))
+  (defn env
+    ([] @*env*)
+    ([key] (get @*env* key)))
   (defn env! [map] 
     (swap! *env* #(merge % map))
     map)
-
 
   (defmacro wenv [map & body] 
     `(binding [forex.util.general/*env*
@@ -1131,7 +1133,7 @@ Yes, currently it is not very development start friendly. That will change!
     {:msg (str "clj-forex error: " message) 
      :unhandled (throw-msg Exception)})
 
-  (defn throwf [msg & args] (raise *clj-forex-error* (apply format msg args)))
+  (defn throwf [msg & args] (raise *clj-forex-error* (apply format  msg args)))
 
   (defmacro is?
     [val & message]
