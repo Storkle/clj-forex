@@ -128,8 +128,12 @@ Yes, currently it is not very development start friendly. That will change!
 	 (do 
 	   (give msg-ask (second msg))
 	   (swap! ids dissoc key))))))
+  (defvar *ids* (atom {}))
+  (comment
+    (defn unblock []
+      (doall (map #(give % (Exception. "unblock")) (keys *ids*)))))
 
-  (defn- socket-service-match [events ids send receive]
+  (defn- socket-service-match [events send receive]
     (match  
      (first events)
      [local "STOP"] (do (info "closing ...") "stop")  
@@ -145,8 +149,8 @@ Yes, currently it is not very development start friendly. That will change!
 		   msg)
 	     (catch-unexpected
 	      (give askin (Exception. "socket service down"))))
-	   (swap! ids assoc id askin))))  
-     [receive ?msg] (mql-recv ids msg) 
+	   (swap! *ids* assoc id askin))))  
+     [receive ?msg] (mql-recv *ids* msg) 
      ?msg (warn "Ignoring invalid message %s" msg)))
 
   ;;TODO: weird bugwhen stopping everything with an ea.
@@ -155,16 +159,15 @@ Yes, currently it is not very development start friendly. That will change!
     []  
     (debugging
      "MQL Socket Service: " 
-     (let [ids (atom {})]
-       {:pid 
-	(spawn-log  
-	 #(with-open [send (doto (new-socket +push+)
-			     (.bind mql-socket-send-address))
-		      receive (doto (new-socket +pull+)
-				(.bind mql-socket-recv-address))]
-	    (loop [events (event-seq [receive local])]
-	      (when-not (= "stop" (socket-service-match events ids send receive))
-		(recur (rest events))))))}))) 
+     {:pid 
+      (spawn-log  
+       #(with-open [send (doto (new-socket +push+)
+			   (.bind mql-socket-send-address))
+		    receive (doto (new-socket +pull+)
+			      (.bind mql-socket-recv-address))]
+	  (loop [events (event-seq [receive local])]
+	    (when-not (= "stop" (socket-service-match events send receive))
+	      (recur (rest events))))))})) 
 
   ;;global socket service
   (defonce- *s* (atom nil))
@@ -405,11 +408,11 @@ Yes, currently it is not very development start friendly. That will change!
       (aif (core/order-delete id) (merge o {:lots 0}) it)
       o))
 
-  (defvar *account-info-on-mql-error* true)
+  (defvar *account-warn-on-mql-error* true)
 
   (defn- account-warn [it]
     (if *account-info-on-mql-error*
-      (do (info "MQL Error %s" (:e it)) it)
+      (do (warn "MQL Order Error %s" (:e it)) it)
       it))
 
   (defn- close!*
@@ -874,50 +877,54 @@ Yes, currently it is not very development start friendly. That will change!
   (defn- >? [a] (or (zero? a) (pos? a)))
   ;;an example of acessing a custom ea
 
+
   (defn moving-averages
     ([method] (fn
 		([period] (moving-averages method period))
 		([period offset] (moving-averages method period offset))))
     ([method period] (moving-averages method period 0))
     ([method period offset]
-       {:pre [(env?) (or (>? offset) (nil? offset))
+       {:pre [(env?)  (>? offset)
 	      (number? method) (>? period)]}
-       (if offset (receive-double! 
-		   (format "Custom_Moving_Averages %s %s %s %s %s 0 %s"
-			   (env :symbol) (env :period) ;;period/method
-			   0 (off offset) period method)
-		   3)
-	   (fn this 
-	     ([offset] (moving-averages method period offset))
-	     ([] (this 0)))))) 
+       (receive-double! 
+	(format "Custom_Moving_Averages %s %s %s %s %s 0 %s"
+		(env :symbol) (env :period) ;;period/method
+		0 (off offset) period method)
+	3))) 
   (def sma (moving-averages 0))
   (def ema (moving-averages 1))
   (def smma (moving-averages 2))
   (def lwma (moving-averages 3))
 
   ;;todo - check for valif params - above 1?
+  (defn psar
+    "step (0.02), maximum 0.2"
+    ([params] (psar params 0))
+    ([params offset]
+       {:pre [(env?) (>? offset)  (= (count params) 2)]}
+       (receive-double! 
+	(format "Custom_Parabolic %s %s %s %s %s %s"
+		(env :symbol) (env :period)
+		0 (off offset) (first params) (second params))
+	3)))
   (defn cci
     ([period] (cci period 0))
     ([period offset]
-       {:pre [(env?) (or (>? offset) (nil? offset)) (number? period)]}
-       (if offset
-	(receive-double! 
-	 (format "Custom_CCI %s %s %s %s %s"
-		 (env :symbol) (env :period)
-		 0 (off offset) period)
-	 3)
-	(fn this ([offset] (cci period offset)) ([] (this 0))))))
+       {:pre [(env?) (>? offset)  (number? period)]}
+       (receive-double! 
+	(format "Custom_CCI %s %s %s %s %s"
+		(env :symbol) (env :period)
+		0 (off offset) period)
+	3)))
   (defn rsi
     ([period] (rsi period 0))
     ([period offset]
-       {:pre [(env?) (or (>? offset) (nil? offset)) (number? period)]}
-       (if offset
-	(receive-double! 
-	 (format "Custom_RSI %s %s %s %s %s"
-		 (env :symbol) (env :period)
-		 0 (off offset) period)
-	 3)
-	(fn this ([offset] (rsi period offset)) ([] (this 0))))))
+       {:pre [(env?) (>? offset) (number? period)]}
+       (receive-double! 
+	(format "Custom_RSI %s %s %s %s %s"
+		(env :symbol) (env :period)
+		0 (off offset) period)
+	3)))
 
 
   (defn blazan-dynamic-stop
