@@ -484,17 +484,17 @@ Yes, currently it is not very development start friendly. That will change!
 
   (defn- order!* [{:keys [symbol type price tp sl lots slip]
 		   :as order
-		   :or { symbol (env :symbol)}}]
+		   :or { symbol (env :symbol) sl 0 tp 0 slip 3}}]
     (let [price (or price (if (sell? order) (bid symbol) (ask symbol)))
 	  order (merge
 		 {:symbol symbol
 		  :id ""
-		  :sl 0 :tp 0 :slip 3}
+		  :slip slip}
 		 (merge order {:price price}))]
       (with-order order  
 	(verify-order order)
 	(aif (core/order-send symbol type lots price 0 0 slip)
-	     (let [o (merge {:slip slip :symbol symbol} (merge order {:id it}))]
+	     (let [o (merge order {:id it})]
 	       ;;now, use modify to change sl and tp
 	       (aif (modify!* o {:sl sl :tp tp})
 		    (merge {:sl sl :tp tp} o)
