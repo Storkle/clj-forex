@@ -361,6 +361,8 @@ Yes, currently it is not very development start friendly. That will change!
 #+srcname:account-common
 #+begin_src clojure :tangle src/forex/module/account.clj
   ;;TODO: unit test everything
+  ;;TODO: create a new atom-hash on merging, etc????????
+
   (ns forex.module.account
     (:use utils.general emacs  
 	  forex.util.general forex.util.log
@@ -371,10 +373,13 @@ Yes, currently it is not very development start friendly. That will change!
 
   (defvar *account-warn-on-mql-error* true)
 
-  (defn- account-warn [it order]
-    (if *account-warn-on-mql-error* 
-      (do (warn "MQL error %s on order %s" (:e it) order) it)
-      it))
+  (defn- account-warn
+    ([err order] (account-warn err order ""))
+    ([err order msg & args]
+       (if *account-warn-on-mql-error* 
+	 (do (warn "MQL error %s on order %s - %s" (:e err)
+		   order (apply format msg args)) err)
+	 err)))
   (defmacro- with-order [order & body]
     `(let [o# ~order]
        (if-not (= (:lots o#) 0)
@@ -437,13 +442,13 @@ Yes, currently it is not very development start friendly. That will change!
 				    (bid symbol))
 				  slip :blue)
 		(merge order {:lots new-lots})
-		(account-warn it order))
+		(account-warn it order "invalid new lots %s" new-lots))
 	   order))))
 
   (defn- modify!* [order {:keys [sl tp price]}]
     (with-order  order
-      (let [sl (or sl (:sl order))
-	    tp (or tp (:tp order))
+      (let [sl (or sl (:sl order) 0)
+	    tp (or tp (:tp order) 0)
 	    price (or price (:price order))]
 	(is? [sl tp price 
 	      (>? sl) (>? tp) (pos? price)])
@@ -451,7 +456,7 @@ Yes, currently it is not very development start friendly. That will change!
 		     (= tp (:tp order)))
 	  (aif (core/order-modify (:id order) price sl tp)
 	       (merge order {:sl sl :tp tp :price price})
-	       (account-warn it order))
+	       (account-warn it order "sl %s tp %s" sl tp))
 	  order))))
 
   ;;TOOD: how do we get map with defaults?
@@ -488,18 +493,18 @@ Yes, currently it is not very development start friendly. That will change!
     (let [price (or price (if (sell? order) (bid symbol) (ask symbol)))
 	  order (merge
 		 {:symbol symbol
-		  :id ""
 		  :slip slip}
-		 (merge order {:price price}))]
+		 (merge order {:sl 0 :tp 0 :id "" :price price}))]
       (with-order order  
 	(verify-order order)
 	(aif (core/order-send symbol type lots price 0 0 slip)
-	     (let [o (merge order {:id it})]
-	       ;;now, use modify to change sl and tp
-	       (aif (modify!* o {:sl sl :tp tp})
-		    (merge {:sl sl :tp tp} o)
-		    (do (account-warn it o) o)))
-	     (account-warn it order)))))
+	     (atom-hash
+	      (let [o (merge order {:id it})]
+		;;now, use modify to change sl and tp
+		(aif (modify!* o {:sl sl :tp tp})
+		     (merge o {:sl sl :tp tp})
+		     o)))
+	     (account-warn it order))))) 
 
   (defn- open?* [order] 
     (default (= (order-close-time order) 0)))
@@ -543,7 +548,7 @@ Yes, currently it is not very development start friendly. That will change!
     POrder
     (order-close-time [this] (order-close-time @this))
     (order-type [this] (order-type @this))
-    (order! [this] (aif (order! @this) (do (reset! (.val this) it) this) it))
+    ;;(order! [this] (aif (order! @this) (do (reset! (.val this) it) this) it))
     (delete! [this] (aif (delete! @this) (do (reset! (.val this) it) this) it))
     (close!
      ([this new-amount] (aif (close! @this new-amount) (do (reset! (.val this) it) this) it))
@@ -554,16 +559,6 @@ Yes, currently it is not very development start friendly. That will change!
     (order? [this] (order? @this))
     (market? [this] (market? @this))
     (entry? [this] (entry? @this)))
-
-  ;;;below is account
-
-  (comment
-    (defn- immigrate [& syms]
-      (let [core-ns (find-ns 'forex.module.account.core)
-	    publics (ns-publics 'forex.module.account.core)]
-	(on [s syms]
-	    (let [sym  (symbol (camel-to-dash s))]
-	      (intern *ns* sym (var-get (intern core-ns sym))))))))
 #+end_src
 *** Ea
 #+srcname:ea-common
@@ -620,13 +615,14 @@ Yes, currently it is not very development start friendly. That will change!
 	    (recur (rest a)))))))
 
   (defn query [m]
-    (filter
-     (fn [ea]
-       (if (every (fn [[key val]]
-		    (= val (ea key)))
-		  m) 
-	 ea))
-     @*eas*))
+    (let [a (filter
+	     (fn [ea]
+	       (if (every (fn [[key val]]
+			    (= val (get ea key)))
+			  m) 
+		 ea))
+	     @*eas*)]
+      (if (= (count a) 1) (first a) a)))
   (defn alive? [ea] (pid? (:pid ea)))
 
   (defmacro- catch-unexpected [prefix & body]
@@ -636,14 +632,15 @@ Yes, currently it is not very development start friendly. That will change!
 
   (require 'clojure.contrib.error-kit)
   ;;TODO; how to create unbound var for error-kit???
-
+  (defn ping [a] (! (:pid a) "ping"))
+  ;;TODO: we need a monitor which pings and then sets something.... like in erlang
   (defn run-by-tick [{:keys [deinit init start] :as ea}]
     (with-ea [ea]
       (try
 	(clojure.contrib.error-kit/with-handler
 	  (loop [prev-close nil]
 	    (sleep 1)
-	    (when-not (match (? 0) "stop" true) 
+	    (when-not (match (? 0) "stop"  true "ping" (do (out "ping") nil)) 
 	      (let [new-close (close)]
 		(when-not (= new-close prev-close)
 		  (let [func (get-fn start)]
@@ -665,7 +662,7 @@ Yes, currently it is not very development start friendly. That will change!
 	      (warn "deinit %s is not a function. ignoring ...." de))))))))
 
   (defn- timeframe? [a] (number? a))
-  (defrecord EA [name init deinit start symbol period args pid run vars])
+  (defrecord EA [name type init deinit start symbol period args pid run vars])
 
   (defn new-ea
     ([] (new-ea {}))
@@ -688,10 +685,10 @@ Yes, currently it is not very development start friendly. That will change!
 			  (constantly true))]
 	   (is? [(fn? (get-fn init)) (fn? (get-fn deinit)) (string? name)
 		 (string? symbol) (fn? run) (timeframe? period)])
-	   (EA. (format "%s %s, %s" name symbol period)
+	   (EA. (format "%s %s, %s" name symbol period) name
 		init deinit start symbol period (or args {})
 		nil run
-		(copy-atoms (ns-vars ns)))))))
+		(copy-atoms (ns-vars ns))))))) 
 
   ;;how to get it to access actual var? as long as we dont use set!
   (defmethod clojure.core/print-method EA [o w]
