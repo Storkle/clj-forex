@@ -1,7 +1,7 @@
 #+TITLE: CLJ-FOREX
 #+Author: Seth Burleigh
 #+Babel: :comments link :noweb yes :mkdirp yes
-   
+    
 * Introduction
 ** What is forex?
 Forex is a currency trading market. But you probably know all about forex, since you're here! If not, read up on it! \\
@@ -1437,7 +1437,7 @@ Yes, currently it is not very development start friendly. That will change!
 		    (let [sock (.getSocket p i)
 			  msg 
 			  (loop [msg [(.recv sock 0)]]                    
-			    (if (.hasReceiveMore sock)
+			    (if (.hasMore sock)
 			      (recur (cons (String. (.recv sock 0)) msg))
 			      msg))]
 		      [sock (if (= (count msg) 1) (first msg) (vec msg))]))
@@ -1535,13 +1535,13 @@ Yes, currently it is not very development start friendly. That will change!
     (snd [this msg flags]
 	 (if (string? msg)
 	   (.send socket (.getBytes msg) flags)
-	   (.send socket msg flags)))
-    (recv [this flags] (.recv socket flags))
+	   (.send socket msg flags))) 
+    (recv [this flags] (when-let [it (.recv socket flags)] (String. it)))
     (recv [this] (recv this 0)) 
     (close [this] (.close socket))
     (bind [this address] (.bind socket address))
     (connect [this address] (.connect socket address))
-    (hasMore [this] (.hasReceiveMore socket)))
+    (hasMore [this] (.hasReceiveMore socket))) 
 
   (defn new-socket
     ([type] (new-socket *context* type))
