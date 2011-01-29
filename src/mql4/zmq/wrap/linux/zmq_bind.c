@@ -3,26 +3,43 @@
 #include <errno.h>
 #include <stdio.h>
 
-int WINAPI wine_zmq_send_double_array (double* array,int size, void*socket,int flags) {
-  
 
+
+
+void * memcp(void * dst, void const * src, size_t len)
+{
+    char * pDst = (char *) dst;
+    char const * pSrc = (char const *) src;
+    int i=0;
+    while (len--)
+    {
+        pDst[i]=pSrc[len];//*pDst++ = *pSrc++;
+        ++i;
+    }
+    return (dst);
+}
+
+
+
+int WINAPI wine_zmq_send_double_array ( char* array,int size, void*socket,int flags) {
   zmq_msg_t reply;
   zmq_msg_init_size (&reply, sizeof(double)*size);
-  memcpy ((void *) zmq_msg_data (&reply), array, sizeof(double)*size);
-
+  int i;
+  memcp((char*)zmq_msg_data(&reply),array,sizeof(double)*size);
   int ret = zmq_send (socket, &reply, flags);
   zmq_msg_close (&reply);  
   return ret; 
 }
-int WINAPI wine_zmq_send_int_array (int* array,int size, void*socket,int flags) {
+
+int WINAPI wine_zmq_send_int_array ( char* array,int size, void*socket,int flags) {
   zmq_msg_t reply;
   zmq_msg_init_size (&reply, sizeof(int)*size);
-  memcpy ((void *) zmq_msg_data (&reply), array, sizeof(int)*size);
-  int ret = zmq_send (socket, &reply, flags);
+  int i;
+  memcp((char*)zmq_msg_data(&reply),array,sizeof(int)*size);
+  int ret = zmq_send (socket, &reply, flags); 
   zmq_msg_close (&reply);  
   return ret; 
 }
-
 
 
 char *copy (void* s,zmq_msg_t* msg) {
@@ -35,7 +52,7 @@ char *copy (void* s,zmq_msg_t* msg) {
 }
 
 
-void my_free(void*data,void*hint) {
+void my_free(void*data,void*hint) { 
   free(data);
 }
 //messages: underscore before name denotes that it does something more than the actual original dll function, or that it is a function not in dll
@@ -50,7 +67,7 @@ int WINAPI wine_zmq_msg_init_data (zmq_msg_t* msg,char *data, int size) {
   int ret =  zmq_msg_init_data(msg,new_data,size,my_free,NULL);  
   return ret; 
 }
-
+ 
 char* WINAPI wine_zmq_msg_data (zmq_msg_t *msg) {
   void* data = zmq_msg_data(msg);
   return copy(data,msg);
@@ -88,6 +105,27 @@ void* WINAPI wine_new_poll (void* socket) {
 }    
  
  
+ 
+int64_t WINAPI wine_zmq_get_opt_more (void*  socket) {
+   int64_t more;           //  Multipart detection
+   size_t more_size = sizeof (more);
+   zmq_getsockopt (socket, ZMQ_RCVMORE, &more, &more_size);
+   return more; 
+}
+
+
+/*
+int WINAPI wine_zmq_get_opt_identity (void* socket) {
+   //max of 255 bits
+   char optval[1024]; 
+   int len = 1024; 
+   int ret = zmq_getsockopt (socket, ZMQ_IDENTITY, &optval, &len);
+   return len;
+}
+ */
+ 
+ 
+
 //sockets
 void* WINAPI wine_zmq_socket (void* context, int type) {
   return zmq_socket(context,type); 

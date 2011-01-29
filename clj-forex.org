@@ -254,7 +254,7 @@ Yes, currently it is not very development start friendly. That will change!
     (receive (format "OrderDelete %s" ticket)))
 
   (defn market-info [symbol type]
-    (receive-double (format "MarketInfo %s %s" symbol type)))
+     (receive-double (format "MarketInfo %s %s" symbol type)))
 
   (defn order-close-time [ticket]
     (receive-double (format "OrderCloseTime %s" ticket)))
@@ -265,7 +265,7 @@ Yes, currently it is not very development start friendly. That will change!
   (defn order-lots [ticket]
     (receive-double (format "OrderLots %s" ticket)))
 #+end_src
-
+ 
 #+srcname:account-utils
 #+begin_src clojure :tangle src/forex/module/account/utils.clj
   (ns forex.module.account.utils
@@ -307,8 +307,11 @@ Yes, currently it is not very development start friendly. That will change!
 		  `(defn ~(symbolicate "mode-" name)
 		     ([] (~(symbolicate "mode-" name) (env :symbol)))
 		     ([symbol#]
-			(core/market-info symbol# ~num))))
-		(group args))))
+			(let [res# (core/market-info symbol# ~num)]
+			  (if (e? res#)
+			    (throwf "market-info error %s" (:e res#))
+			    res#)))))
+		(group args)))) 
 
   (define-market-info
     low 1
@@ -356,6 +359,60 @@ Yes, currently it is not very development start friendly. That will change!
        (let [a (to-big num)
 	     b (to-big (mode-minlot symbol))]
 	 (* b (.intValue (/ a b))))))
+
+
+  (defn- assert-order [order] (is? [(or (sell? order) (buy? order))]))
+
+  (defn o+ [o & args]
+    (assert-order o) 
+    (if (sell? o) (apply - args) (apply + args)))
+  (defn o- [o & args]
+    (assert-order o)
+    (if (sell? o) (* -1 (apply - args)) (apply - args)))
+
+  (defn omax [order & args]
+    (assert-order order)
+    (let [args (filter #(not (zero? %)) args)]
+      (if (empty? args)
+	(or (:sl order) 0) 
+	(apply (if (buy? order) max min) args))))
+
+  (defn omin [order & args]
+    (assert-order order)
+    (let [args (filter #(not (zero? %)) args)]
+      (if (empty? args)
+	(or (:sl order) 0) 
+	(apply (if (buy? order) min max)
+	       args))))
+
+
+  ;;TODO: change for 4 digit broker
+  (defn digit []
+    (let [pt (mode-point "EURUSD")]
+      (cond
+       (= pt 0.00001) 5
+       (= pt 0.0001) 4
+       true (throwf
+	     "unexpected broker digits given mode-point of % on EURUSD" pt))))
+
+  ;;TODO: check for valid symbol on all of this??
+  (defn spread
+    ([] (spread (env :symbol)))
+    ([symbol]
+       (let [d (digit) spread (mode-spread symbol)]
+	 (cond
+	  (= d 5) (/ spread 10)
+	  (= d 4) spread))))
+
+  (defn point
+    ([pt] (/ pt (point)))
+    ([]
+       (let [d (digit)] 
+	 (if (= d 5)
+	   (* 10 (mode-point))
+	   (mode-point)))))
+
+  (defn pip [pt] (* (point) pt))
 #+end_src
 
 #+srcname:account-common
@@ -491,19 +548,22 @@ Yes, currently it is not very development start friendly. That will change!
 		   :as order
 		   :or { symbol (env :symbol) sl 0 tp 0 slip 3}}]
     (let [price (or price (if (sell? order) (bid symbol) (ask symbol)))
-	  order (merge
+	  order (merge 
 		 {:symbol symbol
 		  :slip slip}
 		 (merge order {:sl 0 :tp 0 :id "" :price price}))]
-      (with-order order  
+      (with-order order    
 	(verify-order order)
 	(aif (core/order-send symbol type lots price 0 0 slip)
 	     (atom-hash
-	      (let [o (merge order {:id it})]
-		;;now, use modify to change sl and tp
-		(aif (modify!* o {:sl sl :tp tp})
-		     (merge o {:sl sl :tp tp})
-		     o)))
+	      (let [result
+		    (let [o (merge order {:id it})]
+		      ;;now, use modify to change sl and tp
+		      (aif (modify!* o {:sl sl :tp tp})
+			   (merge o {:sl sl :tp tp})
+			   o))
+		    spread (spread)]
+		(merge result {:spread spread :break (o+ result price (pip spread))}))) 
 	     (account-warn it order))))) 
 
   (defn- open?* [order] 
@@ -662,7 +722,7 @@ Yes, currently it is not very development start friendly. That will change!
 	      (warn "deinit %s is not a function. ignoring ...." de))))))))
 
   (defn- timeframe? [a] (number? a))
-  (defrecord EA [name type init deinit start symbol period args pid run vars])
+  (defrecord EA [name type ns init deinit start symbol period args pid run vars])
 
   (defn new-ea
     ([] (new-ea {}))
@@ -685,7 +745,7 @@ Yes, currently it is not very development start friendly. That will change!
 			  (constantly true))]
 	   (is? [(fn? (get-fn init)) (fn? (get-fn deinit)) (string? name)
 		 (string? symbol) (fn? run) (timeframe? period)])
-	   (EA. (format "%s %s, %s" name symbol period) name
+	   (EA. (format "%s %s, %s" name symbol period) name ns
 		init deinit start symbol period (or args {})
 		nil run
 		(copy-atoms (ns-vars ns))))))) 
@@ -849,6 +909,15 @@ Yes, currently it is not very development start friendly. That will change!
   (def +h1+ 60)
   (def +h4+ 240)
   (def +d1+ (* 24 +h1+))
+  (defn cross?
+    ([signal main] (cross? signal main 0))
+    ([signal main i]
+       (let [i1 (+ i 1) i2 (+ i 2)
+	     a1 (signal i1) a2 (signal i2)
+	     b1 (main i1) b2 (main i2)] 
+	 (or (and (> a1 b1) (< a2 b2) [:buy i])
+	     (and (< a1 b1) (> a2 b2) [:sell i])
+	     nil))))
 
   ;;high low open close
   (defn get-rel-data [^String symbol ^Integer period ^Integer from ^Integer to]
@@ -932,6 +1001,19 @@ Yes, currently it is not very development start friendly. That will change!
 		(env :symbol) (env :period)
 		0 (off offset) period)
 	3)))
+
+
+  (defn momentum
+    ([period] (momentum period 0))
+    ([period offset]
+       {:pre [(env?) (>? offset)  (number? period)]}
+       (receive-double! 
+	(format "Custom_Momentum %s %s %s %s %s"
+		(env :symbol) (env :period)
+		0 (off offset) period)
+	3)))
+
+
   (defn rsi
     ([period] (rsi period 0))
     ([period offset]
@@ -941,6 +1023,49 @@ Yes, currently it is not very development start friendly. That will change!
 		(env :symbol) (env :period)
 		0 (off offset) period)
 	3)))
+
+  (defn vma
+    ([params] (vma params 0))
+    ([params offset]
+       {:pre [(env?) (>? offset) (= (count params) 4)]}
+       (receive-double! 
+	(format "Custom_FantailVMA3 %s %s %s %s %s"
+		(env :symbol) (env :period)
+		0 (off offset) (apply str (interpose " " params)))
+	3)))
+
+
+  (defmacro- indicator-fn [[params index] & body]
+    `(fn a#
+       ([~params] (a# ~params 0))
+       ([~params ~index]
+	  ~@body)))
+
+
+
+  (defn rsi-black 
+    ([params] (fn 
+		([mode offset] (rsi-black params mode offset))
+		([offset] (rsi-black params 0 offset))))
+    ([params mode] (fn
+		     ([offset] (rsi-black params mode offset))
+		     ([] (rsi-black params mode  0))))
+    ([params mode offset]
+       {:pre [(env?) (>? offset) (>? mode) 
+	      (= (count params) 5)]}
+       (receive-double! 
+	(format "Custom_Rsi_BlackFeet_modded %s %s %s %s %s"
+		(env :symbol) (env :period)
+		mode (off offset) (apply str (interpose " " params)))
+	3)))
+
+  (def rsi-black-signal
+    (indicator-fn [params index]
+		  (rsi-black params 1
+				 index)))
+  (def rsi-black-main
+    (indicator-fn [params index]
+		  (rsi-black params 0 index)))
 
 
   (defn blazan-dynamic-stop
@@ -957,7 +1082,9 @@ Yes, currently it is not very development start friendly. That will change!
 	(format "Custom_Blazan_Dynamic_Stop %s %s %s %s %s"
 		(env :symbol) (env :period)
 		mode (off offset) (apply str (interpose " " params)))
-	3))) 
+	3)))
+
+
 
   (defn hit? [order val]
     (cond
@@ -1266,7 +1393,7 @@ Yes, currently it is not very development start friendly. That will change!
 	    (s/?)))
     (recv [this] (recv this 0))
     (close [this] (.close socket))
-    (hasReceiveMore [this] false))
+    (hasMore [this] false))
 
 
   (comment
@@ -1336,7 +1463,7 @@ Yes, currently it is not very development start friendly. That will change!
   (def +rep+ 4)
   (def +xreq+ 5)
   (def +xrep+ 6)
-  (def +pull+ 7)
+  (def +pull+ 7) 
   (def +push+ 8)
 
   (def +hwm+ 1)
@@ -1367,9 +1494,9 @@ Yes, currently it is not very development start friendly. That will change!
     (recv [this flags] [this])
     (bind [this address])
     (connect [this address])
-    (hasReceiveMore [this])
+    (hasMore [this])
     (close [this])
-    (snd [this msg flags]))
+    (snd [this msg] [this msg flags])) 
   (defprotocol PPoller
     (setTimeout [this timeout])
     (poll [this])
@@ -1402,16 +1529,19 @@ Yes, currently it is not very development start friendly. That will change!
 
   ;;TODO: now just a string socket!
   (defrecord Socket [socket]
-    PSocket
-    (raw [this] (:socket this))
-    (snd [this msg flags] (.send socket (.getBytes msg) flags))
-    (recv [this flags] (when-let [it (.recv socket flags)]
-			 (String. it)))
+    PSocket 
+    (raw [this] socket)
+    (snd [this msg] (.snd this msg 0))
+    (snd [this msg flags]
+	 (if (string? msg)
+	   (.send socket (.getBytes msg) flags)
+	   (.send socket msg flags)))
+    (recv [this flags] (.recv socket flags))
     (recv [this] (recv this 0)) 
     (close [this] (.close socket))
     (bind [this address] (.bind socket address))
     (connect [this address] (.connect socket address))
-    (hasReceiveMore [this] (.hasReceiveMore socket)))
+    (hasMore [this] (.hasReceiveMore socket)))
 
   (defn new-socket
     ([type] (new-socket *context* type))
@@ -1494,6 +1624,7 @@ Yes, currently it is not very development start friendly. That will change!
 			   "double" "StrToDouble"
 			   "string" nil
 			   "color" "StrToInteger"
+			   "bool" "StrToInteger"
 			   (throwf "unknown type %s" type)))
 	  user-extract (apply str
 			      (interpose "\n"
@@ -1523,11 +1654,10 @@ Yes, currently it is not very development start friendly. That will change!
   (defn iCustom
     "given a file, generate mql4 binding code to the indicator in the flie"
     [f]
-    (let [name (.replaceAll (first (.split (.getName f) "\\.")) " +" "_")
+    (let [name (.replaceAll (first (.split (.getName f) "\\.")) "( |-)+" "_")
 	  s (slurp f)
 	  args (map #(list (first %) (format "i_%s" (second %))) (args s))
 	  buffers (buffers s)]
-
       (when (and s args buffers)
 	(let [custom (format "double val = iCustom(symbol,timeframe,\"%s\",%smode,shift);" ;
 					       (name-of f) (listify (map second args))) 
@@ -1554,7 +1684,9 @@ Yes, currently it is not very development start friendly. That will change!
 
   ;;example usage - first param is custom indicator folder, second is output file
   (defn do-it []
-    (iCustom-all "/home/seth/.wine/dosdevices/c:/Program Files/FXCM MT4 powered by BT/experts/indicators/" "/home/seth/.wine/dosdevices/c:/Program Files/FXCM MT4 powered by BT/experts/include/INDICATORS.mqh"))
+    (iCustom-all
+     "/home/seth/.wine/dosdevices/c:/Program Files/FXCM MT4 powered by BT/experts/indicators/"
+     "/home/seth/.wine/dosdevices/c:/Program Files/FXCM MT4 powered by BT/experts/include/INDICATORS.mqh"))
 #+end_src
 ** User 
 #+srcname:forex_user
