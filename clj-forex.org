@@ -368,7 +368,7 @@ Yes, currently it is not very development start friendly. That will change!
     (if (sell? o) (apply - args) (apply + args)))
   (defn o- [o & args]
     (assert-order o)
-    (if (sell? o) (* -1 (apply - args)) (apply - args)))
+    (if (sell? o) (apply + args) (apply - args)))
 
   (defn omax [order & args]
     (assert-order order)
