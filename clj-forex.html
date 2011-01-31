@@ -7,7 +7,7 @@ lang="en" xml:lang="en">
 <title>CLJ-FOREX</title>
 <meta http-equiv="Content-Type" content="text/html;charset=utf-8"/>
 <meta name="generator" content="Org-mode"/>
-<meta name="generated" content="2011-01-29 15:48:59 CST"/>
+<meta name="generated" content="2011-01-31 13:58:35 CST"/>
 <meta name="author" content="Seth Burleigh"/>
 <meta name="description" content=""/>
 <meta name="keywords" content=""/>
@@ -304,14 +304,16 @@ Yes, currently it is not very development start friendly. That will change!
 <span style="color: #b22222;">;;</span><span style="color: #b22222;">forex.backend.mql.socket-service: provide background sockets which allow us to connect with metatrader. Provides functions to interact with the background socket
 </span>
 <span style="color: #b22222;">;;</span><span style="color: #b22222;">todo: bug with stopping all and then stopping again! so bug with stop..
-</span>(<span style="color: #a020f0;">ns</span> forex.backend.mql.socket-service   
-  (<span style="color: #7a378b;">:require</span>
-   [utils.fiber.mbox <span style="color: #7a378b;">:as</span> m]
-   [clojure.contrib.logging <span style="color: #7a378b;">:as</span> l])
-  (<span style="color: #7a378b;">:use</span>
-   emacs 
-   forex.util.general forex.util.zmq forex.util.log
-   forex.util.spawn utils.general))
+</span>(clojure.core/<span style="color: #7a378b;">use</span> 'nstools.ns)
+(ns+ forex.backend.mql.socket-service
+     (<span style="color: #7a378b;">:clone</span> clj.core) 
+     (<span style="color: #7a378b;">:require</span>
+      [utils.fiber.mbox <span style="color: #7a378b;">:as</span> m]
+      [clojure.contrib.logging <span style="color: #7a378b;">:as</span> l])
+     (<span style="color: #7a378b;">:use</span>
+      emacs 
+      forex.util.general forex.util.zmq forex.util.log
+      forex.util.spawn utils.general))
 
 <span style="color: #b22222;">;;</span><span style="color: #b22222;">TODO: 3ms or so per request, a little slow...
 </span><span style="color: #b22222;">;;</span><span style="color: #b22222;">also, unfortunately, if we add more servers, speed doesn't increase linearly. so the bottleneck is in the clojure code ... a better designed socket service should really be made.
@@ -338,12 +340,13 @@ Yes, currently it is not very development start friendly. That will change!
      (<span style="color: #a020f0;">if-not</span> (<span style="color: #7a378b;">satisfies?</span> PWait msg-ask)
        (warn <span style="color: #8b2252;">"Ignoring invalid msg: %s"</span> msg)
        (<span style="color: #a020f0;">do</span> 
-         (give msg-ask (<span style="color: #7a378b;">second</span> msg))
+         (<span style="color: #7a378b;">deliver</span> msg-ask (<span style="color: #7a378b;">second</span> msg))
          (<span style="color: #7a378b;">swap!</span> ids dissoc key))))))
 (<span style="color: #a020f0;">defvar</span> <span style="color: #0000ff;">*ids*</span> (<span style="color: #7a378b;">atom</span> {}))
 (<span style="color: #7a378b;">comment</span>
   (<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">unblock</span> []
-    (<span style="color: #a020f0;">doall</span> (<span style="color: #7a378b;">map</span> #(give % (Exception. <span style="color: #8b2252;">"unblock"</span>)) (<span style="color: #7a378b;">keys</span> *ids*)))))
+    (<span style="color: #a020f0;">doall</span> (<span style="color: #7a378b;">map</span> #(<span style="color: #7a378b;">deliver</span> % (Exception. <span style="color: #8b2252;">"unblock"</span>)) (<span style="color: #7a378b;">keys</span> *ids*)))))
+
 
 (<span style="color: #a020f0;">defn-</span> <span style="color: #0000ff;">socket-service-match</span> [events send receive]
   (match  
@@ -360,7 +363,7 @@ Yes, currently it is not very development start friendly. That will change!
            (warn <span style="color: #8b2252;">"failed to queue request %s: are any metatrader scripts alive?"</span>
                  msg)
            (catch-unexpected
-            (give askin (Exception. <span style="color: #8b2252;">"socket service down"</span>))))
+            (<span style="color: #7a378b;">deliver</span> askin (Exception. <span style="color: #8b2252;">"socket service down"</span>))))
          (<span style="color: #7a378b;">swap!</span> *ids* assoc id askin))))  
    [receive ?msg] (mql-recv *ids* msg) 
    ?msg (warn <span style="color: #8b2252;">"Ignoring invalid message %s"</span> msg)))
@@ -404,7 +407,7 @@ Yes, currently it is not very development start friendly. That will change!
 (<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">receive</span>
   ([msg] (receive msg nil))
   ([msg timeout]
-     (<span style="color: #a020f0;">let</span> [askin (beg)]
+     (<span style="color: #a020f0;">let</span> [askin (<span style="color: #7a378b;">promise</span>)]
        (request askin msg)
        (<span style="color: #a020f0;">let</span> [result (<span style="color: #a020f0;">if</span> (wait-for askin timeout) @askin)]
          (<span style="color: #a020f0;">cond</span>
@@ -435,8 +438,9 @@ Yes, currently it is not very development start friendly. That will change!
 
 <div class="org-src-container"><label class="org-src-name">account-core()</label><pre class="src src-clojure">
 <span style="color: #b22222;">;;</span><span style="color: #b22222;">forex.module.order.core - interface with mql backend
-</span>
-(<span style="color: #a020f0;">ns</span> forex.module.account.core
+</span>(clojure.core/<span style="color: #7a378b;">use</span> 'nstools.ns)
+(ns+ forex.module.account.core
+  (<span style="color: #7a378b;">:clone</span> clj.core)
   (<span style="color: #7a378b;">:use</span> utils.general emacs utils.fiber.spawn
         forex.util.general
         forex.module.error))
@@ -502,7 +506,10 @@ Yes, currently it is not very development start friendly. That will change!
 
 
 <div class="org-src-container"><label class="org-src-name">account-utils()</label><pre class="src src-clojure">
-(<span style="color: #a020f0;">ns</span> forex.module.account.utils
+(clojure.core/<span style="color: #7a378b;">use</span> 'nstools.ns)
+
+(ns+ forex.module.account.utils
+  (<span style="color: #7a378b;">:clone</span> clj.core)
   (<span style="color: #7a378b;">:use</span> utils.general emacs  
         forex.util.general
         forex.module.error)
@@ -597,12 +604,16 @@ Yes, currently it is not very development start friendly. That will change!
 
 (<span style="color: #a020f0;">defn-</span> <span style="color: #0000ff;">assert-order</span> [order] (is? [(<span style="color: #a020f0;">or</span> (sell? order) (buy? order))]))
 
+(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">o--</span> [o &amp; args]
+  (assert-order o)
+  (<span style="color: #a020f0;">if</span> (sell? o) (<span style="color: #7a378b;">-</span> (<span style="color: #7a378b;">apply</span> - args)) (<span style="color: #7a378b;">apply</span> - args)))
+
 (<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">o+</span> [o &amp; args]
   (assert-order o) 
   (<span style="color: #a020f0;">if</span> (sell? o) (<span style="color: #7a378b;">apply</span> - args) (<span style="color: #7a378b;">apply</span> + args)))
 (<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">o-</span> [o &amp; args]
   (assert-order o)
-  (<span style="color: #a020f0;">if</span> (sell? o) (<span style="color: #7a378b;">*</span> -1 (<span style="color: #7a378b;">apply</span> - args)) (<span style="color: #7a378b;">apply</span> - args)))
+  (<span style="color: #a020f0;">if</span> (sell? o) (<span style="color: #7a378b;">apply</span> + args) (<span style="color: #7a378b;">apply</span> - args)))
 
 (<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">omax</span> [order &amp; args]
   (assert-order order)
@@ -655,8 +666,9 @@ Yes, currently it is not very development start friendly. That will change!
 <div class="org-src-container"><label class="org-src-name">account-common()</label><pre class="src src-clojure">
 <span style="color: #b22222;">;;</span><span style="color: #b22222;">TODO: unit test everything
 </span><span style="color: #b22222;">;;</span><span style="color: #b22222;">TODO: create a new atom-hash on merging, etc????????
-</span>
-(<span style="color: #a020f0;">ns</span> forex.module.account
+</span>(clojure.core/<span style="color: #7a378b;">use</span> 'nstools.ns)
+(ns+ forex.module.account
+  (<span style="color: #7a378b;">:clone</span> clj.core)
   (<span style="color: #7a378b;">:use</span> utils.general emacs  
         forex.util.general forex.util.log
         forex.module.indicator
@@ -678,7 +690,7 @@ Yes, currently it is not very development start friendly. That will change!
      (<span style="color: #a020f0;">if-not</span> (<span style="color: #7a378b;">=</span> (<span style="color: #7a378b;">:lots</span> o#) 0)
        (<span style="color: #a020f0;">do</span> ~@body)
        (<span style="color: #a020f0;">do</span> (warn <span style="color: #8b2252;">"attempting to change order %s with zero lots"</span> o#)
-           o#))))
+           o#)))) 
 
 (<span style="color: #a020f0;">defn-</span> <span style="color: #0000ff;">&gt;?</span> [a] (<span style="color: #a020f0;">and</span> (<span style="color: #7a378b;">number?</span> a) (<span style="color: #7a378b;">&gt;=</span> a 0)))
 
@@ -738,21 +750,23 @@ Yes, currently it is not very development start friendly. That will change!
               (account-warn it order <span style="color: #8b2252;">"invalid new lots %s"</span> new-lots))
          order))))
 
-(<span style="color: #a020f0;">defn-</span> <span style="color: #0000ff;">modify!*</span> [order {<span style="color: #7a378b;">:keys</span> [sl tp price]}]
-  (with-order  order
+<span style="color: #b22222;">;;</span><span style="color: #b22222;">TODO: normalize so we dont get mql error 1?
+</span>(<span style="color: #a020f0;">defn-</span> <span style="color: #0000ff;">modify!*</span> [order {<span style="color: #7a378b;">:keys</span> [sl tp] <span style="color: #7a378b;">:as</span> mod}]
+  (with-order order
     (<span style="color: #a020f0;">let</span> [sl (<span style="color: #a020f0;">or</span> sl (<span style="color: #7a378b;">:sl</span> order) 0)
           tp (<span style="color: #a020f0;">or</span> tp (<span style="color: #7a378b;">:tp</span> order) 0)
-          price (<span style="color: #a020f0;">or</span> price (<span style="color: #7a378b;">:price</span> order))]
-      (is? [sl tp price 
-            (&gt;? sl) (&gt;? tp) (<span style="color: #7a378b;">pos?</span> price)])
+          price (<span style="color: #7a378b;">:price</span> order)]
+      (is? [sl tp price (&gt;? sl) (&gt;? tp) (<span style="color: #7a378b;">pos?</span> price)]) 
       (<span style="color: #a020f0;">if-not</span> (<span style="color: #a020f0;">and</span> (<span style="color: #7a378b;">=</span> sl (<span style="color: #7a378b;">:sl</span> order))
                    (<span style="color: #7a378b;">=</span> tp (<span style="color: #7a378b;">:tp</span> order)))
-        (aif (core/order-modify (<span style="color: #7a378b;">:id</span> order) price sl tp)
-             (<span style="color: #7a378b;">merge</span> order {<span style="color: #7a378b;">:sl</span> sl <span style="color: #7a378b;">:tp</span> tp <span style="color: #7a378b;">:price</span> price})
-             (account-warn it order <span style="color: #8b2252;">"sl %s tp %s"</span> sl tp))
-        order))))
+        (aif (core/order-modify (<span style="color: #7a378b;">:id</span> order) (<span style="color: #7a378b;">:price</span> order) sl tp)
+             (<span style="color: #7a378b;">merge</span> order (<span style="color: #7a378b;">merge</span> mod {<span style="color: #7a378b;">:sl</span> sl <span style="color: #7a378b;">:tp</span> tp}))
+             (<span style="color: #a020f0;">if</span> (<span style="color: #7a378b;">=</span> (<span style="color: #7a378b;">:e</span> it) 1)
+               (<span style="color: #7a378b;">merge</span> order mod)
+               (account-warn it order <span style="color: #8b2252;">"sl %s tp %s"</span> sl tp)))
+        (<span style="color: #7a378b;">merge</span> order mod)))))  
 
-<span style="color: #b22222;">;;</span><span style="color: #b22222;">TOOD: how do we get map with defaults?
+<span style="color: #b22222;">;;</span><span style="color: #b22222;">TOODOs: how do we get map with defaults?
 </span>(<span style="color: #a020f0;">defn-</span> <span style="color: #0000ff;">verify-order</span> [{<span style="color: #7a378b;">:keys</span> [slip symbol type price tp sl lots]
                       <span style="color: #7a378b;">:or</span> {slip 3 sl 0 tp 0}}]
   (is? [(<span style="color: #7a378b;">number?</span> slip) (<span style="color: #7a378b;">&gt;</span> slip 0) (<span style="color: #7a378b;">integer?</span> slip)]
@@ -791,15 +805,14 @@ Yes, currently it is not very development start friendly. That will change!
     (with-order order    
       (verify-order order)
       (aif (core/order-send symbol type lots price 0 0 slip)
-           (atom-hash
-            (<span style="color: #a020f0;">let</span> [result
-                  (<span style="color: #a020f0;">let</span> [o (<span style="color: #7a378b;">merge</span> order {<span style="color: #7a378b;">:id</span> it})]
-                    <span style="color: #b22222;">;;</span><span style="color: #b22222;">now, use modify to change sl and tp
-</span>                    (aif (modify!* o {<span style="color: #7a378b;">:sl</span> sl <span style="color: #7a378b;">:tp</span> tp})
-                         (<span style="color: #7a378b;">merge</span> o {<span style="color: #7a378b;">:sl</span> sl <span style="color: #7a378b;">:tp</span> tp})
-                         o))
-                  spread (spread)]
-              (<span style="color: #7a378b;">merge</span> result {<span style="color: #7a378b;">:spread</span> spread <span style="color: #7a378b;">:break</span> (o+ result price (pip spread))}))) 
+           (<span style="color: #a020f0;">let</span> [result
+                 (<span style="color: #a020f0;">let</span> [o (<span style="color: #7a378b;">merge</span> order {<span style="color: #7a378b;">:id</span> it})]
+                   <span style="color: #b22222;">;;</span><span style="color: #b22222;">now, use modify to change sl and tp
+</span>                   (aif (modify!* o {<span style="color: #7a378b;">:sl</span> sl <span style="color: #7a378b;">:tp</span> tp})
+                        (<span style="color: #7a378b;">merge</span> o {<span style="color: #7a378b;">:sl</span> sl <span style="color: #7a378b;">:tp</span> tp})
+                        o))
+                 spread (spread)]
+             (<span style="color: #7a378b;">merge</span> result {<span style="color: #7a378b;">:spread</span> spread <span style="color: #7a378b;">:break</span> (o+ result price (pip spread))})) 
            (account-warn it order))))) 
 
 (<span style="color: #a020f0;">defn-</span> <span style="color: #0000ff;">open?*</span> [order] 
@@ -845,7 +858,7 @@ Yes, currently it is not very development start friendly. That will change!
   (order-close-time [this] (order-close-time @this))
   (order-type [this] (order-type @this))
   <span style="color: #b22222;">;;</span><span style="color: #b22222;">(order! [this] (aif (order! @this) (do (reset! (.val this) it) this) it))
-</span>  (delete! [this] (aif (delete! @this) (<span style="color: #a020f0;">do</span> (<span style="color: #7a378b;">reset!</span> (.val this) it) this) it))
+</span>  (delete! [this] (aif (delete! @this) (<span style="color: #a020f0;">do</span> (<span style="color: #7a378b;">reset!</span> (.val this) it) this) it))  
   (close!
    ([this new-amount] (aif (close! @this new-amount) (<span style="color: #a020f0;">do</span> (<span style="color: #7a378b;">reset!</span> (.val this) it) this) it))
    ([this] (close! this 0)))
@@ -870,7 +883,9 @@ Yes, currently it is not very development start friendly. That will change!
 
 
 <div class="org-src-container"><label class="org-src-name">ea-common()</label><pre class="src src-clojure">
-(<span style="color: #a020f0;">ns</span> forex.module.ea 
+(clojure.core/<span style="color: #7a378b;">use</span> 'nstools.ns)
+(ns+ forex.module.ea 
+  (<span style="color: #7a378b;">:clone</span> clj.core)
   (<span style="color: #7a378b;">:use</span> utils.general forex.util.general
         utils.fiber.spawn clojure.contrib.core)
   (<span style="color: #7a378b;">:import</span> clojure.lang.Atom)
@@ -971,6 +986,8 @@ Yes, currently it is not very development start friendly. That will change!
 (<span style="color: #a020f0;">defn-</span> <span style="color: #0000ff;">timeframe?</span> [a] (<span style="color: #7a378b;">number?</span> a))
 (<span style="color: #a020f0;">defrecord</span> <span style="color: #0000ff;">EA</span> [name type ns init deinit start symbol period args pid run vars])
 
+(<span style="color: #a020f0;">defn-</span> <span style="color: #0000ff;">constant-map</span> [&amp; args] {})
+(<span style="color: #a020f0;">defn-</span> <span style="color: #0000ff;">constant-true</span> [&amp; args] {})
 (<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">new-ea</span>
   ([] (new-ea {}))
   ([{<span style="color: #7a378b;">:keys</span> [ns symbol period run args] <span style="color: #7a378b;">:or</span> {symbol (env <span style="color: #7a378b;">:symbol</span>)
@@ -986,10 +1003,10 @@ Yes, currently it is not very development start friendly. That will change!
              start (ns-symbol 'start ns)
              init (<span style="color: #a020f0;">or</span> (<span style="color: #a020f0;">let</span> [fn (ns-symbol 'init ns)]
                         (<span style="color: #a020f0;">if</span> (get-fn fn) fn))
-                      (<span style="color: #7a378b;">constantly</span> {}))
+                      constant-map)
              deinit (<span style="color: #a020f0;">or</span> (<span style="color: #a020f0;">let</span> [fn (ns-symbol 'deinit ns)]
                           (<span style="color: #a020f0;">if</span> (get-fn fn) fn))
-                        (<span style="color: #7a378b;">constantly</span> true))]
+                         constant-true)]
          (is? [(<span style="color: #7a378b;">fn?</span> (get-fn init)) (<span style="color: #7a378b;">fn?</span> (get-fn deinit)) (<span style="color: #7a378b;">string?</span> name)
                (<span style="color: #7a378b;">string?</span> symbol) (<span style="color: #7a378b;">fn?</span> run) (timeframe? period)])
          (EA. (<span style="color: #7a378b;">format</span> <span style="color: #8b2252;">"%s %s, %s"</span> name symbol period) name ns
@@ -1064,7 +1081,9 @@ Yes, currently it is not very development start friendly. That will change!
 
 
 <div class="org-src-container"><label class="org-src-name">error-common()</label><pre class="src src-clojure">
-(<span style="color: #a020f0;">ns</span> forex.module.error
+(clojure.core/<span style="color: #7a378b;">use</span> 'nstools.ns)
+(ns+ forex.module.error
+  (<span style="color: #7a378b;">:clone</span> clj.core)
   (<span style="color: #7a378b;">:require</span> [forex.backend.mql.socket-service <span style="color: #7a378b;">:as</span> s])
   (<span style="color: #7a378b;">:use</span> utils.general emacs 
         forex.util.general))
@@ -1087,10 +1106,11 @@ Yes, currently it is not very development start friendly. That will change!
          (<span style="color: #a020f0;">if</span> (<span style="color: #7a378b;">=</span> (<span style="color: #7a378b;">first</span> spl) <span style="color: #8b2252;">"error"</span>)
            (<span style="color: #a020f0;">let</span> [err (<span style="color: #a020f0;">try</span> (Integer/parseInt (<span style="color: #7a378b;">second</span> spl))
                           (<span style="color: #a020f0;">catch</span> Exception e (<span style="color: #7a378b;">second</span> spl)))]
-             (<span style="color: #a020f0;">if</span> (<span style="color: #a020f0;">and</span> try (<span style="color: #7a378b;">&lt;</span> retries try) (<span style="color: #a020f0;">or</span> (<span style="color: #7a378b;">=</span> err 4066) (<span style="color: #7a378b;">=</span> err 4054)))
-               (<span style="color: #a020f0;">do</span> (Thread/sleep 300) (<span style="color: #a020f0;">recur</span> (<span style="color: #7a378b;">inc</span> retries)))
-               (throwf <span style="color: #8b2252;">"MQL error %s"</span> (<span style="color: #7a378b;">second</span> spl))))
+             (<span style="color: #a020f0;">cond</span>
+              (<span style="color: #a020f0;">and</span> try (<span style="color: #7a378b;">&lt;</span> retries try) (<span style="color: #a020f0;">or</span> (<span style="color: #7a378b;">=</span> err 4066) (<span style="color: #7a378b;">=</span> err 4054))) (<span style="color: #a020f0;">do</span> (Thread/sleep 300) (<span style="color: #a020f0;">recur</span> (<span style="color: #7a378b;">inc</span> retries)))
+              true (throwf <span style="color: #8b2252;">"MQL error %s"</span> (<span style="color: #7a378b;">second</span> spl))))
            spl)))))
+
 (<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">receive!</span>
   ([msg] (receive! msg nil))
   ([msg try]
@@ -1112,27 +1132,30 @@ Yes, currently it is not very development start friendly. That will change!
   ([test then] `(aif ~test ~then nil))
   ([test then else]
      `(<span style="color: #a020f0;">let</span> [~'it ~test]
-        (<span style="color: #a020f0;">if</span> (<span style="color: #a020f0;">and</span> test (<span style="color: #7a378b;">not</span> (e? ~'it)))
+        (<span style="color: #a020f0;">if</span> (<span style="color: #a020f0;">and</span> ~'it (<span style="color: #7a378b;">not</span> (e? ~'it)))
           ~then
-          ~else))))
+          ~else)))) 
 (<span style="color: #a020f0;">defmacro</span> <span style="color: #0000ff;">awhen</span> [test &amp; body] `(aif ~test (<span style="color: #a020f0;">do</span> ~@body)))
-(<span style="color: #a020f0;">defmacro</span> <span style="color: #0000ff;">aif-not</span>
+(<span style="color: #a020f0;">defmacro</span> <span style="color: #0000ff;">aif-not</span> 
   ([test then] `(aif-not ~test ~then nil))
   ([test then else]
      `(<span style="color: #a020f0;">let</span> [~'it ~test]
-        (<span style="color: #a020f0;">if</span> (<span style="color: #7a378b;">not</span> (<span style="color: #a020f0;">and</span> test (<span style="color: #7a378b;">not</span> (e? ~'it))))
+        (<span style="color: #a020f0;">if</span> (<span style="color: #7a378b;">not</span> (<span style="color: #a020f0;">and</span> ~'it (<span style="color: #7a378b;">not</span> (e? ~'it))))
           ~then
-          ~else))))
+          ~else)))) 
 (<span style="color: #a020f0;">defmacro</span> <span style="color: #0000ff;">awhen-not</span> [test &amp; body] `(aif-not ~test (<span style="color: #a020f0;">do</span> ~@body)))
+
+(<span style="color: #a020f0;">defn-</span> <span style="color: #0000ff;">parse-int</span> [a] (<span style="color: #a020f0;">try</span> (Integer/parseInt a) (<span style="color: #a020f0;">catch</span> Exception e a)))
 
 (<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">receive</span>
   ([msg] (receive msg *default*))
   ([msg default]
      (<span style="color: #a020f0;">let</span> [spl (raw-receive-lst msg)]
-       (<span style="color: #a020f0;">if</span> (<span style="color: #7a378b;">=</span> (<span style="color: #7a378b;">first</span> spl) <span style="color: #8b2252;">"error"</span>)
-         (<span style="color: #a020f0;">if</span> (<span style="color: #7a378b;">=</span> default *er*)
-           (MqlError. (Integer/parseInt (<span style="color: #7a378b;">second</span> spl)))
-           (<span style="color: #a020f0;">if</span> (<span style="color: #7a378b;">fn?</span> default) (default (MqlError. (Integer/parseInt (<span style="color: #7a378b;">second</span> spl)))) default))
+       (<span style="color: #a020f0;">if</span> (<span style="color: #a020f0;">and</span> (<span style="color: #7a378b;">=</span> (<span style="color: #7a378b;">first</span> spl) <span style="color: #8b2252;">"error"</span>))
+         (<span style="color: #a020f0;">let</span> [err (parse-int  (<span style="color: #7a378b;">second</span> spl))] 
+           (<span style="color: #a020f0;">if</span> (<span style="color: #7a378b;">=</span> default *er*)
+             (MqlError. err) 
+             (<span style="color: #a020f0;">if</span> (<span style="color: #7a378b;">fn?</span> default) (default (MqlError. err)) default)))
          (<span style="color: #228b22;">join</span> <span style="color: #8b2252;">""</span> spl)))))
 
 (<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">receive-double</span>
@@ -1164,7 +1187,9 @@ Yes, currently it is not very development start friendly. That will change!
 
 
 <div class="org-src-container"><label class="org-src-name">indicator-common()</label><pre class="src src-clojure">
-(<span style="color: #a020f0;">ns</span> forex.module.indicator
+(clojure.core/<span style="color: #7a378b;">use</span> 'nstools.ns)
+(ns+ forex.module.indicator
+  (<span style="color: #7a378b;">:clone</span> clj.core)
   (<span style="color: #7a378b;">:use</span>
    utils.general 
    forex.util.general
@@ -1386,12 +1411,29 @@ Yes, currently it is not very development start friendly. That will change!
 
 
 <div class="org-src-container"><label class="org-src-name">forex-util-general()</label><pre class="src src-clojure">
-(<span style="color: #a020f0;">ns</span> forex.util.general
+(clojure.core/<span style="color: #7a378b;">use</span> 'nstools.ns)
+(ns+ forex.util.general
+  (<span style="color: #7a378b;">:clone</span> clj.core)
   (<span style="color: #7a378b;">:use</span> emacs utils.general forex.util.spawn forex.util.log)
   (<span style="color: #7a378b;">:require</span> clojure.contrib.error-kit)
-  (<span style="color: #7a378b;">:import</span> (org.joda.time DateTime DateTimeZone Instant)))
+  (<span style="color: #7a378b;">:import</span> java.io.File (org.joda.time DateTime DateTimeZone Instant)))
 <span style="color: #b22222;">;;</span><span style="color: #b22222;">TODO: memoize pow?
-</span>
+</span><span style="color: #b22222;">;;</span><span style="color: #b22222;">used from http://groups.google.com/group/clojure/browse_thread/thread/cb5246d07142a3dc?fwc=2&amp;pli=1
+</span>(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">frm-save</span> 
+ <span style="color: #8b2252;">"Save a clojure form to file."</span> 
+  [file form] 
+  (<span style="color: #a020f0;">with-open</span> [w (java.io.FileWriter.
+                 (<span style="color: #a020f0;">if</span> (<span style="color: #7a378b;">instance?</span> File file) file (File. file)))] 
+    (<span style="color: #a020f0;">binding</span> [*out* w *print-dup* true] (<span style="color: #7a378b;">prn</span> form))))
+
+(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">frm-load</span> 
+  <span style="color: #8b2252;">"Load a clojure form from file."</span> 
+  [file] 
+  (<span style="color: #a020f0;">with-open</span> [r (java.io.PushbackReader. 
+     (java.io.FileReader. (<span style="color: #a020f0;">if</span> (<span style="color: #7a378b;">instance?</span> File file) file (File. file))))] 
+     (<span style="color: #a020f0;">let</span> [rec (<span style="color: #7a378b;">read</span> r)] 
+       rec)))
+
 (<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">round</span> [num places]
   (<span style="color: #a020f0;">let</span> [multiplier (Math/pow 10 places)]
     (<span style="color: #7a378b;">/</span> (<span style="color: #7a378b;">int</span> (<span style="color: #7a378b;">*</span> num multiplier)) multiplier)))
@@ -1440,61 +1482,22 @@ Yes, currently it is not very development start friendly. That will change!
 
 (<span style="color: #a020f0;">defmethod</span> <span style="color: #0000ff;">clojure.core/print-method</span> AtomHash [o w]
   (.write w (.toString o)))
+<span style="color: #b22222;">;;</span><span style="color: #b22222;">TODO: make into protocol method! not multimethod!
+</span>(<span style="color: #a020f0;">defmethod</span> <span style="color: #0000ff;">swap!</span>  forex.util.general.AtomHash [a &amp; args]
+  (<span style="color: #7a378b;">apply</span> swap! (.val a) args))
+(<span style="color: #a020f0;">defmethod</span> <span style="color: #0000ff;">reset!</span>  forex.util.general.AtomHash [a &amp; args]
+  (<span style="color: #7a378b;">apply</span> reset! (.val a) args))
 
-(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">atom-hash</span> [val]
-  (<span style="color: #228b22;">is</span> (<span style="color: #7a378b;">map?</span> val))
-  (AtomHash. (<span style="color: #7a378b;">atom</span> val)))
-
+(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">atom-hash</span>
+  ([] (atom-hash {}))
+  ([val]
+     (<span style="color: #228b22;">is</span> (<span style="color: #7a378b;">map?</span> val))
+     (AtomHash. (<span style="color: #7a378b;">atom</span> val))))
 
 (<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">symbolicate</span>
   <span style="color: #8b2252;">"symbolicate symbols together. ignores things like whitespaces, just drops them!"</span>
   [&amp; args]
   (<span style="color: #7a378b;">symbol</span> (<span style="color: #7a378b;">apply</span> str args)))
-
-
-<span style="color: #b22222;">;;</span><span style="color: #b22222;">TODO: add support for waiting on multiple objects, including sockets!
-</span>(<span style="color: #a020f0;">defprotocol</span> <span style="color: #0000ff;">PWait</span>
-  (wait-for [this timeout units] [this timeout]))
-<span style="color: #b22222;">;;</span><span style="color: #b22222;">copied from clojure source, but adding timeout wait-for
-</span>(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">beg</span>
-  <span style="color: #8b2252;">"Alpha - subject to change.
-  Returns a promise object that can be read with deref/@, and set,
-  once only, with deliver. Calls to deref/@ prior to delivery will
-  block. All subsequent derefs will return the same delivered value
-  without blocking."</span>
-  {<span style="color: #7a378b;">:added</span> <span style="color: #8b2252;">"1.1"</span>}
-  []
-  (<span style="color: #a020f0;">let</span> [d (java.util.concurrent.CountDownLatch. 1)
-        v (<span style="color: #7a378b;">atom</span> nil)]
-    (<span style="color: #7a378b;">reify</span> 
-      clojure.lang.IDeref
-      (<span style="color: #7a378b;">deref</span> [_] (.await d) @v)
-      PWait
-      (wait-for [this timeout]
-                (wait-for this timeout
-                          java.util.concurrent.TimeUnit/MILLISECONDS))
-      (wait-for [this timeout units]
-                (<span style="color: #a020f0;">if</span> timeout
-                  (.await d timeout units)
-                  (<span style="color: #a020f0;">do</span> (.await d) true)))
-      clojure.lang.IFn
-      (invoke [this x] 
-              (<span style="color: #7a378b;">locking</span> d
-                (<span style="color: #a020f0;">if</span> (<span style="color: #7a378b;">pos?</span> (.getCount d))
-                  (<span style="color: #a020f0;">do</span> (<span style="color: #7a378b;">reset!</span> v x)
-                      (.countDown d)
-                      x)
-                  (<span style="color: #a020f0;">throw</span>
-                   (IllegalStateException.
-                    <span style="color: #8b2252;">"Multiple deliver calls to a promise"</span>))))))))
-
-(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">give</span>
-  <span style="color: #8b2252;">"Alpha - subject to change.
-  Delivers the supplied value to the promise, releasing any pending
-  derefs. A subsequent call to deliver on a promise will throw an exception."</span>
-  {<span style="color: #7a378b;">:added</span> <span style="color: #8b2252;">"1.1"</span>}
-  [promise val]
-  (<span style="color: #7a378b;">promise</span> val))
 
 (<span style="color: #a020f0;">defmacro</span> <span style="color: #0000ff;">naive-var-local-cache-strategy</span> [var] 
  `(<span style="color: #a020f0;">let</span> [cache# (<span style="color: #7a378b;">atom</span> {})]
@@ -1577,7 +1580,9 @@ Yes, currently it is not very development start friendly. That will change!
 
 
 <div class="org-src-container"><label class="org-src-name">forex-util-log()</label><pre class="src src-clojure">
-(<span style="color: #a020f0;">ns</span> forex.util.log
+(clojure.core/<span style="color: #7a378b;">use</span> 'nstools.ns)
+(ns+ forex.util.log
+  (<span style="color: #7a378b;">:clone</span> clj.core)
   (<span style="color: #7a378b;">:import</span> [java.util.logging Logger Level LogManager Handler
             FileHandler SimpleFormatter ConsoleHandler])
   (<span style="color: #7a378b;">:require</span> [clojure.contrib.duck-streams <span style="color: #7a378b;">:as</span> f])
@@ -1668,7 +1673,9 @@ Yes, currently it is not very development start friendly. That will change!
 
 
 <div class="org-src-container"><label class="org-src-name">forex-util-spawn()</label><pre class="src src-clojure">
-(<span style="color: #a020f0;">ns</span> forex.util.spawn
+(clojure.core/<span style="color: #7a378b;">use</span> 'nstools.ns)
+(ns+ forex.util.spawn
+  (<span style="color: #7a378b;">:clone</span> clj.core)
   (<span style="color: #7a378b;">:use</span> utils.general forex.util.zmq)
   (<span style="color: #7a378b;">:require</span> [utils.fiber.spawn <span style="color: #7a378b;">:as</span> s]))
 
@@ -1746,7 +1753,7 @@ Yes, currently it is not very development start friendly. That will change!
                   (<span style="color: #a020f0;">let</span> [sock (.getSocket p i)
                         msg 
                         (<span style="color: #a020f0;">loop</span> [msg [(.recv sock 0)]]                    
-                          (<span style="color: #a020f0;">if</span> (.hasReceiveMore sock)
+                          (<span style="color: #a020f0;">if</span> (.hasMore sock)
                             (<span style="color: #a020f0;">recur</span> (<span style="color: #7a378b;">cons</span> (String. (.recv sock 0)) msg))
                             msg))]
                     [sock (<span style="color: #a020f0;">if</span> (<span style="color: #7a378b;">=</span> (<span style="color: #7a378b;">count</span> msg) 1) (<span style="color: #7a378b;">first</span> msg) (<span style="color: #7a378b;">vec</span> msg))]))
@@ -1771,7 +1778,9 @@ Yes, currently it is not very development start friendly. That will change!
 
 
 <div class="org-src-container"><label class="org-src-name">forex-util-zmq()</label><pre class="src src-clojure">
-(<span style="color: #a020f0;">ns</span> forex.util.zmq
+(clojure.core/<span style="color: #7a378b;">use</span> 'nstools.ns)
+(ns+ forex.util.zmq
+  (<span style="color: #7a378b;">:clone</span> clj.core)
   (<span style="color: #7a378b;">:import</span> (org.zeromq ZMQ))
   (<span style="color: #7a378b;">:use</span> utils.general))
 (<span style="color: #a020f0;">def</span> <span style="color: #0000ff;">+noblock+</span> 1)
@@ -1824,7 +1833,7 @@ Yes, currently it is not very development start friendly. That will change!
   (getSocket [this i])
   (getSize [this])
   (pollin [this i])) 
-(<span style="color: #a020f0;">defrecord</span> <span style="color: #0000ff;">Poller</span> [poll sockets]
+(<span style="color: #a020f0;">defrecord</span> <span style="color: #0000ff;">Poller</span> [poll sockets] 
   PPoller 
   (getSize [this] (.getSize (<span style="color: #7a378b;">:poll</span> this)))
   (pollin [this i] (.pollin (<span style="color: #7a378b;">:poll</span> this) i))
@@ -1855,13 +1864,13 @@ Yes, currently it is not very development start friendly. That will change!
   (snd [this msg flags]
        (<span style="color: #a020f0;">if</span> (<span style="color: #7a378b;">string?</span> msg)
          (.send socket (.getBytes msg) flags)
-         (.send socket msg flags)))
-  (recv [this flags] (.recv socket flags))
+         (.send socket msg flags))) 
+  (recv [this flags] (<span style="color: #a020f0;">when-let</span> [it (.recv socket flags)] (String. it)))
   (recv [this] (recv this 0)) 
   (close [this] (.close socket))
   (bind [this address] (.bind socket address))
   (connect [this address] (.connect socket address))
-  (hasMore [this] (.hasReceiveMore socket)))
+  (hasMore [this] (.hasReceiveMore socket))) 
 
 (<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">new-socket</span>
   ([type] (new-socket *context* type))
@@ -1897,7 +1906,9 @@ Yes, currently it is not very development start friendly. That will change!
 
 
 <div class="org-src-container"><label class="org-src-name">forex-util-mql-devel()</label><pre class="src src-clojure">
+(clojure.core/<span style="color: #7a378b;">use</span> 'nstools.ns)
 (<span style="color: #a020f0;">ns</span> forex.utils.mql-devel
+  (<span style="color: #7a378b;">:clone</span> clj.core)
   (<span style="color: #7a378b;">:use</span> utils.general))
 
 
@@ -1935,8 +1946,10 @@ Yes, currently it is not very development start friendly. That will change!
 
 
 <div class="org-src-container"><label class="org-src-name">forex-util-indicator-devel()</label><pre class="src src-clojure">
+(clojure.core/<span style="color: #7a378b;">use</span> 'nstools.ns)
 <span style="color: #b22222;">;;</span><span style="color: #b22222;">this file allows one to automatically produce binding code for metatrader custom indicators
-</span>(<span style="color: #a020f0;">ns</span> forex.utils.mql-indicator-devel
+</span>(ns+ forex.utils.mql-indicator-devel
+  (<span style="color: #7a378b;">:clone</span> clj.core)
   (<span style="color: #7a378b;">:import</span> java.io.File))
 
 (<span style="color: #a020f0;">defmacro</span> <span style="color: #0000ff;">for+</span> [args &amp; body]
@@ -2059,18 +2072,100 @@ return(val);
 
 
 <div class="org-src-container"><label class="org-src-name">template()</label><pre class="src src-clojure">
-(<span style="color: #a020f0;">ns</span> forex.default
-(<span style="color: #7a378b;">:use</span> forex.util.general emacs
-      forex.util.log) 
-(<span style="color: #7a378b;">:use</span> forex.module.error
-      forex.module.ea
-      forex.module.indicator
-      forex.module.account forex.module.account.utils
-      [clj-time.core <span style="color: #7a378b;">:exclude</span> [extend start]])
-(<span style="color: #7a378b;">:require</span>
- [forex.backend.mql.socket-service <span style="color: #7a378b;">:as</span> backend]))
+(clojure.core/<span style="color: #7a378b;">use</span> 'nstools.ns)
+(ns+ forex.default
+     (<span style="color: #7a378b;">:clone</span> clj.core)
+     (<span style="color: #7a378b;">:use</span> forex.util.general emacs
+           forex.util.log) 
+     (<span style="color: #7a378b;">:use</span> forex.module.error
+           forex.module.ea
+           forex.module.indicator
+           forex.module.account forex.module.account.utils
+           [clj-time.core <span style="color: #7a378b;">:exclude</span> [extend start]])
+     (<span style="color: #7a378b;">:require</span>
+      [forex.backend.mql.socket-service <span style="color: #7a378b;">:as</span> backend]))
 </pre></div>
 
+
+
+
+<div class="org-src-container"><label class="org-src-name">template()</label><pre class="src src-clojure">
+(<span style="color: #a020f0;">ns</span> clj.core
+  (<span style="color: #7a378b;">:refer-clojure</span> <span style="color: #7a378b;">:exclude</span> [promise swap! reset!])
+  (<span style="color: #7a378b;">:import</span> clojure.lang.APersistentMap java.io.Writer))
+<span style="color: #b22222;">;;</span><span style="color: #b22222;">TODO: serializable records and atoms and refs!
+</span>(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">record?</span> [a] 
+  (<span style="color: #a020f0;">and</span> (<span style="color: #7a378b;">map?</span> a) (<span style="color: #7a378b;">not</span> (<span style="color: #7a378b;">instance?</span> clojure.lang.APersistentMap a))))
+<span style="color: #b22222;">;;</span><span style="color: #b22222;">this will affect all code!! i do not know how to make it not so. oh well, this is good anyways, maybe ill change later!
+</span>
+(<span style="color: #a020f0;">defmethod</span> <span style="color: #0000ff;">print-dup</span> clojure.lang.IPersistentMap [m, <span style="color: #228b22;">^Writer</span> w]
+  (<span style="color: #a020f0;">if</span> (record? m)
+    (<span style="color: #7a378b;">print-dup</span> `(new ~(<span style="color: #7a378b;">class</span> m) ~@(<span style="color: #7a378b;">map</span> second (<span style="color: #7a378b;">seq</span> m))) w)
+    (<span style="color: #a020f0;">do</span> 
+      (#'clojure.core/print-meta m w)
+      (.write w <span style="color: #8b2252;">"#=("</span>)
+      (.write w (.getName (<span style="color: #7a378b;">class</span> m)))
+      (.write w <span style="color: #8b2252;">"/create "</span>)
+      (#'clojure.core/print-map m print-dup w)
+      (.write w <span style="color: #8b2252;">")"</span>))))
+
+(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">unuse</span> [ns]
+  (<span style="color: #a020f0;">doseq</span> [[n v] (<span style="color: #7a378b;">ns-refers</span> *ns*)]
+    (<span style="color: #a020f0;">if</span> (<span style="color: #7a378b;">=</span> (<span style="color: #a020f0;">..</span> v ns name) ns)
+      (<span style="color: #7a378b;">ns-unmap</span> *ns* n))))
+(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">reuse</span> [ns]
+  (unuse ns) 
+  (<span style="color: #7a378b;">remove-ns</span> ns)
+  (<span style="color: #7a378b;">use</span> <span style="color: #7a378b;">:reload-all</span> ns))
+
+(<span style="color: #a020f0;">defmulti</span> <span style="color: #0000ff;">swap!</span> (<span style="color: #7a378b;">fn</span> [a &amp; args] (<span style="color: #7a378b;">class</span> a)))
+(<span style="color: #a020f0;">defmethod</span> <span style="color: #0000ff;">swap!</span> clojure.lang.Atom [&amp; args]
+  (<span style="color: #7a378b;">apply</span> clojure.core/swap! args))
+(<span style="color: #a020f0;">defmulti</span> <span style="color: #0000ff;">reset!</span> (<span style="color: #7a378b;">fn</span> [a &amp; args] (<span style="color: #7a378b;">class</span> a)))
+(<span style="color: #a020f0;">defmethod</span> <span style="color: #0000ff;">reset!</span> clojure.lang.Atom [&amp; args]
+  (<span style="color: #7a378b;">apply</span> clojure.core/reset! args))
+(<span style="color: #a020f0;">defprotocol</span> <span style="color: #0000ff;">PWait</span> 
+  (wait-for [this timeout units] [this timeout]))
+<span style="color: #b22222;">;;</span><span style="color: #b22222;">copied from clojure source, but adding timeout wait-for
+</span>(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">promise</span>
+  <span style="color: #8b2252;">"Alpha - subject to change.
+  Returns a promise object that can be read with deref/@, and set,
+  once only, with deliver. Calls to deref/@ prior to delivery will
+  block. All subsequent derefs will return the same delivered value
+  without blocking."</span>
+  {<span style="color: #7a378b;">:added</span> <span style="color: #8b2252;">"1.1"</span>}
+  []
+  (<span style="color: #a020f0;">let</span> [d (java.util.concurrent.CountDownLatch. 1)
+        v (<span style="color: #7a378b;">atom</span> nil)]
+    (<span style="color: #7a378b;">reify</span> 
+      clojure.lang.IDeref
+      (<span style="color: #7a378b;">deref</span> [_] (.await d) @v)
+      PWait
+      (wait-for [this timeout]
+                (wait-for this timeout
+                          java.util.concurrent.TimeUnit/MILLISECONDS))
+      (wait-for [this timeout units]
+                (<span style="color: #a020f0;">if</span> timeout
+                  (.await d timeout units)
+                  (<span style="color: #a020f0;">do</span> (.await d) true)))
+      clojure.lang.IFn
+      (invoke [this x] 
+              (<span style="color: #7a378b;">locking</span> d
+                (<span style="color: #a020f0;">if</span> (<span style="color: #7a378b;">pos?</span> (.getCount d))
+                  (<span style="color: #a020f0;">do</span> (<span style="color: #7a378b;">reset!</span> v x)
+                      (.countDown d)
+                      x)
+                  (<span style="color: #a020f0;">throw</span>
+                   (IllegalStateException.
+                    <span style="color: #8b2252;">"Multiple deliver calls to a promise"</span>))))))))
+
+(<span style="color: #a020f0;">defmethod</span> <span style="color: #0000ff;">print-dup</span> clojure.lang.Atom [o w]
+  (.write w <span style="color: #8b2252;">"#=(atom "</span>) (<span style="color: #7a378b;">print-dup</span> @o w) (.write w <span style="color: #8b2252;">")"</span>))
+(<span style="color: #a020f0;">defmethod</span> <span style="color: #0000ff;">print-dup</span> clojure.lang.Ref [o w]
+  (.write w <span style="color: #8b2252;">"#=(ref "</span>) (<span style="color: #7a378b;">print-dup</span> @o w) (.write w <span style="color: #8b2252;">")"</span>))
+
+
+</pre></div>
 
 
 </div>
@@ -2206,7 +2301,7 @@ return(val);
 <div id="postamble">
 <p class="author"> Author: Seth Burleigh
 </p>
-<p class="date"> Date: 2011-01-29 15:48:59 CST</p>
+<p class="date"> Date: 2011-01-31 13:58:35 CST</p>
 <p class="creator">HTML generated by org-mode 7.4 in emacs 23</p>
 </div>
 </div>
