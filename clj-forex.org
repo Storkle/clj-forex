@@ -858,17 +858,17 @@ Yes, currently it is not very development start friendly. That will change!
     ([test then] `(aif ~test ~then nil))
     ([test then else]
        `(let [~'it ~test]
-	  (if (and test (not (e? ~'it)))
+	  (if (and ~'it (not (e? ~'it)))
 	    ~then
-	    ~else))))
+	    ~else)))) 
   (defmacro awhen [test & body] `(aif ~test (do ~@body)))
-  (defmacro aif-not
+  (defmacro aif-not 
     ([test then] `(aif-not ~test ~then nil))
     ([test then else]
        `(let [~'it ~test]
-	  (if (not (and test (not (e? ~'it))))
+	  (if (not (and ~'it (not (e? ~'it))))
 	    ~then
-	    ~else))))
+	    ~else)))) 
   (defmacro awhen-not [test & body] `(aif-not ~test (do ~@body)))
 
   (defn receive
