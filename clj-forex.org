@@ -363,6 +363,10 @@ Yes, currently it is not very development start friendly. That will change!
 
   (defn- assert-order [order] (is? [(or (sell? order) (buy? order))]))
 
+  (defn o-- [o & args]
+    (assert-order o)
+    (if (sell? o) (- (apply - args)) (apply - args)))
+
   (defn o+ [o & args]
     (assert-order o) 
     (if (sell? o) (apply - args) (apply + args)))
