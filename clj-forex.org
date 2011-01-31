@@ -202,7 +202,7 @@ Yes, currently it is not very development start friendly. That will change!
 	    (instance? Exception result) (throw result)
 	    result result
 	    true (throwf "invalid result received %s" result))))))
-#+end_src
+#+end_src 
 ** Module 
 *** Account
 #+srcname:account-core
@@ -514,6 +514,7 @@ Yes, currently it is not very development start friendly. That will change!
 		(account-warn it order "invalid new lots %s" new-lots))
 	   order))))
 
+  ;;TODO: normalize so we dont get mql error 1?
   (defn- modify!* [order {:keys [sl tp] :as mod}]
     (with-order order
       (let [sl (or sl (:sl order) 0)
@@ -524,10 +525,12 @@ Yes, currently it is not very development start friendly. That will change!
 		     (= tp (:tp order)))
 	  (aif (core/order-modify (:id order) (:price order) sl tp)
 	       (merge order (merge mod {:sl sl :tp tp}))
-	       (account-warn it order "sl %s tp %s" sl tp))
-	  (merge order mod))))) 
+	       (if (= (:e it) 1)
+		 (merge order mod)
+		 (account-warn it order "sl %s tp %s" sl tp)))
+	  (merge order mod)))))  
 
-  ;;TOOD: how do we get map with defaults?
+  ;;TOODOs: how do we get map with defaults?
   (defn- verify-order [{:keys [slip symbol type price tp sl lots]
 			:or {slip 3 sl 0 tp 0}}]
     (is? [(number? slip) (> slip 0) (integer? slip)]
@@ -736,6 +739,8 @@ Yes, currently it is not very development start friendly. That will change!
   (defn- timeframe? [a] (number? a))
   (defrecord EA [name type ns init deinit start symbol period args pid run vars])
 
+  (defn- constant-map [& args] {})
+  (defn- constant-true [& args] {})
   (defn new-ea
     ([] (new-ea {}))
     ([{:keys [ns symbol period run args] :or {symbol (env :symbol)
@@ -751,10 +756,10 @@ Yes, currently it is not very development start friendly. That will change!
 	       start (ns-symbol 'start ns)
 	       init (or (let [fn (ns-symbol 'init ns)]
 			  (if (get-fn fn) fn))
-			(constantly {}))
+			constant-map)
 	       deinit (or (let [fn (ns-symbol 'deinit ns)]
 			    (if (get-fn fn) fn))
-			  (constantly true))]
+			   constant-true)]
 	   (is? [(fn? (get-fn init)) (fn? (get-fn deinit)) (string? name)
 		 (string? symbol) (fn? run) (timeframe? period)])
 	   (EA. (format "%s %s, %s" name symbol period) name ns
@@ -843,10 +848,11 @@ Yes, currently it is not very development start friendly. That will change!
 	   (if (= (first spl) "error")
 	     (let [err (try (Integer/parseInt (second spl))
 			    (catch Exception e (second spl)))]
-	       (if (and try (< retries try) (or (= err 4066) (= err 4054)))
-		 (do (Thread/sleep 300) (recur (inc retries)))
-		 (throwf "MQL error %s" (second spl))))
+	       (cond
+		(and try (< retries try) (or (= err 4066) (= err 4054))) (do (Thread/sleep 300) (recur (inc retries)))
+		true (throwf "MQL error %s" (second spl))))
 	     spl)))))
+
   (defn receive!
     ([msg] (receive! msg nil))
     ([msg try]
@@ -881,14 +887,17 @@ Yes, currently it is not very development start friendly. That will change!
 	    ~else)))) 
   (defmacro awhen-not [test & body] `(aif-not ~test (do ~@body)))
 
+  (defn- parse-int [a] (try (Integer/parseInt a) (catch Exception e a)))
+
   (defn receive
     ([msg] (receive msg *default*))
     ([msg default]
        (let [spl (raw-receive-lst msg)]
-	 (if (= (first spl) "error")
-	   (if (= default *er*)
-	     (MqlError. (Integer/parseInt (second spl)))
-	     (if (fn? default) (default (MqlError. (Integer/parseInt (second spl)))) default))
+	 (if (and (= (first spl) "error"))
+	   (let [err (parse-int  (second spl))] 
+	     (if (= default *er*)
+	       (MqlError. err) 
+	       (if (fn? default) (default (MqlError. err)) default)))
 	   (join "" spl)))))
 
   (defn receive-double
@@ -1128,7 +1137,8 @@ Yes, currently it is not very development start friendly. That will change!
     [file form] 
     (with-open [w (java.io.FileWriter.
 		   (if (instance? File file) file (File. file)))] 
-      (binding [*out* w *print-dup* true] (prn form))))  
+      (binding [*out* w *print-dup* true] (prn form))))
+
   (defn frm-load 
     "Load a clojure form from file." 
     [file] 
