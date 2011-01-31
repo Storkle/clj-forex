@@ -1,7 +1,7 @@
 #+TITLE: CLJ-FOREX
 #+Author: Seth Burleigh
 #+Babel: :comments link :noweb yes :mkdirp yes
-    
+       
 * Introduction
 ** What is forex?
 Forex is a currency trading market. But you probably know all about forex, since you're here! If not, read up on it! \\
@@ -92,14 +92,16 @@ Yes, currently it is not very development start friendly. That will change!
   ;;forex.backend.mql.socket-service: provide background sockets which allow us to connect with metatrader. Provides functions to interact with the background socket
 
   ;;todo: bug with stopping all and then stopping again! so bug with stop..
-  (ns forex.backend.mql.socket-service   
-    (:require
-     [utils.fiber.mbox :as m]
-     [clojure.contrib.logging :as l])
-    (:use
-     emacs 
-     forex.util.general forex.util.zmq forex.util.log
-     forex.util.spawn utils.general))
+  (clojure.core/use 'nstools.ns)
+  (ns+ forex.backend.mql.socket-service
+       (:clone clj.core) 
+       (:require
+	[utils.fiber.mbox :as m]
+	[clojure.contrib.logging :as l])
+       (:use
+	emacs 
+	forex.util.general forex.util.zmq forex.util.log
+	forex.util.spawn utils.general))
 
   ;;TODO: 3ms or so per request, a little slow...
   ;;also, unfortunately, if we add more servers, speed doesn't increase linearly. so the bottleneck is in the clojure code ... a better designed socket service should really be made.
@@ -126,12 +128,13 @@ Yes, currently it is not very development start friendly. That will change!
        (if-not (satisfies? PWait msg-ask)
 	 (warn "Ignoring invalid msg: %s" msg)
 	 (do 
-	   (give msg-ask (second msg))
+	   (deliver msg-ask (second msg))
 	   (swap! ids dissoc key))))))
   (defvar *ids* (atom {}))
   (comment
     (defn unblock []
-      (doall (map #(give % (Exception. "unblock")) (keys *ids*)))))
+      (doall (map #(deliver % (Exception. "unblock")) (keys *ids*)))))
+
 
   (defn- socket-service-match [events send receive]
     (match  
@@ -148,7 +151,7 @@ Yes, currently it is not very development start friendly. That will change!
 	     (warn "failed to queue request %s: are any metatrader scripts alive?"
 		   msg)
 	     (catch-unexpected
-	      (give askin (Exception. "socket service down"))))
+	      (deliver askin (Exception. "socket service down"))))
 	   (swap! *ids* assoc id askin))))  
      [receive ?msg] (mql-recv *ids* msg) 
      ?msg (warn "Ignoring invalid message %s" msg)))
@@ -192,7 +195,7 @@ Yes, currently it is not very development start friendly. That will change!
   (defn receive
     ([msg] (receive msg nil))
     ([msg timeout]
-       (let [askin (beg)]
+       (let [askin (promise)]
 	 (request askin msg)
 	 (let [result (if (wait-for askin timeout) @askin)]
 	   (cond
@@ -205,8 +208,9 @@ Yes, currently it is not very development start friendly. That will change!
 #+srcname:account-core
 #+begin_src clojure :tangle src/forex/module/account/core.clj
   ;;forex.module.order.core - interface with mql backend
-
-  (ns forex.module.account.core
+  (clojure.core/use 'nstools.ns)
+  (ns+ forex.module.account.core
+    (:clone clj.core)
     (:use utils.general emacs utils.fiber.spawn
 	  forex.util.general
 	  forex.module.error))
@@ -268,7 +272,10 @@ Yes, currently it is not very development start friendly. That will change!
  
 #+srcname:account-utils
 #+begin_src clojure :tangle src/forex/module/account/utils.clj
-  (ns forex.module.account.utils
+  (clojure.core/use 'nstools.ns)
+
+  (ns+ forex.module.account.utils
+    (:clone clj.core)
     (:use utils.general emacs  
 	  forex.util.general
 	  forex.module.error)
@@ -423,8 +430,9 @@ Yes, currently it is not very development start friendly. That will change!
 #+begin_src clojure :tangle src/forex/module/account.clj
   ;;TODO: unit test everything
   ;;TODO: create a new atom-hash on merging, etc????????
-
-  (ns forex.module.account
+  (clojure.core/use 'nstools.ns)
+  (ns+ forex.module.account
+    (:clone clj.core)
     (:use utils.general emacs  
 	  forex.util.general forex.util.log
 	  forex.module.indicator
@@ -446,7 +454,7 @@ Yes, currently it is not very development start friendly. That will change!
        (if-not (= (:lots o#) 0)
 	 (do ~@body)
 	 (do (warn "attempting to change order %s with zero lots" o#)
-	     o#))))
+	     o#)))) 
 
   (defn- >? [a] (and (number? a) (>= a 0)))
 
@@ -506,19 +514,18 @@ Yes, currently it is not very development start friendly. That will change!
 		(account-warn it order "invalid new lots %s" new-lots))
 	   order))))
 
-  (defn- modify!* [order {:keys [sl tp price]}]
-    (with-order  order
+  (defn- modify!* [order {:keys [sl tp] :as mod}]
+    (with-order order
       (let [sl (or sl (:sl order) 0)
 	    tp (or tp (:tp order) 0)
-	    price (or price (:price order))]
-	(is? [sl tp price 
-	      (>? sl) (>? tp) (pos? price)])
+	    price (:price order)]
+	(is? [sl tp price (>? sl) (>? tp) (pos? price)]) 
 	(if-not (and (= sl (:sl order))
 		     (= tp (:tp order)))
-	  (aif (core/order-modify (:id order) price sl tp)
-	       (merge order {:sl sl :tp tp :price price})
+	  (aif (core/order-modify (:id order) (:price order) sl tp)
+	       (merge order (merge mod {:sl sl :tp tp}))
 	       (account-warn it order "sl %s tp %s" sl tp))
-	  order))))
+	  (merge order mod))))) 
 
   ;;TOOD: how do we get map with defaults?
   (defn- verify-order [{:keys [slip symbol type price tp sl lots]
@@ -559,15 +566,14 @@ Yes, currently it is not very development start friendly. That will change!
       (with-order order    
 	(verify-order order)
 	(aif (core/order-send symbol type lots price 0 0 slip)
-	     (atom-hash
-	      (let [result
-		    (let [o (merge order {:id it})]
-		      ;;now, use modify to change sl and tp
-		      (aif (modify!* o {:sl sl :tp tp})
-			   (merge o {:sl sl :tp tp})
-			   o))
-		    spread (spread)]
-		(merge result {:spread spread :break (o+ result price (pip spread))}))) 
+	     (let [result
+		   (let [o (merge order {:id it})]
+		     ;;now, use modify to change sl and tp
+		     (aif (modify!* o {:sl sl :tp tp})
+			  (merge o {:sl sl :tp tp})
+			  o))
+		   spread (spread)]
+	       (merge result {:spread spread :break (o+ result price (pip spread))})) 
 	     (account-warn it order))))) 
 
   (defn- open?* [order] 
@@ -613,7 +619,7 @@ Yes, currently it is not very development start friendly. That will change!
     (order-close-time [this] (order-close-time @this))
     (order-type [this] (order-type @this))
     ;;(order! [this] (aif (order! @this) (do (reset! (.val this) it) this) it))
-    (delete! [this] (aif (delete! @this) (do (reset! (.val this) it) this) it))
+    (delete! [this] (aif (delete! @this) (do (reset! (.val this) it) this) it))  
     (close!
      ([this new-amount] (aif (close! @this new-amount) (do (reset! (.val this) it) this) it))
      ([this] (close! this 0)))
@@ -627,7 +633,9 @@ Yes, currently it is not very development start friendly. That will change!
 *** Ea
 #+srcname:ea-common
 #+begin_src clojure :tangle src/forex/module/ea.clj
-  (ns forex.module.ea 
+  (clojure.core/use 'nstools.ns)
+  (ns+ forex.module.ea 
+    (:clone clj.core)
     (:use utils.general forex.util.general
 	  utils.fiber.spawn clojure.contrib.core)
     (:import clojure.lang.Atom)
@@ -810,7 +818,9 @@ Yes, currently it is not very development start friendly. That will change!
 *** Error
 #+srcname:error-common 
 #+begin_src clojure :tangle src/forex/module/error.clj
-  (ns forex.module.error
+  (clojure.core/use 'nstools.ns)
+  (ns+ forex.module.error
+    (:clone clj.core)
     (:require [forex.backend.mql.socket-service :as s])
     (:use utils.general emacs 
 	  forex.util.general))
@@ -899,7 +909,9 @@ Yes, currently it is not very development start friendly. That will change!
 *** Indicator
 #+srcname:indicator-common
 #+begin_src clojure :tangle src/forex/module/indicator.clj
-  (ns forex.module.indicator
+  (clojure.core/use 'nstools.ns)
+  (ns+ forex.module.indicator
+    (:clone clj.core)
     (:use
      utils.general 
      forex.util.general
@@ -1103,11 +1115,27 @@ Yes, currently it is not very development start friendly. That will change!
 *** General
 #+srcname:forex-util-general
 #+begin_src clojure :tangle src/forex/util/general.clj
-  (ns forex.util.general
+  (clojure.core/use 'nstools.ns)
+  (ns+ forex.util.general
+    (:clone clj.core)
     (:use emacs utils.general forex.util.spawn forex.util.log)
     (:require clojure.contrib.error-kit)
-    (:import (org.joda.time DateTime DateTimeZone Instant)))
+    (:import java.io.File (org.joda.time DateTime DateTimeZone Instant)))
   ;;TODO: memoize pow?
+  ;;used from http://groups.google.com/group/clojure/browse_thread/thread/cb5246d07142a3dc?fwc=2&pli=1
+  (defn frm-save 
+   "Save a clojure form to file." 
+    [file form] 
+    (with-open [w (java.io.FileWriter.
+		   (if (instance? File file) file (File. file)))] 
+      (binding [*out* w *print-dup* true] (prn form))))  
+  (defn frm-load 
+    "Load a clojure form from file." 
+    [file] 
+    (with-open [r (java.io.PushbackReader. 
+       (java.io.FileReader. (if (instance? File file) file (File. file))))] 
+       (let [rec (read r)] 
+	 rec)))
 
   (defn round [num places]
     (let [multiplier (Math/pow 10 places)]
@@ -1157,61 +1185,22 @@ Yes, currently it is not very development start friendly. That will change!
 
   (defmethod clojure.core/print-method AtomHash [o w]
     (.write w (.toString o)))
+  ;;TODO: make into protocol method! not multimethod!
+  (defmethod swap!  forex.util.general.AtomHash [a & args]
+    (apply swap! (.val a) args))
+  (defmethod reset!  forex.util.general.AtomHash [a & args]
+    (apply reset! (.val a) args))
 
-  (defn atom-hash [val]
-    (is (map? val))
-    (AtomHash. (atom val)))
-
+  (defn atom-hash
+    ([] (atom-hash {}))
+    ([val]
+       (is (map? val))
+       (AtomHash. (atom val))))
 
   (defn symbolicate
     "symbolicate symbols together. ignores things like whitespaces, just drops them!"
     [& args]
     (symbol (apply str args)))
-
-
-  ;;TODO: add support for waiting on multiple objects, including sockets!
-  (defprotocol PWait
-    (wait-for [this timeout units] [this timeout]))
-  ;;copied from clojure source, but adding timeout wait-for
-  (defn beg
-    "Alpha - subject to change.
-    Returns a promise object that can be read with deref/@, and set,
-    once only, with deliver. Calls to deref/@ prior to delivery will
-    block. All subsequent derefs will return the same delivered value
-    without blocking."
-    {:added "1.1"}
-    []
-    (let [d (java.util.concurrent.CountDownLatch. 1)
-	  v (atom nil)]
-      (reify 
-	clojure.lang.IDeref
-	(deref [_] (.await d) @v)
-	PWait
-	(wait-for [this timeout]
-		  (wait-for this timeout
-			    java.util.concurrent.TimeUnit/MILLISECONDS))
-	(wait-for [this timeout units]
-		  (if timeout
-		    (.await d timeout units)
-		    (do (.await d) true)))
-	clojure.lang.IFn
-	(invoke [this x] 
-		(locking d
-		  (if (pos? (.getCount d))
-		    (do (reset! v x)
-			(.countDown d)
-			x)
-		    (throw
-		     (IllegalStateException.
-		      "Multiple deliver calls to a promise"))))))))
-
-  (defn give
-    "Alpha - subject to change.
-    Delivers the supplied value to the promise, releasing any pending
-    derefs. A subsequent call to deliver on a promise will throw an exception."
-    {:added "1.1"}
-    [promise val]
-    (promise val))
 
   (defmacro naive-var-local-cache-strategy [var] 
    `(let [cache# (atom {})]
@@ -1283,7 +1272,9 @@ Yes, currently it is not very development start friendly. That will change!
 *** Log
 #+srcname:forex-util-log 
 #+begin_src clojure :tangle src/forex/util/log.clj
-  (ns forex.util.log
+  (clojure.core/use 'nstools.ns)
+  (ns+ forex.util.log
+    (:clone clj.core)
     (:import [java.util.logging Logger Level LogManager Handler
 	      FileHandler SimpleFormatter ConsoleHandler])
     (:require [clojure.contrib.duck-streams :as f])
@@ -1363,7 +1354,9 @@ Yes, currently it is not very development start friendly. That will change!
 *** Spawn
 #+srcname:forex-util-spawn
 #+begin_src clojure :tangle src/forex/util/spawn.clj
-  (ns forex.util.spawn
+  (clojure.core/use 'nstools.ns)
+  (ns+ forex.util.spawn
+    (:clone clj.core)
     (:use utils.general forex.util.zmq)
     (:require [utils.fiber.spawn :as s]))
 
@@ -1455,7 +1448,9 @@ Yes, currently it is not very development start friendly. That will change!
 *** ZMQ
 #+srcname:forex-util-zmq
 #+begin_src clojure :tangle src/forex/util/zmq.clj
-  (ns forex.util.zmq
+  (clojure.core/use 'nstools.ns)
+  (ns+ forex.util.zmq
+    (:clone clj.core)
     (:import (org.zeromq ZMQ))
     (:use utils.general))
   (def +noblock+ 1)
@@ -1508,7 +1503,7 @@ Yes, currently it is not very development start friendly. That will change!
     (getSocket [this i])
     (getSize [this])
     (pollin [this i])) 
-  (defrecord Poller [poll sockets]
+  (defrecord Poller [poll sockets] 
     PPoller 
     (getSize [this] (.getSize (:poll this)))
     (pollin [this i] (.pollin (:poll this) i))
@@ -1570,7 +1565,9 @@ Yes, currently it is not very development start friendly. That will change!
 *** Devel
 #+srcname:forex-util-mql-devel
 #+begin_src clojure :tangle src/forex/util/mql_devel.clj
+  (clojure.core/use 'nstools.ns)
   (ns forex.utils.mql-devel
+    (:clone clj.core)
     (:use utils.general))
 
 
@@ -1606,8 +1603,10 @@ Yes, currently it is not very development start friendly. That will change!
 
 #+srcname:forex-util-indicator-devel
 #+begin_src clojure :tangle src/forex/util/mql_indicator_devel.clj
+  (clojure.core/use 'nstools.ns)
   ;;this file allows one to automatically produce binding code for metatrader custom indicators
-  (ns forex.utils.mql-indicator-devel
+  (ns+ forex.utils.mql-indicator-devel
+    (:clone clj.core)
     (:import java.io.File))
 
   (defmacro for+ [args & body]
@@ -1707,18 +1706,98 @@ Yes, currently it is not very development start friendly. That will change!
 ** Templates
 #+source: template
 #+begin_src clojure :tangle src/forex/default.clj
-  (ns forex.default
-  (:use forex.util.general emacs
-	forex.util.log) 
-  (:use forex.module.error
-	forex.module.ea
-	forex.module.indicator
-	forex.module.account forex.module.account.utils
-	[clj-time.core :exclude [extend start]])
-  (:require
-   [forex.backend.mql.socket-service :as backend]))
+  (clojure.core/use 'nstools.ns)
+  (ns+ forex.default
+       (:clone clj.core)
+       (:use forex.util.general emacs
+	     forex.util.log) 
+       (:use forex.module.error
+	     forex.module.ea
+	     forex.module.indicator
+	     forex.module.account forex.module.account.utils
+	     [clj-time.core :exclude [extend start]])
+       (:require
+	[forex.backend.mql.socket-service :as backend]))
 #+end_src
 
+#+source: template
+#+begin_src clojure :tangle src/clj/core.clj
+  (ns clj.core
+    (:refer-clojure :exclude [promise swap! reset!])
+    (:import clojure.lang.APersistentMap java.io.Writer))
+  ;;TODO: serializable records and atoms and refs!
+  (defn record? [a] 
+    (and (map? a) (not (instance? clojure.lang.APersistentMap a))))
+  ;;this will affect all code!! i do not know how to make it not so. oh well, this is good anyways, maybe ill change later!
+  
+  (defmethod print-dup clojure.lang.IPersistentMap [m, ^Writer w]
+    (if (record? m)
+      (print-dup `(new ~(class m) ~@(map second (seq m))) w)
+      (do 
+        (#'clojure.core/print-meta m w)
+        (.write w "#=(")
+        (.write w (.getName (class m)))
+        (.write w "/create ")
+        (#'clojure.core/print-map m print-dup w)
+        (.write w ")"))))
+  
+  (defn unuse [ns]
+    (doseq [[n v] (ns-refers *ns*)]
+      (if (= (.. v ns name) ns)
+        (ns-unmap *ns* n))))
+  (defn reuse [ns]
+    (unuse ns) 
+    (remove-ns ns)
+    (use :reload-all ns))
+  
+  (defmulti swap! (fn [a & args] (class a)))
+  (defmethod swap! clojure.lang.Atom [& args]
+    (apply clojure.core/swap! args))
+  (defmulti reset! (fn [a & args] (class a)))
+  (defmethod reset! clojure.lang.Atom [& args]
+    (apply clojure.core/reset! args))
+  (defprotocol PWait 
+    (wait-for [this timeout units] [this timeout]))
+  ;;copied from clojure source, but adding timeout wait-for
+  (defn promise
+    "Alpha - subject to change.
+    Returns a promise object that can be read with deref/@, and set,
+    once only, with deliver. Calls to deref/@ prior to delivery will
+    block. All subsequent derefs will return the same delivered value
+    without blocking."
+    {:added "1.1"}
+    []
+    (let [d (java.util.concurrent.CountDownLatch. 1)
+          v (atom nil)]
+      (reify 
+        clojure.lang.IDeref
+        (deref [_] (.await d) @v)
+        PWait
+        (wait-for [this timeout]
+                  (wait-for this timeout
+                            java.util.concurrent.TimeUnit/MILLISECONDS))
+        (wait-for [this timeout units]
+                  (if timeout
+                    (.await d timeout units)
+                    (do (.await d) true)))
+        clojure.lang.IFn
+        (invoke [this x] 
+                (locking d
+                  (if (pos? (.getCount d))
+                    (do (reset! v x)
+                        (.countDown d)
+                        x)
+                    (throw
+                     (IllegalStateException.
+                      "Multiple deliver calls to a promise"))))))))
+  
+  (defmethod print-dup clojure.lang.Atom [o w]
+    (.write w "#=(atom ") (print-dup @o w) (.write w ")"))
+  (defmethod print-dup clojure.lang.Ref [o w]
+    (.write w "#=(ref ") (print-dup @o w) (.write w ")"))
+  
+  
+#+end_src
 ** Examples
 #+source: timeout-ea
 #+begin_src clojure :tangle src/forex/examples/timeout_ea.clj

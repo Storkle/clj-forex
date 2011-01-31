@@ -1,6 +1,7 @@
 native
 classes
 CMakeFiles
+/src/clj/
 /src/forex/
 /src/*.clj
 *~
@@ -65,3 +66,4 @@ CMakeFiles
 /lib/matchure-0.10.0.jar
 /mql4_libs_1.zip
 /dodo.tex
+/lib/defrecord2-1.0.0-20110104.084027-1.jar
