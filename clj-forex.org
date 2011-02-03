@@ -396,6 +396,11 @@ Yes, currently it is not very development start friendly. That will change!
     (:use forex.util.emacs forex.util.general forex.util.spawn forex.util.log)
     (:require clojure.contrib.error-kit)
     (:import java.io.File (org.joda.time DateTime DateTimeZone Instant)))
+
+  (defonce *debug* true)
+  (defn debug [msg & args]
+    (when *debug* (apply out (str "DEBUG: " msg) args)))
+
   ;;TODO: memoize pow?
   ;;used from http://groups.google.com/group/clojure/browse_thread/thread/cb5246d07142a3dc?fwc=2&pli=1
   (defn frm-save 
@@ -1483,7 +1488,7 @@ Yes, currently it is not very development start friendly. That will change!
   (defvar mql-socket-recv-address "tcp://127.0.0.1:3000")
   (defvar mql-socket-send-address "tcp://127.0.0.1:3005")
   (defvar mql-socket-pub-address "tcp://127.0.0.1:3010")
-  (defonce *ids* (atom {})) 
+  (defonce- *ids* (atom {})) 
   ;;utils  
   (defonce- *msg-id* (atom 0))
   (defn- msg-id []
@@ -1498,11 +1503,11 @@ Yes, currently it is not very development start friendly. That will change!
     (catch-unexpected   
      (let [key (first msg)
 	   msg-ask (get @*ids* key)] 
-       (if-not (satisfies? PWait msg-ask)
-	 (warn "Ignoring invalid msg: %s" msg)
-	 (do  
+       (if msg-ask
+	 (do
 	   (deliver msg-ask (second msg))
-	   (swap! *ids* dissoc key))))))
+	   (swap! *ids* dissoc key))
+	 (warn "msg-ask corresponding to key %s is nil" key)))))
 
   (comment
     (defn unblock []
@@ -1568,16 +1573,25 @@ Yes, currently it is not very development start friendly. That will change!
        (! (:pid @*s*) ["REQUEST" msg askin])
        (throwf "mql socket service is not alive"))))
 
+  ;;TODO: we added a debug message
+  ;;so when we get the really annoying failures to
+  ;;stop we can examine this:)
+  ;;ALSO, we can now apparently get the write lock! hmm...
+  ;;ALL BECAUSE WE DONT USE INFINITE TIMEOUT?  
   (defn receive
     ([msg] (receive msg nil))
     ([msg timeout]
-       (let [askin (promise)]
-	 (request askin msg)
-	 (let [result (if (wait-for askin timeout) @askin)]
-	   (cond
-	    (instance? Exception result) (throw result)
-	    result result
-	    true (throwf "invalid result received %s" result))))))
+       (let [ask (promise)]
+	 (request ask msg)
+	 (loop [i 0]
+	   (if (wait-for ask 5000)
+	     (let [result @ask]
+	       (cond 
+		(instance? Exception result) (throw result)
+		result result
+		true (throwf "invalid result received %s" result)))
+	     (do (debug "too much time! for msg %s retry %s" msg i)
+		 (recur (+ i 1))))))))
 #+end_src 
 ** Module 
 *** Account
