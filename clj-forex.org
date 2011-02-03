@@ -2072,7 +2072,7 @@ Yes, currently it is not very development start friendly. That will change!
   (defonce *eas* (atom []))
   (import java.util.concurrent.locks.ReentrantReadWriteLock)
   ;;TODO: lock orphaning
-  (def- *ea-pre-lock*
+  (defonce- *ea-pre-lock*
     (java.util.concurrent.locks.ReentrantReadWriteLock. true))
 
   (defn every [pred coll]
