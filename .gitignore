@@ -68,3 +68,4 @@ CMakeFiles
 /dodo.tex
 /lib/defrecord2-1.0.0-20110104.084027-1.jar
 /src/TODO
+*.clj
