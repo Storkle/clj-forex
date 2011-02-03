@@ -1,7 +1,7 @@
 #+TITLE: CLJ-FOREX
 #+Author: Seth Burleigh
 #+Babel: :comments link :noweb yes :mkdirp yes
-            
+             
 * Introduction
 ** What is forex?
 Forex is a currency trading market. But you probably know all about forex, since you're here! If not, read up on it! \\
@@ -492,7 +492,7 @@ Yes, currently it is not very development start friendly. That will change!
 
   (defmacro constants [& args]
     `(do ~@(map (fn [[name val]] `(def ~name ~val)) (group args 2))))
- 
+
   (defmacro spawn-log [func name]
     `(spawn (fn [] (try (~func) (catch Exception e#
 				  (.printStackTrace e#) (severe e#))))
@@ -2793,13 +2793,11 @@ use clj-forex....
       (modify! o {:sl (omax o (:sl o) (o- o (main 1) (pip 20)))})))  
 
   ;;MAIN  
-  (defn gobble [o] (out "in gobble")
-    (time (close))
-    (time (if (close? o) 
-	    (reset)
-	    (awhen-not (and (close-condition o) (close! o))
-		       (check o))))
-    (out "done with gobble goop "))
+  (defn gobble [o] 
+    (if (close? o) 
+      (reset)
+      (awhen-not (and (close-condition o) (close! o))
+		 (check o))))
 
   (defn monitor []
     (when-let [{:keys [type category] :as o} (open-condition 0)] 
