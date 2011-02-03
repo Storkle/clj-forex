@@ -2042,6 +2042,7 @@ Yes, currently it is not very development start friendly. That will change!
     `(let [l# (.readLock ~lock)]
        (try (do (.lock l#) ~@body)
 	    (finally (.unlock l#)))))
+  ;;TODO: for some reason, write lock never can lock
   (defmacro locking-write [lock & body]
     `(let [l# (.writeLock ~lock)]
        (try (do (.lock l#) ~@body)
@@ -2070,8 +2071,9 @@ Yes, currently it is not very development start friendly. That will change!
   ;;##ea implementation
   (defonce *eas* (atom []))
   (import java.util.concurrent.locks.ReentrantReadWriteLock)
-  (defonce- *ea-pre-lock*
-    (java.util.concurrent.locks.ReentrantReadWriteLock.))
+  ;;TODO: lock orphaning
+  (def- *ea-pre-lock*
+    (java.util.concurrent.locks.ReentrantReadWriteLock. true))
 
   (defn every [pred coll]
     (if (empty? coll)
@@ -2808,8 +2810,8 @@ use clj-forex....
   (defn start [args]  
     (cond
      (= @state :monitor) (monitor)
-     (= @state :gobble) (gobble @order)))
+     (= @state :gobble) (gobble order)))
 
   (defn vars [ea] (:vars ea))
-  (defn var [var ea] (get (:vars ea) var))
+  (defn get-var [vvar ea] (get (:vars ea) vvar))
 #+end_src
