@@ -7,7 +7,7 @@ lang="en" xml:lang="en">
 <title>CLJ-FOREX</title>
 <meta http-equiv="Content-Type" content="text/html;charset=utf-8"/>
 <meta name="generator" content="Org-mode"/>
-<meta name="generated" content="2011-02-02 18:59:29 CST"/>
+<meta name="generated" content="2011-02-04 10:52:18 CST"/>
 <meta name="author" content="Seth Burleigh"/>
 <meta name="description" content=""/>
 <meta name="keywords" content=""/>
@@ -345,7 +345,7 @@ Yes, currently it is not very development start friendly. That will change!
 <span style="color: #b22222;">;;</span><span style="color: #b22222;">BY David McNeil
 </span><span style="color: #b22222;">;;</span><span style="color: #b22222;">https://github.com/david-mcneil/defrecord2
 </span><span style="color: #b22222;">;;</span><span style="color: #b22222;">modified defrecord2 macro so i could include protocols
-</span><span style="color: #b22222;">;;</span><span style="color: #b22222;">got rid of print-method method
+</span><span style="color: #b22222;">;;</span><span style="color: #b22222;">got rid of print-method and pprint method 
 </span>
 (<span style="color: #a020f0;">ns</span> clj.third-party.defrecord2
   (<span style="color: #7a378b;">:require</span> [clojure.contrib.str-utils2 <span style="color: #7a378b;">:as</span> str2])
@@ -355,20 +355,20 @@ Yes, currently it is not very development start friendly. That will change!
         [clojure.contrib.pprint <span style="color: #7a378b;">:only</span> (*simple-dispatch* use-method pprint-map)])
   (<span style="color: #7a378b;">:import</span> [clojure.lang IPersistentList IPersistentVector IPersistentMap ISeq]))
 
-<span style="color: #b22222;">;;;; </span><span style="color: #b22222;">enhanced records
+<span style="color: #b22222;">;;;; </span><span style="color: #b22222;">enhanced records with constructor support (take in a hashmap) and print-dup support
 </span>
 <span style="color: #b22222;">;; </span><span style="color: #b22222;">internal helpers for name conversion
 </span>
-(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">take-even</span> [x]
+(<span style="color: #a020f0;">defn-</span> <span style="color: #0000ff;">take-even</span> [x]
   (<span style="color: #7a378b;">take-nth</span> 2 x))
 
-(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">take-odd</span> [x]
+(<span style="color: #a020f0;">defn-</span> <span style="color: #0000ff;">take-odd</span> [x]
   (<span style="color: #7a378b;">take-nth</span> 2 (<span style="color: #7a378b;">drop</span> 1 x)))
 
-(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">is-upper?</span> [s]
+(<span style="color: #a020f0;">defn-</span> <span style="color: #0000ff;">is-upper?</span> [s]
   (<span style="color: #7a378b;">=</span> (.toUpperCase s) s))
 
-(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">assemble-words</span> [parts]
+(<span style="color: #a020f0;">defn-</span> <span style="color: #0000ff;">assemble-words</span> [parts]
   (<span style="color: #a020f0;">loop</span> [remaining-parts parts result []]
     (<span style="color: #a020f0;">if</span> (<span style="color: #7a378b;">seq</span> remaining-parts)
       (<span style="color: #a020f0;">let</span> [part (<span style="color: #7a378b;">first</span> remaining-parts)]
@@ -380,7 +380,7 @@ Yes, currently it is not very development start friendly. That will change!
                          []) (<span style="color: #7a378b;">str</span> (<span style="color: #7a378b;">last</span> result) part)))))
       result)))
 
-(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">camel-to-dashed</span>
+(<span style="color: #a020f0;">defn-</span> <span style="color: #0000ff;">camel-to-dashed</span>
   <span style="color: #8b2252;">"Convert a name like 'BigBlueCar' to 'big-blue-car'."</span>
   [s]
   (<span style="color: #a020f0;">let</span> [parts (<span style="color: #7a378b;">remove</span> #(<span style="color: #7a378b;">=</span> <span style="color: #8b2252;">""</span> %) (str2/partition s #<span style="color: #8b2252;">"[A-Z]"</span>))
@@ -415,7 +415,7 @@ Yes, currently it is not very development start friendly. That will change!
                    (<span style="color: #7a378b;">isa?</span> (<span style="color: #7a378b;">class</span> initial#) ~type-name))
                (<span style="color: #7a378b;">map?</span> value-map#)
                (expected-keys? value-map# ~(<span style="color: #7a378b;">set</span> (<span style="color: #7a378b;">map</span> keyword field-list)))]}
-        (set-record-fields (<span style="color: #a020f0;">if</span> (<span style="color: #7a378b;">nil?</span> initial#) ~default-record initial#) value-map#))))
+        (set-record-fields (<span style="color: #a020f0;">if</span> (<span style="color: #7a378b;">nil?</span> initial#) ~default-record initial#) value-map#)))) 
 
 <span style="color: #b22222;">;; </span><span style="color: #b22222;">internal helpers for printing
 </span>
@@ -427,11 +427,16 @@ Yes, currently it is not very development start friendly. That will change!
                                             (<span style="color: #7a378b;">not</span> (<span style="color: #7a378b;">nil?</span> v)))
                                       [k v]))))))
 
+(<span style="color: #a020f0;">defn-</span> <span style="color: #0000ff;">ns-resolve-symbol</span> [s]
+  (<span style="color: #a020f0;">if-let</span> [s (<span style="color: #7a378b;">resolve</span> s)]
+    (.substring (<span style="color: #7a378b;">str</span> s) 2)
+    (<span style="color: #7a378b;">str</span> s)))
+
 (<span style="color: #a020f0;">defmacro</span> <span style="color: #0000ff;">print-record</span>
   <span style="color: #8b2252;">"Low-level function to print a record to a stream using the specified constructor name in the print output and using the provided write-contents function to write out the contents of the record (represented as a map)."</span>
   [ctor ctor-name native-keys record stream write-contents]
-  `(<span style="color: #a020f0;">do</span>
-     (.write ~stream (<span style="color: #7a378b;">str</span> <span style="color: #8b2252;">"#=("</span> ~ctor-name <span style="color: #8b2252;">" "</span>))
+  `(<span style="color: #a020f0;">do</span> 
+     (.write ~stream (<span style="color: #7a378b;">str</span> <span style="color: #8b2252;">"#=("</span> ~(ns-resolve-symbol ctor-name) <span style="color: #8b2252;">" "</span>))
      (~write-contents (remove-nil-native-fields ~native-keys ~record))
      (.write ~stream  <span style="color: #8b2252;">")"</span>)))
 
@@ -451,11 +456,11 @@ Yes, currently it is not very development start friendly. That will change!
   `(<span style="color: #a020f0;">do</span> <span style="color: #b22222;">;</span><span style="color: #b22222;">(setup-print-record-method ~ctor ~ctor-name ~native-keys ~type-name print-method)
 </span>     (setup-print-record-method ~ctor ~ctor-name ~native-keys ~type-name print-dup)))
 
-(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">generate-record-pprint</span>
+(<span style="color: #a020f0;">defmacro</span> <span style="color: #0000ff;">generate-record-pprint</span>
   <span style="color: #8b2252;">"Return a function that can be used in the pprint dispatch mechanism to handle a specific constructor name."</span>
   [ctor ctor-name native-keys]
-  (<span style="color: #7a378b;">fn</span> [record]
-    (print-record ctor ctor-name native-keys record *out* pprint-map)))
+  `(<span style="color: #7a378b;">fn</span> [record#]
+     (print-record ~ctor ~ctor-name ~native-keys record# *out* pprint-map)))
 
 <span style="color: #b22222;">;; </span><span style="color: #b22222;">internal helpers - walking data structures
 </span>
@@ -530,12 +535,13 @@ Yes, currently it is not very development start friendly. That will change!
 (<span style="color: #a020f0;">defmethod</span> <span style="color: #0000ff;">postwalk2</span> <span style="color: #7a378b;">:default</span> [f n]
   (f (walk2 postwalk2 f n)))
 
-
 (<span style="color: #a020f0;">defmacro</span> <span style="color: #0000ff;">defrecord2</span>
   <span style="color: #8b2252;">"Defines a record and sets up constructor functions, printing, and pprinting for the new record type."</span>
-  [type-name field-list &amp; protocols]
-  (<span style="color: #a020f0;">let</span> [type-name (<span style="color: #a020f0;">if</span> (seqable? type-name) (<span style="color: #7a378b;">first</span> type-name) type-name)
-        ctor-name (<span style="color: #a020f0;">if</span> (seqable? type-name) (<span style="color: #7a378b;">second</span> type-name) (<span style="color: #7a378b;">symbol</span> (<span style="color: #7a378b;">str</span> <span style="color: #8b2252;">"new-"</span> (camel-to-dashed (<span style="color: #7a378b;">str</span> type-name)))))] 
+  [type field-list &amp; protocols]
+  (<span style="color: #a020f0;">let</span> [type-name (<span style="color: #a020f0;">if</span> (seqable? type) (<span style="color: #7a378b;">first</span> type) type)
+        ctor-name (<span style="color: #a020f0;">if</span> (seqable? type)
+                    (<span style="color: #7a378b;">second</span> type)
+                    (<span style="color: #7a378b;">symbol</span> (<span style="color: #7a378b;">str</span> <span style="color: #8b2252;">"new-"</span> (camel-to-dashed (<span style="color: #7a378b;">str</span> type)))))]
     `(<span style="color: #a020f0;">do</span> 
        <span style="color: #b22222;">;; </span><span style="color: #b22222;">define the record
 </span>       (<span style="color: #a020f0;">defrecord</span> <span style="color: #0000ff;">~type-name</span> ~field-list ~@protocols)
@@ -551,9 +557,15 @@ Yes, currently it is not very development start friendly. That will change!
        <span style="color: #b22222;">;; </span><span style="color: #b22222;">setup printing
 </span>       (<span style="color: #a020f0;">let</span> [empty-record# (~ctor-name {})
              native-keys# (<span style="color: #7a378b;">set</span> (<span style="color: #7a378b;">keys</span> empty-record#))]
-         (setup-print-record ~ctor-name (quote ~ctor-name) native-keys# ~type-name)
+         (setup-print-record ~ctor-name ~ctor-name native-keys# ~type-name)
          <span style="color: #b22222;">;; </span><span style="color: #b22222;">setup pprinting
-</span>         (use-method *simple-dispatch* ~type-name (generate-record-pprint ~ctor-name (quote ~ctor-name) native-keys#))))))
+</span>         (<span style="color: #7a378b;">comment</span>
+           (use-method *simple-dispatch*
+                       ~type-name
+
+                       (generate-record-pprint ~ctor-name
+                                               ~ctor-name
+                                               native-keys#)))))))
 </pre></div>
 
 
@@ -620,9 +632,9 @@ Yes, currently it is not very development start friendly. That will change!
                     <span style="color: #8b2252;">"Multiple deliver calls to a promise"</span>))))))))
 
 (<span style="color: #a020f0;">defmethod</span> <span style="color: #0000ff;">print-dup</span> clojure.lang.Atom [o w]
-  (.write w <span style="color: #8b2252;">"#=(atom "</span>) (<span style="color: #7a378b;">print-dup</span> @o w) (.write w <span style="color: #8b2252;">")"</span>))
+  (.write w <span style="color: #8b2252;">"#=(clojure.core/atom "</span>) (<span style="color: #7a378b;">print-dup</span> @o w) (.write w <span style="color: #8b2252;">")"</span>))
 (<span style="color: #a020f0;">defmethod</span> <span style="color: #0000ff;">print-dup</span> clojure.lang.Ref [o w]
-  (.write w <span style="color: #8b2252;">"#=(ref "</span>) (<span style="color: #7a378b;">print-dup</span> @o w) (.write w <span style="color: #8b2252;">")"</span>))
+  (.write w <span style="color: #8b2252;">"#=(clojure.core/ref "</span>) (<span style="color: #7a378b;">print-dup</span> @o w) (.write w <span style="color: #8b2252;">")"</span>))
 </pre></div>
 
 
@@ -645,6 +657,11 @@ Yes, currently it is not very development start friendly. That will change!
   (<span style="color: #7a378b;">:use</span> forex.util.emacs forex.util.general forex.util.spawn forex.util.log)
   (<span style="color: #7a378b;">:require</span> clojure.contrib.error-kit)
   (<span style="color: #7a378b;">:import</span> java.io.File (org.joda.time DateTime DateTimeZone Instant)))
+
+(<span style="color: #a020f0;">defonce</span> <span style="color: #0000ff;">*debug*</span> true)
+(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">debug</span> [msg &amp; args]
+  (<span style="color: #a020f0;">when</span> *debug* (<span style="color: #7a378b;">apply</span> out (<span style="color: #7a378b;">str</span> <span style="color: #8b2252;">"DEBUG: "</span> msg) args)))
+
 <span style="color: #b22222;">;;</span><span style="color: #b22222;">TODO: memoize pow?
 </span><span style="color: #b22222;">;;</span><span style="color: #b22222;">used from http://groups.google.com/group/clojure/browse_thread/thread/cb5246d07142a3dc?fwc=2&amp;pli=1
 </span>(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">frm-save</span> 
@@ -707,8 +724,9 @@ Yes, currently it is not very development start friendly. That will change!
   (without [this k] (.without @val k))
   clojure.lang.IDeref
   (<span style="color: #7a378b;">deref</span> [this] @val))
-(<span style="color: #a020f0;">defmethod</span> <span style="color: #0000ff;">print-dup</span> AtomHash [o w]
-  (.write w <span style="color: #8b2252;">"#=(atom-hash "</span>) (<span style="color: #7a378b;">print-dup</span> @o w) (.write w <span style="color: #8b2252;">")"</span>))
+<span style="color: #b22222;">;;</span><span style="color: #b22222;">todo - create ns-resolve-symbol, instead of hardcoding namespace
+</span>(<span style="color: #a020f0;">defmethod</span> <span style="color: #0000ff;">print-dup</span> AtomHash [o w]
+  (.write w <span style="color: #8b2252;">"#=(forex.util.core/atom-hash "</span>) (<span style="color: #7a378b;">print-dup</span> @o w) (.write w <span style="color: #8b2252;">")"</span>))
 
 (<span style="color: #a020f0;">defmethod</span> <span style="color: #0000ff;">clojure.core/print-method</span> AtomHash [o w]
   (.write w (.toString o)))
@@ -1824,7 +1842,7 @@ return(val);
 (<span style="color: #a020f0;">defvar</span> <span style="color: #0000ff;">mql-socket-recv-address</span> <span style="color: #8b2252;">"tcp://127.0.0.1:3000"</span>)
 (<span style="color: #a020f0;">defvar</span> <span style="color: #0000ff;">mql-socket-send-address</span> <span style="color: #8b2252;">"tcp://127.0.0.1:3005"</span>)
 (<span style="color: #a020f0;">defvar</span> <span style="color: #0000ff;">mql-socket-pub-address</span> <span style="color: #8b2252;">"tcp://127.0.0.1:3010"</span>)
-(<span style="color: #a020f0;">defonce</span> <span style="color: #0000ff;">*ids*</span> (<span style="color: #7a378b;">atom</span> {})) 
+(<span style="color: #a020f0;">defonce-</span> <span style="color: #0000ff;">*ids*</span> (<span style="color: #7a378b;">atom</span> {})) 
 <span style="color: #b22222;">;;</span><span style="color: #b22222;">utils  
 </span>(<span style="color: #a020f0;">defonce-</span> <span style="color: #0000ff;">*msg-id*</span> (<span style="color: #7a378b;">atom</span> 0))
 (<span style="color: #a020f0;">defn-</span> <span style="color: #0000ff;">msg-id</span> []
@@ -1839,11 +1857,11 @@ return(val);
   (catch-unexpected   
    (<span style="color: #a020f0;">let</span> [key (<span style="color: #7a378b;">first</span> msg)
          msg-ask (<span style="color: #7a378b;">get</span> @*ids* key)] 
-     (<span style="color: #a020f0;">if-not</span> (<span style="color: #7a378b;">satisfies?</span> PWait msg-ask)
-       (warn <span style="color: #8b2252;">"Ignoring invalid msg: %s"</span> msg)
-       (<span style="color: #a020f0;">do</span>  
+     (<span style="color: #a020f0;">if</span> msg-ask
+       (<span style="color: #a020f0;">do</span>
          (<span style="color: #7a378b;">deliver</span> msg-ask (<span style="color: #7a378b;">second</span> msg))
-         (<span style="color: #7a378b;">swap!</span> *ids* dissoc key))))))
+         (<span style="color: #7a378b;">swap!</span> *ids* dissoc key))
+       (warn <span style="color: #8b2252;">"msg-ask corresponding to key %s is nil"</span> key)))))
 
 (<span style="color: #7a378b;">comment</span>
   (<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">unblock</span> []
@@ -1909,16 +1927,25 @@ return(val);
      (! (<span style="color: #7a378b;">:pid</span> @*s*) [<span style="color: #8b2252;">"REQUEST"</span> msg askin])
      (throwf <span style="color: #8b2252;">"mql socket service is not alive"</span>))))
 
-(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">receive</span>
+<span style="color: #b22222;">;;</span><span style="color: #b22222;">TODO: we added a debug message
+</span><span style="color: #b22222;">;;</span><span style="color: #b22222;">so when we get the really annoying failures to
+</span><span style="color: #b22222;">;;</span><span style="color: #b22222;">stop we can examine this:)
+</span><span style="color: #b22222;">;;</span><span style="color: #b22222;">ALSO, we can now apparently get the write lock! hmm...
+</span><span style="color: #b22222;">;;</span><span style="color: #b22222;">ALL BECAUSE WE DONT USE INFINITE TIMEOUT?  
+</span>(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">receive</span>
   ([msg] (receive msg nil))
   ([msg timeout]
-     (<span style="color: #a020f0;">let</span> [askin (<span style="color: #7a378b;">promise</span>)]
-       (request askin msg)
-       (<span style="color: #a020f0;">let</span> [result (<span style="color: #a020f0;">if</span> (wait-for askin timeout) @askin)]
-         (<span style="color: #a020f0;">cond</span>
-          (<span style="color: #7a378b;">instance?</span> Exception result) (<span style="color: #a020f0;">throw</span> result)
-          result result
-          true (throwf <span style="color: #8b2252;">"invalid result received %s"</span> result))))))
+     (<span style="color: #a020f0;">let</span> [ask (<span style="color: #7a378b;">promise</span>)]
+       (request ask msg)
+       (<span style="color: #a020f0;">loop</span> [i 0]
+         (<span style="color: #a020f0;">if</span> (wait-for ask 5000)
+           (<span style="color: #a020f0;">let</span> [result @ask]
+             (<span style="color: #a020f0;">cond</span> 
+              (<span style="color: #7a378b;">instance?</span> Exception result) (<span style="color: #a020f0;">throw</span> result)
+              result result
+              true (throwf <span style="color: #8b2252;">"invalid result received %s"</span> result)))
+           (<span style="color: #a020f0;">do</span> (debug <span style="color: #8b2252;">"too much time! for msg %s retry %s"</span> msg i)
+               (<span style="color: #a020f0;">recur</span> (<span style="color: #7a378b;">+</span> i 1))))))))
 </pre></div>
 
 
@@ -2259,20 +2286,24 @@ return(val);
          order))))
 
 <span style="color: #b22222;">;;</span><span style="color: #b22222;">TODO: normalize so we dont get mql error 1?
+</span><span style="color: #b22222;">;;</span><span style="color: #b22222;">TODO: act as a regular modify if we dont pass in sl,tp,or price 
 </span>(<span style="color: #a020f0;">defn-</span> <span style="color: #0000ff;">modify!*</span> [order {<span style="color: #7a378b;">:keys</span> [sl tp] <span style="color: #7a378b;">:as</span> mod}]
   (with-order order
-    (<span style="color: #a020f0;">let</span> [sl (<span style="color: #a020f0;">or</span> sl (<span style="color: #7a378b;">:sl</span> order) 0)
-          tp (<span style="color: #a020f0;">or</span> tp (<span style="color: #7a378b;">:tp</span> order) 0)
-          price (<span style="color: #7a378b;">:price</span> order)]
-      (is? [sl tp price (&gt;? sl) (&gt;? tp) (<span style="color: #7a378b;">pos?</span> price)]) 
-      (<span style="color: #a020f0;">if-not</span> (<span style="color: #a020f0;">and</span> (<span style="color: #7a378b;">=</span> sl (<span style="color: #7a378b;">:sl</span> order))
-                   (<span style="color: #7a378b;">=</span> tp (<span style="color: #7a378b;">:tp</span> order)))
-        (aif (core/order-modify (<span style="color: #7a378b;">:id</span> order) (<span style="color: #7a378b;">:price</span> order) sl tp)
-             (<span style="color: #7a378b;">merge</span> order (<span style="color: #7a378b;">merge</span> mod {<span style="color: #7a378b;">:sl</span> sl <span style="color: #7a378b;">:tp</span> tp}))
-             (<span style="color: #a020f0;">if</span> (<span style="color: #7a378b;">=</span> (<span style="color: #7a378b;">:e</span> it) 1)
-               (<span style="color: #7a378b;">merge</span> order mod)
-               (account-warn it order <span style="color: #8b2252;">"sl %s tp %s"</span> sl tp)))
-        (<span style="color: #7a378b;">merge</span> order mod)))))  
+    (<span style="color: #a020f0;">let</span> [sl (<span style="color: #a020f0;">or</span> sl (<span style="color: #7a378b;">:sl</span> order))
+          tp (<span style="color: #a020f0;">or</span> tp (<span style="color: #7a378b;">:tp</span> order)) 
+          price (<span style="color: #7a378b;">:price</span> order)] 
+      (<span style="color: #a020f0;">if</span> (<span style="color: #a020f0;">or</span> (<span style="color: #7a378b;">number?</span> sl) (<span style="color: #7a378b;">number?</span> tp))
+        (<span style="color: #a020f0;">do</span>  
+          (is? [sl tp price (&gt;? sl) (&gt;? tp) (<span style="color: #7a378b;">pos?</span> price)]) 
+          (<span style="color: #a020f0;">if-not</span> (<span style="color: #a020f0;">and</span> (<span style="color: #7a378b;">=</span> sl (<span style="color: #7a378b;">:sl</span> order))
+                       (<span style="color: #7a378b;">=</span> tp (<span style="color: #7a378b;">:tp</span> order)))
+            (aif (core/order-modify (<span style="color: #7a378b;">:id</span> order) (<span style="color: #7a378b;">:price</span> order) sl tp)
+                 (<span style="color: #7a378b;">merge</span> order (<span style="color: #7a378b;">merge</span> mod {<span style="color: #7a378b;">:sl</span> sl <span style="color: #7a378b;">:tp</span> tp}))
+                 (<span style="color: #a020f0;">if</span> (<span style="color: #7a378b;">=</span> (<span style="color: #7a378b;">:e</span> it) 1)
+                   (<span style="color: #7a378b;">merge</span> order mod)
+                   (account-warn it order <span style="color: #8b2252;">"sl %s tp %s"</span> sl tp)))
+            (<span style="color: #7a378b;">merge</span> order mod)))
+        (<span style="color: #7a378b;">merge</span> order mod)))))   
 
 <span style="color: #b22222;">;;</span><span style="color: #b22222;">TOODOs: how do we get map with defaults?
 </span>(<span style="color: #a020f0;">defn-</span> <span style="color: #0000ff;">verify-order</span> [{<span style="color: #7a378b;">:keys</span> [slip symbol type price tp sl lots]
@@ -2400,7 +2431,8 @@ return(val);
         clojure.contrib.core)
   (<span style="color: #7a378b;">:import</span> clojure.lang.Atom)
   (<span style="color: #7a378b;">:require</span> [clj-time.core <span style="color: #7a378b;">:as</span> t])
-  (<span style="color: #7a378b;">:use</span> forex.util.emacs
+  (<span style="color: #7a378b;">:use</span> 
+   forex.util.emacs
    forex.util.log  
    forex.module.error 
    forex.module.indicator 
@@ -2418,7 +2450,8 @@ return(val);
   `(<span style="color: #a020f0;">let</span> [l# (.readLock ~lock)]
      (<span style="color: #a020f0;">try</span> (<span style="color: #a020f0;">do</span> (.lock l#) ~@body)
           (<span style="color: #a020f0;">finally</span> (.unlock l#)))))
-(<span style="color: #a020f0;">defmacro</span> <span style="color: #0000ff;">locking-write</span> [lock &amp; body]
+<span style="color: #b22222;">;;</span><span style="color: #b22222;">TODO: for some reason, write lock never can lock
+</span>(<span style="color: #a020f0;">defmacro</span> <span style="color: #0000ff;">locking-write</span> [lock &amp; body]
   `(<span style="color: #a020f0;">let</span> [l# (.writeLock ~lock)]
      (<span style="color: #a020f0;">try</span> (<span style="color: #a020f0;">do</span> (.lock l#) ~@body)
           (<span style="color: #a020f0;">finally</span> (.unlock l#)))))
@@ -2446,8 +2479,9 @@ return(val);
 <span style="color: #b22222;">;;</span><span style="color: #b22222;">##ea implementation
 </span>(<span style="color: #a020f0;">defonce</span> <span style="color: #0000ff;">*eas*</span> (<span style="color: #7a378b;">atom</span> []))
 (<span style="color: #a020f0;">import</span> java.util.concurrent.locks.ReentrantReadWriteLock)
-(<span style="color: #a020f0;">defonce-</span> <span style="color: #0000ff;">*ea-pre-lock*</span>
-  (java.util.concurrent.locks.ReentrantReadWriteLock.))
+<span style="color: #b22222;">;;</span><span style="color: #b22222;">TODO: lock orphaning
+</span>(<span style="color: #a020f0;">defonce-</span> <span style="color: #0000ff;">*ea-pre-lock*</span>
+  (java.util.concurrent.locks.ReentrantReadWriteLock. true))
 
 (<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">every</span> [pred coll]
   (<span style="color: #a020f0;">if</span> (<span style="color: #7a378b;">empty?</span> coll)
@@ -2504,7 +2538,10 @@ return(val);
       (clojure.contrib.error-kit/with-handler
         (<span style="color: #a020f0;">loop</span> [prev-close nil]
           (sleep 1) 
-          (<span style="color: #a020f0;">when-not</span> (match (? 0) <span style="color: #8b2252;">"STOP"</span>  true <span style="color: #8b2252;">"PING"</span> (<span style="color: #a020f0;">do</span> (out <span style="color: #8b2252;">"ping"</span>) nil)) 
+          (<span style="color: #a020f0;">when-not</span>
+              (match (? 0) 
+                     <span style="color: #8b2252;">"STOPGRR"</span> (<span style="color: #a020f0;">do</span> (out <span style="color: #8b2252;">"GOT STOP!!!!"</span>) true)
+                     <span style="color: #8b2252;">"PING"</span> (<span style="color: #a020f0;">do</span> (out <span style="color: #8b2252;">"ping"</span>) nil)) 
             (<span style="color: #a020f0;">let</span> [new-close (close)] 
               (<span style="color: #a020f0;">when-not</span> (<span style="color: #7a378b;">=</span> new-close prev-close)
                 (<span style="color: #a020f0;">let</span> [func (get-fn start)]
@@ -2513,7 +2550,7 @@ return(val);
                                   (func (<span style="color: #7a378b;">:args</span> ea)))
                     (warn <span style="color: #8b2252;">"%s is not a function. start cannot be called"</span> func))))
               (<span style="color: #a020f0;">recur</span> new-close))))
-        (clojure.contrib.error-kit/handle *ea-stop* [message] (out <span style="color: #8b2252;">"stopping ea ... %s"</span> message))) 
+        (clojure.contrib.error-kit/handle *ea-stop* [message] (out <span style="color: #8b2252;">"stopping ea ... %s"</span> message)))  
       (<span style="color: #a020f0;">catch</span> Exception e 
         (severe <span style="color: #8b2252;">"stopping ea... caught exception %s"</span> e)
         (.printStackTrace e))
@@ -2608,7 +2645,7 @@ return(val);
 </span>(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">stop</span> [ea]
   (<span style="color: #a020f0;">let</span> [stop-it (<span style="color: #7a378b;">fn</span> [e]
                   (<span style="color: #a020f0;">if</span> (pid? (<span style="color: #7a378b;">:pid</span> e))
-                    (<span style="color: #a020f0;">do</span> (! (<span style="color: #7a378b;">:pid</span> e) <span style="color: #8b2252;">"STOP"</span>) 
+                    (<span style="color: #a020f0;">do</span> (! (<span style="color: #7a378b;">:pid</span> e) <span style="color: #8b2252;">"STOPGRR"</span>) 
                         true)))]
     (<span style="color: #a020f0;">if</span> (<span style="color: #7a378b;">map?</span> ea)
       (stop-it ea)
@@ -3144,7 +3181,7 @@ use clj-forex&hellip;.
 <span style="color: #b22222;">;;</span><span style="color: #b22222;">TODO: test reusing of account.utils
 </span>(<span style="color: #a020f0;">def</span> ^{<span style="color: #7a378b;">:var</span> true} <span style="color: #0000ff;">state</span> (<span style="color: #7a378b;">atom</span> <span style="color: #7a378b;">:monitor</span>)) 
 (<span style="color: #a020f0;">def</span> ^{<span style="color: #7a378b;">:var</span> true} <span style="color: #0000ff;">order</span> (atom-hash)) 
-(<span style="color: #a020f0;">def</span> ^{<span style="color: #7a378b;">:var</span> true} <span style="color: #0000ff;">close-on-middle</span> false) 
+(<span style="color: #a020f0;">def</span> ^{<span style="color: #7a378b;">:var</span> true} <span style="color: #0000ff;">trail-time-period</span> 5)
 
 (<span style="color: #a020f0;">def</span> <span style="color: #0000ff;">main</span> (<span style="color: #7a378b;">partial</span> vma [2 2 100 1]))
 (<span style="color: #a020f0;">def</span> <span style="color: #0000ff;">signal</span> (<span style="color: #7a378b;">partial</span> vma [2 2 1 1] ))
@@ -3174,7 +3211,7 @@ use clj-forex&hellip;.
 
 <span style="color: #b22222;">;;</span><span style="color: #b22222;">TODO: exit half when cross middle? enter half more when recross? 
 </span><span style="color: #b22222;">;;</span><span style="color: #b22222;">OPEN CONDITION 
-</span>(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">open-condition</span> [i] 
+</span>(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">open-condition</span> [i]  
   (<span style="color: #a020f0;">if-let</span> [[dir i] (cross? signal main i)]
     (<span style="color: #a020f0;">or</span> (<span style="color: #a020f0;">and</span> (<span style="color: #7a378b;">=</span> dir <span style="color: #7a378b;">:buy</span>) (<span style="color: #7a378b;">&gt;</span> (signal i) (middle i)) {<span style="color: #7a378b;">:type</span> <span style="color: #7a378b;">:buy</span> <span style="color: #7a378b;">:i</span> i <span style="color: #7a378b;">:category</span>  <span style="color: #7a378b;">:long</span> <span style="color: #7a378b;">:state</span> <span style="color: #7a378b;">:init</span>})
         (<span style="color: #a020f0;">and</span> (<span style="color: #7a378b;">=</span> dir <span style="color: #7a378b;">:sell</span>) (<span style="color: #7a378b;">&lt;</span> (signal i) (middle  i)) {<span style="color: #7a378b;">:type</span> <span style="color: #7a378b;">:sell</span> <span style="color: #7a378b;">:i</span> i <span style="color: #7a378b;">:category</span> <span style="color: #7a378b;">:long</span> <span style="color: #7a378b;">:state</span> <span style="color: #7a378b;">:init</span>}))
@@ -3215,22 +3252,39 @@ use clj-forex&hellip;.
             (<span style="color: #a020f0;">or</span> (<span style="color: #7a378b;">&gt;</span> (signal) (<span style="color: #228b22;">main</span>)) (<span style="color: #7a378b;">&gt;</span> (signal) (middle)))))))
 
 <span style="color: #b22222;">;;;</span><span style="color: #b22222;">LONG ORDER MANAGEMENT
-</span>(<span style="color: #a020f0;">defmethod</span> <span style="color: #0000ff;">close-condition</span> <span style="color: #7a378b;">:long</span> [{<span style="color: #7a378b;">:keys</span> [type state] <span style="color: #7a378b;">:as</span> o}]
-  (<span style="color: #a020f0;">if</span> (<span style="color: #a020f0;">or</span> (<span style="color: #a020f0;">and</span>  close-on-middle (<span style="color: #7a378b;">&gt;=</span> (profit o) 75)) (<span style="color: #7a378b;">=</span> state <span style="color: #7a378b;">:init</span>))
+</span>(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">five-min-close?</span>
+  <span style="color: #8b2252;">"This is a tight virtual stop on the five minute level. 
+   For buy, if cci&gt;100, set cross-sl to previous middle value.
+   If signal(1) is less than cross-sl, then exit. Opposite for sell"</span>
+  [{<span style="color: #7a378b;">:keys</span> [type state] <span style="color: #7a378b;">:as</span> o}] 
+  (<span style="color: #a020f0;">when</span> (<span style="color: #7a378b;">=</span> state <span style="color: #7a378b;">:trail</span>) 
+    (wenv {<span style="color: #7a378b;">:period</span> trail-time-period}    
+          <span style="color: #b22222;">;;</span><span style="color: #b22222;">modify cross-sl 
+</span>          (<span style="color: #a020f0;">when</span> (<span style="color: #a020f0;">or</span> (<span style="color: #7a378b;">&gt;</span> (cci 30 1) 100) (<span style="color: #7a378b;">&lt;</span> (cci 30 1) -100))
+            <span style="color: #b22222;">;;</span><span style="color: #b22222;">we will not update the cross-sl so that it will generate  a close signal, this would be bad!
+</span>            (<span style="color: #a020f0;">when</span> (<span style="color: #a020f0;">or</span> (<span style="color: #a020f0;">and</span> (buy? o) (<span style="color: #7a378b;">&gt;</span> (signal 1) (middle 1)))
+                      (<span style="color: #a020f0;">and</span> (sell? o) (<span style="color: #7a378b;">&lt;</span> (signal 1) (middle 1))))
+              (modify! o {<span style="color: #7a378b;">:cross-sl</span> (middle 1)})))  
+          <span style="color: #b22222;">;;</span><span style="color: #b22222;">check close condition
+</span>          (<span style="color: #a020f0;">when-let</span> [cross-sl (<span style="color: #7a378b;">:cross-sl</span> o)]
+            (<span style="color: #a020f0;">or</span> (<span style="color: #a020f0;">and</span> (buy? o) (<span style="color: #7a378b;">&lt;=</span> (signal 1) cross-sl)) 
+                (<span style="color: #a020f0;">and</span> (sell? o) (<span style="color: #7a378b;">&gt;=</span> (signal 1) cross-sl))))))) 
+
+(<span style="color: #a020f0;">defmethod</span> <span style="color: #0000ff;">close-condition</span> <span style="color: #7a378b;">:long</span> [{<span style="color: #7a378b;">:keys</span> [type state] <span style="color: #7a378b;">:as</span> o}] 
+  (<span style="color: #a020f0;">if</span> (<span style="color: #7a378b;">=</span> state <span style="color: #7a378b;">:init</span>)
     (should-close? o)
-    (<span style="color: #a020f0;">cond</span>
-     (<span style="color: #7a378b;">=</span> type <span style="color: #7a378b;">:buy</span>)
-     (<span style="color: #7a378b;">&lt;</span> (signal 1) (<span style="color: #228b22;">main</span> 1))
-     (<span style="color: #7a378b;">=</span> type <span style="color: #7a378b;">:sell</span>)
-     (<span style="color: #7a378b;">&gt;</span> (signal 1) (<span style="color: #228b22;">main</span> 1)))))
+    (<span style="color: #a020f0;">or</span> (<span style="color: #a020f0;">cond</span>
+         (<span style="color: #7a378b;">=</span> type <span style="color: #7a378b;">:buy</span>)
+         (<span style="color: #7a378b;">&lt;</span> (signal 1) (<span style="color: #228b22;">main</span> 1))
+         (<span style="color: #7a378b;">=</span> type <span style="color: #7a378b;">:sell</span>)
+         (<span style="color: #7a378b;">&gt;</span> (signal 1) (<span style="color: #228b22;">main</span> 1)))
+        (five-min-close? o)))) 
 
 (<span style="color: #a020f0;">defmethod</span> <span style="color: #0000ff;">check</span> <span style="color: #7a378b;">:long</span> [o]
-  <span style="color: #8b2252;">"long orders have a trailing stop if profit&gt;=20, otherwise we close it regularly like a scalper. "</span>
   (<span style="color: #a020f0;">when</span> (<span style="color: #7a378b;">&gt;=</span> (profit o) 20) (modify! o {<span style="color: #7a378b;">:state</span> <span style="color: #7a378b;">:trail</span>}))
-  <span style="color: #b22222;">;;</span><span style="color: #b22222;">sl is a safety feature in case we go offline accidently
-</span>  (<span style="color: #a020f0;">when</span> (<span style="color: #a020f0;">or</span> (<span style="color: #7a378b;">=</span> (<span style="color: #7a378b;">:sl</span> o) 0) (<span style="color: #7a378b;">&gt;=</span> (profit o (close) (<span style="color: #7a378b;">:sl</span> o)) 20))
-    <span style="color: #b22222;">;;</span><span style="color: #b22222;">shouldnt have to use omax, but just in case!...
-</span>    (modify! o {<span style="color: #7a378b;">:sl</span> (omax o (<span style="color: #7a378b;">:sl</span> o) (o- o (<span style="color: #228b22;">main</span> 1) (pip 20)))})))  
+  <span style="color: #b22222;">;;</span><span style="color: #b22222;">actual sl the server sees. this is a safety stop, in case our ea gets screwed up, turns off, etc.
+</span>  (<span style="color: #a020f0;">when</span> (<span style="color: #a020f0;">or</span> (<span style="color: #7a378b;">=</span> (<span style="color: #7a378b;">:sl</span> o) 0) (<span style="color: #7a378b;">=</span> (<span style="color: #7a378b;">:state</span> o) <span style="color: #7a378b;">:trail</span>))
+    (modify! o {<span style="color: #7a378b;">:sl</span> (omax o (<span style="color: #7a378b;">:sl</span> o) (o- o (<span style="color: #228b22;">main</span> 1) (pip 20)))})))  
 
 <span style="color: #b22222;">;;</span><span style="color: #b22222;">MAIN  
 </span>(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">gobble</span> [o] 
@@ -3239,7 +3293,7 @@ use clj-forex&hellip;.
     (awhen-not (<span style="color: #a020f0;">and</span> (close-condition o) (close! o))
                (check o))))
 
-(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">monitor</span> []
+(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">monitor</span> []  
   (<span style="color: #a020f0;">when-let</span> [{<span style="color: #7a378b;">:keys</span> [type category] <span style="color: #7a378b;">:as</span> o} (open-condition 0)] 
     (awhen (order! (<span style="color: #7a378b;">merge</span> o  {<span style="color: #7a378b;">:type</span> type <span style="color: #7a378b;">:lots</span> (calculate-lots)})) 
            (<span style="color: #7a378b;">reset!</span> order it)
@@ -3248,10 +3302,10 @@ use clj-forex&hellip;.
 (<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">start</span> [args]  
   (<span style="color: #a020f0;">cond</span>
    (<span style="color: #7a378b;">=</span> @state <span style="color: #7a378b;">:monitor</span>) (monitor)
-   (<span style="color: #7a378b;">=</span> @state <span style="color: #7a378b;">:gobble</span>) (gobble @order)))
+   (<span style="color: #7a378b;">=</span> @state <span style="color: #7a378b;">:gobble</span>) (gobble order)))
 
 (<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">vars</span> [ea] (<span style="color: #7a378b;">:vars</span> ea))
-(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">var</span> [var ea] (<span style="color: #7a378b;">get</span> (<span style="color: #7a378b;">:vars</span> ea) var))
+(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">get-var</span> [vvar ea] (<span style="color: #7a378b;">get</span> (<span style="color: #7a378b;">:vars</span> ea) vvar))
 </pre></div>
 
 
@@ -3261,7 +3315,7 @@ use clj-forex&hellip;.
 <div id="postamble">
 <p class="author"> Author: Seth Burleigh
 </p>
-<p class="date"> Date: 2011-02-02 18:59:29 CST</p>
+<p class="date"> Date: 2011-02-04 10:52:18 CST</p>
 <p class="creator">HTML generated by org-mode 7.4 in emacs 23</p>
 </div>
 </div>

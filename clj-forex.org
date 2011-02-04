@@ -110,7 +110,7 @@ Yes, currently it is not very development start friendly. That will change!
     ;;:aot :all
     )
 #+end_src 
-   
+    
 ** Util 
 *** ThirdParty
 #+source:defrecord2
@@ -118,7 +118,7 @@ Yes, currently it is not very development start friendly. That will change!
   ;;BY David McNeil
   ;;https://github.com/david-mcneil/defrecord2
   ;;modified defrecord2 macro so i could include protocols
-  ;;got rid of print-method method
+  ;;got rid of print-method and pprint method 
 
   (ns clj.third-party.defrecord2
     (:require [clojure.contrib.str-utils2 :as str2])
@@ -128,20 +128,20 @@ Yes, currently it is not very development start friendly. That will change!
 	  [clojure.contrib.pprint :only (*simple-dispatch* use-method pprint-map)])
     (:import [clojure.lang IPersistentList IPersistentVector IPersistentMap ISeq]))
 
-  ;;;; enhanced records
+  ;;;; enhanced records with constructor support (take in a hashmap) and print-dup support
 
   ;; internal helpers for name conversion
 
-  (defn take-even [x]
+  (defn- take-even [x]
     (take-nth 2 x))
 
-  (defn take-odd [x]
+  (defn- take-odd [x]
     (take-nth 2 (drop 1 x)))
 
-  (defn is-upper? [s]
+  (defn- is-upper? [s]
     (= (.toUpperCase s) s))
 
-  (defn assemble-words [parts]
+  (defn- assemble-words [parts]
     (loop [remaining-parts parts result []]
       (if (seq remaining-parts)
 	(let [part (first remaining-parts)]
@@ -153,7 +153,7 @@ Yes, currently it is not very development start friendly. That will change!
 			   []) (str (last result) part)))))
 	result)))
 
-  (defn camel-to-dashed
+  (defn- camel-to-dashed
     "Convert a name like 'BigBlueCar' to 'big-blue-car'."
     [s]
     (let [parts (remove #(= "" %) (str2/partition s #"[A-Z]"))
@@ -188,7 +188,7 @@ Yes, currently it is not very development start friendly. That will change!
 		     (isa? (class initial#) ~type-name))
 		 (map? value-map#)
 		 (expected-keys? value-map# ~(set (map keyword field-list)))]}
-	  (set-record-fields (if (nil? initial#) ~default-record initial#) value-map#))))
+	  (set-record-fields (if (nil? initial#) ~default-record initial#) value-map#)))) 
 
   ;; internal helpers for printing
 
@@ -200,11 +200,16 @@ Yes, currently it is not very development start friendly. That will change!
 					      (not (nil? v)))
 					[k v]))))))
 
+  (defn- ns-resolve-symbol [s]
+    (if-let [s (resolve s)]
+      (.substring (str s) 2)
+      (str s)))
+
   (defmacro print-record
     "Low-level function to print a record to a stream using the specified constructor name in the print output and using the provided write-contents function to write out the contents of the record (represented as a map)."
     [ctor ctor-name native-keys record stream write-contents]
-    `(do
-       (.write ~stream (str "#=(" ~ctor-name " "))
+    `(do 
+       (.write ~stream (str "#=(" ~(ns-resolve-symbol ctor-name) " "))
        (~write-contents (remove-nil-native-fields ~native-keys ~record))
        (.write ~stream  ")")))
 
@@ -224,11 +229,11 @@ Yes, currently it is not very development start friendly. That will change!
     `(do ;(setup-print-record-method ~ctor ~ctor-name ~native-keys ~type-name print-method)
        (setup-print-record-method ~ctor ~ctor-name ~native-keys ~type-name print-dup)))
 
-  (defn generate-record-pprint
+  (defmacro generate-record-pprint
     "Return a function that can be used in the pprint dispatch mechanism to handle a specific constructor name."
     [ctor ctor-name native-keys]
-    (fn [record]
-      (print-record ctor ctor-name native-keys record *out* pprint-map)))
+    `(fn [record#]
+       (print-record ~ctor ~ctor-name ~native-keys record# *out* pprint-map)))
 
   ;; internal helpers - walking data structures
 
@@ -303,12 +308,13 @@ Yes, currently it is not very development start friendly. That will change!
   (defmethod postwalk2 :default [f n]
     (f (walk2 postwalk2 f n)))
 
-
   (defmacro defrecord2
     "Defines a record and sets up constructor functions, printing, and pprinting for the new record type."
-    [type-name field-list & protocols]
-    (let [type-name (if (seqable? type-name) (first type-name) type-name)
-	  ctor-name (if (seqable? type-name) (second type-name) (symbol (str "new-" (camel-to-dashed (str type-name)))))] 
+    [type field-list & protocols]
+    (let [type-name (if (seqable? type) (first type) type)
+	  ctor-name (if (seqable? type)
+		      (second type)
+		      (symbol (str "new-" (camel-to-dashed (str type)))))]
       `(do 
 	 ;; define the record
 	 (defrecord ~type-name ~field-list ~@protocols)
@@ -324,9 +330,15 @@ Yes, currently it is not very development start friendly. That will change!
 	 ;; setup printing
 	 (let [empty-record# (~ctor-name {})
 	       native-keys# (set (keys empty-record#))]
-	   (setup-print-record ~ctor-name (quote ~ctor-name) native-keys# ~type-name)
+	   (setup-print-record ~ctor-name ~ctor-name native-keys# ~type-name)
 	   ;; setup pprinting
-	   (use-method *simple-dispatch* ~type-name (generate-record-pprint ~ctor-name (quote ~ctor-name) native-keys#))))))
+	   (comment
+	     (use-method *simple-dispatch*
+			 ~type-name
+
+			 (generate-record-pprint ~ctor-name
+						 ~ctor-name
+						 native-keys#)))))))
 #+end_src
 
 *** CLJ
@@ -382,9 +394,9 @@ Yes, currently it is not very development start friendly. That will change!
 		      "Multiple deliver calls to a promise"))))))))
 
   (defmethod print-dup clojure.lang.Atom [o w]
-    (.write w "#=(atom ") (print-dup @o w) (.write w ")"))
+    (.write w "#=(clojure.core/atom ") (print-dup @o w) (.write w ")"))
   (defmethod print-dup clojure.lang.Ref [o w]
-    (.write w "#=(ref ") (print-dup @o w) (.write w ")"))
+    (.write w "#=(clojure.core/ref ") (print-dup @o w) (.write w ")"))
 #+end_src
 
 *** Core
@@ -463,8 +475,9 @@ Yes, currently it is not very development start friendly. That will change!
     (without [this k] (.without @val k))
     clojure.lang.IDeref
     (deref [this] @val))
+  ;;todo - create ns-resolve-symbol, instead of hardcoding namespace
   (defmethod print-dup AtomHash [o w]
-    (.write w "#=(atom-hash ") (print-dup @o w) (.write w ")"))
+    (.write w "#=(forex.util.core/atom-hash ") (print-dup @o w) (.write w ")"))
 
   (defmethod clojure.core/print-method AtomHash [o w]
     (.write w (.toString o)))
@@ -1908,20 +1921,24 @@ Yes, currently it is not very development start friendly. That will change!
 	   order))))
 
   ;;TODO: normalize so we dont get mql error 1?
+  ;;TODO: act as a regular modify if we dont pass in sl,tp,or price 
   (defn- modify!* [order {:keys [sl tp] :as mod}]
     (with-order order
-      (let [sl (or sl (:sl order) 0)
-	    tp (or tp (:tp order) 0)
-	    price (:price order)]
-	(is? [sl tp price (>? sl) (>? tp) (pos? price)]) 
-	(if-not (and (= sl (:sl order))
-		     (= tp (:tp order)))
-	  (aif (core/order-modify (:id order) (:price order) sl tp)
-	       (merge order (merge mod {:sl sl :tp tp}))
-	       (if (= (:e it) 1)
-		 (merge order mod)
-		 (account-warn it order "sl %s tp %s" sl tp)))
-	  (merge order mod)))))  
+      (let [sl (or sl (:sl order))
+	    tp (or tp (:tp order)) 
+	    price (:price order)] 
+	(if (or (number? sl) (number? tp))
+	  (do  
+	    (is? [sl tp price (>? sl) (>? tp) (pos? price)]) 
+	    (if-not (and (= sl (:sl order))
+			 (= tp (:tp order)))
+	      (aif (core/order-modify (:id order) (:price order) sl tp)
+		   (merge order (merge mod {:sl sl :tp tp}))
+		   (if (= (:e it) 1)
+		     (merge order mod)
+		     (account-warn it order "sl %s tp %s" sl tp)))
+	      (merge order mod)))
+	  (merge order mod)))))   
 
   ;;TOODOs: how do we get map with defaults?
   (defn- verify-order [{:keys [slip symbol type price tp sl lots]
@@ -2038,7 +2055,8 @@ Yes, currently it is not very development start friendly. That will change!
 	  clojure.contrib.core)
     (:import clojure.lang.Atom)
     (:require [clj-time.core :as t])
-    (:use forex.util.emacs
+    (:use 
+     forex.util.emacs
      forex.util.log  
      forex.module.error 
      forex.module.indicator 
@@ -2144,7 +2162,10 @@ Yes, currently it is not very development start friendly. That will change!
 	(clojure.contrib.error-kit/with-handler
 	  (loop [prev-close nil]
 	    (sleep 1) 
-	    (when-not (match (? 0) "STOP"  true "PING" (do (out "ping") nil)) 
+	    (when-not
+		(match (? 0) 
+		       "STOPGRR" (do (out "GOT STOP!!!!") true)
+		       "PING" (do (out "ping") nil)) 
 	      (let [new-close (close)] 
 		(when-not (= new-close prev-close)
 		  (let [func (get-fn start)]
@@ -2153,7 +2174,7 @@ Yes, currently it is not very development start friendly. That will change!
 				    (func (:args ea)))
 		      (warn "%s is not a function. start cannot be called" func))))
 		(recur new-close))))
-	  (clojure.contrib.error-kit/handle *ea-stop* [message] (out "stopping ea ... %s" message))) 
+	  (clojure.contrib.error-kit/handle *ea-stop* [message] (out "stopping ea ... %s" message)))  
 	(catch Exception e 
 	  (severe "stopping ea... caught exception %s" e)
 	  (.printStackTrace e))
@@ -2248,7 +2269,7 @@ Yes, currently it is not very development start friendly. That will change!
   (defn stop [ea]
     (let [stop-it (fn [e]
 		    (if (pid? (:pid e))
-		      (do (! (:pid e) "STOP") 
+		      (do (! (:pid e) "STOPGRR") 
 			  true)))]
       (if (map? ea)
 	(stop-it ea)
@@ -2720,7 +2741,7 @@ use clj-forex....
   ;;TODO: test reusing of account.utils
   (def ^{:var true} state (atom :monitor)) 
   (def ^{:var true} order (atom-hash)) 
-  (def ^{:var true} close-on-middle false) 
+  (def ^{:var true} trail-time-period 5)
 
   (def main (partial vma [2 2 100 1]))
   (def signal (partial vma [2 2 1 1] ))
@@ -2750,7 +2771,7 @@ use clj-forex....
 
   ;;TODO: exit half when cross middle? enter half more when recross? 
   ;;OPEN CONDITION 
-  (defn open-condition [i] 
+  (defn open-condition [i]  
     (if-let [[dir i] (cross? signal main i)]
       (or (and (= dir :buy) (> (signal i) (middle i)) {:type :buy :i i :category  :long :state :init})
 	  (and (= dir :sell) (< (signal i) (middle  i)) {:type :sell :i i :category :long :state :init}))
@@ -2791,21 +2812,38 @@ use clj-forex....
 	      (or (> (signal) (main)) (> (signal) (middle)))))))
 
   ;;;LONG ORDER MANAGEMENT
-  (defmethod close-condition :long [{:keys [type state] :as o}]
-    (if (or (and  close-on-middle (>= (profit o) 75)) (= state :init))
+  (defn five-min-close?
+    "This is a tight virtual stop on the five minute level. 
+     For buy, if cci>100, set cross-sl to previous middle value.
+     If signal(1) is less than cross-sl, then exit. Opposite for sell"
+    [{:keys [type state] :as o}] 
+    (when (= state :trail) 
+      (wenv {:period trail-time-period}    
+	    ;;modify cross-sl 
+	    (when (or (> (cci 30 1) 100) (< (cci 30 1) -100))
+	      ;;we will not update the cross-sl so that it will generate  a close signal, this would be bad!
+	      (when (or (and (buy? o) (> (signal 1) (middle 1)))
+			(and (sell? o) (< (signal 1) (middle 1))))
+		(modify! o {:cross-sl (middle 1)})))  
+	    ;;check close condition
+	    (when-let [cross-sl (:cross-sl o)]
+	      (or (and (buy? o) (<= (signal 1) cross-sl)) 
+		  (and (sell? o) (>= (signal 1) cross-sl))))))) 
+
+  (defmethod close-condition :long [{:keys [type state] :as o}] 
+    (if (= state :init)
       (should-close? o)
-      (cond
-       (= type :buy)
-       (< (signal 1) (main 1))
-       (= type :sell)
-       (> (signal 1) (main 1)))))
+      (or (cond
+	   (= type :buy)
+	   (< (signal 1) (main 1))
+	   (= type :sell)
+	   (> (signal 1) (main 1)))
+	  (five-min-close? o)))) 
 
   (defmethod check :long [o]
-    "long orders have a trailing stop if profit>=20, otherwise we close it regularly like a scalper. "
     (when (>= (profit o) 20) (modify! o {:state :trail}))
-    ;;sl is a safety feature in case we go offline accidently
-    (when (or (= (:sl o) 0) (>= (profit o (close) (:sl o)) 20))
-      ;;shouldnt have to use omax, but just in case!...
+    ;;actual sl the server sees. this is a safety stop, in case our ea gets screwed up, turns off, etc.
+    (when (or (= (:sl o) 0) (= (:state o) :trail))
       (modify! o {:sl (omax o (:sl o) (o- o (main 1) (pip 20)))})))  
 
   ;;MAIN  
@@ -2815,7 +2853,7 @@ use clj-forex....
       (awhen-not (and (close-condition o) (close! o))
 		 (check o))))
 
-  (defn monitor []
+  (defn monitor []  
     (when-let [{:keys [type category] :as o} (open-condition 0)] 
       (awhen (order! (merge o  {:type type :lots (calculate-lots)})) 
 	     (reset! order it)
