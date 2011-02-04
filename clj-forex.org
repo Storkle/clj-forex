@@ -406,7 +406,7 @@ Yes, currently it is not very development start friendly. That will change!
   (ns+ forex.util.core
     (:clone clj.core)
     (:use forex.util.emacs forex.util.general forex.util.spawn forex.util.log)
-    (:require clojure.contrib.error-kit)
+    (:require clojure.contrib.error-kit clojure.contrib.pprint)
     (:import java.io.File (org.joda.time DateTime DateTimeZone Instant)))
 
   (defonce *debug* true)
@@ -460,22 +460,23 @@ Yes, currently it is not very development start friendly. That will change!
     (valAt [this key notfound] (get @val key notfound))
     ;;IPersistentCollection
     (count [this] (.count @val))
-    (empty [this]  {})
+    (empty [this]  {}) 
     (cons [this e]  (.cons @val e))
     (equiv [this gs] (or (identical? this gs)
 			 (when (identical? (class this) (class gs))
-			   (.equiv @val) gs)))
+			   (= val (.val gs)))))
     (containsKey [this k] (or (and (get @val k) true) false))
     (entryAt [this k] (get @val k))
     ;;Seqable
     (seq [this] (seq @val))
-    ;;Associative
+    ;;Associative 
     (assoc [this k g] (assoc @val k g))
     (assocEx [this k g] (assoc this k g))
     (without [this k] (.without @val k))
     clojure.lang.IDeref
     (deref [this] @val))
   ;;todo - create ns-resolve-symbol, instead of hardcoding namespace
+  ;;TODO: add pprint
   (defmethod print-dup AtomHash [o w]
     (.write w "#=(forex.util.core/atom-hash ") (print-dup @o w) (.write w ")"))
 
@@ -2048,14 +2049,15 @@ Yes, currently it is not very development start friendly. That will change!
 #+begin_src clojure :tangle src/forex/module/ea.clj
   (clojure.core/use 'nstools.ns)
   (ns+ forex.module.ea 
-    (:clone clj.core)
+       (:clone clj.core)
+       (:import forex.util.core.AtomHash)
     (:use forex.util.core
 	  forex.util.general
 	  forex.util.spawn
 	  clojure.contrib.core)
     (:import clojure.lang.Atom)
     (:require [clj-time.core :as t])
-    (:use 
+    (:use  
      forex.util.emacs
      forex.util.log  
      forex.module.error 
@@ -2092,14 +2094,20 @@ Yes, currently it is not very development start friendly. That will change!
 				     (concat [msg] args)))))
 
 
-  (defn- copy-atoms [map]
+  (defmulti copy-ea-obj class)
+  ;;TODO: do we really want to copy these objects? yes, in most cases perhaps
+  ;;but we should add an option to the ea definition (we will do that later, before first release)
+  (defmethod copy-ea-obj :default [o] o)
+  (defmethod copy-ea-obj clojure.lang.Atom [o] (atom @o))
+  (defmethod copy-ea-obj clojure.lang.Ref [o] (ref @o))
+  (defmethod copy-ea-obj forex.util.core.AtomHash [o] (atom-hash @o))
+
+  (defn- copy-ea-objs [map]
     (apply hash-map
 	   (mapcat (fn [[key val]]
-		     (list key
-			   (if (instance? clojure.lang.Atom val)
-			     (atom @val)
-			     val)))
+		     (list key (copy-ea-obj val)))
 		   map)))
+
   ;;##ea implementation
   (defonce *eas* (atom []))
   (import java.util.concurrent.locks.ReentrantReadWriteLock)
@@ -2147,7 +2155,7 @@ Yes, currently it is not very development start friendly. That will change!
     ([] (load-eas false))
     ([append]
        (let [eas (frm-load save-file)]
-	 (if append (swap! *eas* conj eas) (vec eas)))))
+	 (if append (swap! *eas* concat eas) (vec eas)))))
 
 
   (require 'clojure.contrib.error-kit)
@@ -2219,7 +2227,7 @@ Yes, currently it is not very development start friendly. That will change!
 	   (EA. (format "%s %s, %s" name symbol period) name ns
 		init deinit start symbol period (or args {})
 		nil run
-		(merge (copy-atoms (ns-vars ns)) vars)))))) 
+		(merge (copy-ea-objs (ns-vars ns)) vars)))))) 
 
   ;;how to get it to access actual var? as long as we dont use set!
   (defmethod clojure.core/print-method EA [o w]
@@ -2739,6 +2747,7 @@ use clj-forex....
   ;;TODO!!!: speed up ns+ by alot! and dont have it automatically reload it, please!!!
 
   ;;TODO: test reusing of account.utils
+  ;;TODO: defaults per currency
   (def ^{:var true} state (atom :monitor)) 
   (def ^{:var true} order (atom-hash)) 
   (def ^{:var true} trail-time-period 5)
@@ -2812,6 +2821,7 @@ use clj-forex....
 	      (or (> (signal) (main)) (> (signal) (middle)))))))
 
   ;;;LONG ORDER MANAGEMENT
+  ;;TODO: take profit via price action; if GBPJPY is owning, why not trail on 1 minute level?
   (defn five-min-close?
     "This is a tight virtual stop on the five minute level. 
      For buy, if cci>100, set cross-sl to previous middle value.
@@ -2865,5 +2875,5 @@ use clj-forex....
      (= @state :gobble) (gobble order)))
 
   (defn vars [ea] (:vars ea))
-  (defn get-var [vvar ea] (get (:vars ea) vvar))
+  (defn getv [vvar ea] (get (:vars ea) vvar))
 #+end_src

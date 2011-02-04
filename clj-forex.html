@@ -7,7 +7,7 @@ lang="en" xml:lang="en">
 <title>CLJ-FOREX</title>
 <meta http-equiv="Content-Type" content="text/html;charset=utf-8"/>
 <meta name="generator" content="Org-mode"/>
-<meta name="generated" content="2011-02-04 10:52:18 CST"/>
+<meta name="generated" content="2011-02-04 12:05:07 CST"/>
 <meta name="author" content="Seth Burleigh"/>
 <meta name="description" content=""/>
 <meta name="keywords" content=""/>
@@ -655,7 +655,7 @@ Yes, currently it is not very development start friendly. That will change!
 (ns+ forex.util.core
   (<span style="color: #7a378b;">:clone</span> clj.core)
   (<span style="color: #7a378b;">:use</span> forex.util.emacs forex.util.general forex.util.spawn forex.util.log)
-  (<span style="color: #7a378b;">:require</span> clojure.contrib.error-kit)
+  (<span style="color: #7a378b;">:require</span> clojure.contrib.error-kit clojure.contrib.pprint)
   (<span style="color: #7a378b;">:import</span> java.io.File (org.joda.time DateTime DateTimeZone Instant)))
 
 (<span style="color: #a020f0;">defonce</span> <span style="color: #0000ff;">*debug*</span> true)
@@ -709,22 +709,23 @@ Yes, currently it is not very development start friendly. That will change!
   (valAt [this key notfound] (<span style="color: #7a378b;">get</span> @val key notfound))
   <span style="color: #b22222;">;;</span><span style="color: #b22222;">IPersistentCollection
 </span>  (<span style="color: #7a378b;">count</span> [this] (.count @val))
-  (<span style="color: #7a378b;">empty</span> [this]  {})
+  (<span style="color: #7a378b;">empty</span> [this]  {}) 
   (<span style="color: #7a378b;">cons</span> [this e]  (.cons @val e))
   (equiv [this gs] (<span style="color: #a020f0;">or</span> (<span style="color: #7a378b;">identical?</span> this gs)
                        (<span style="color: #a020f0;">when</span> (<span style="color: #7a378b;">identical?</span> (<span style="color: #7a378b;">class</span> this) (<span style="color: #7a378b;">class</span> gs))
-                         (.equiv @val) gs)))
+                         (<span style="color: #7a378b;">=</span> val (.val gs)))))
   (containsKey [this k] (<span style="color: #a020f0;">or</span> (<span style="color: #a020f0;">and</span> (<span style="color: #7a378b;">get</span> @val k) true) false))
   (entryAt [this k] (<span style="color: #7a378b;">get</span> @val k))
   <span style="color: #b22222;">;;</span><span style="color: #b22222;">Seqable
 </span>  (<span style="color: #7a378b;">seq</span> [this] (<span style="color: #7a378b;">seq</span> @val))
-  <span style="color: #b22222;">;;</span><span style="color: #b22222;">Associative
+  <span style="color: #b22222;">;;</span><span style="color: #b22222;">Associative 
 </span>  (<span style="color: #7a378b;">assoc</span> [this k g] (<span style="color: #7a378b;">assoc</span> @val k g))
   (assocEx [this k g] (<span style="color: #7a378b;">assoc</span> this k g))
   (without [this k] (.without @val k))
   clojure.lang.IDeref
   (<span style="color: #7a378b;">deref</span> [this] @val))
 <span style="color: #b22222;">;;</span><span style="color: #b22222;">todo - create ns-resolve-symbol, instead of hardcoding namespace
+</span><span style="color: #b22222;">;;</span><span style="color: #b22222;">TODO: add pprint
 </span>(<span style="color: #a020f0;">defmethod</span> <span style="color: #0000ff;">print-dup</span> AtomHash [o w]
   (.write w <span style="color: #8b2252;">"#=(forex.util.core/atom-hash "</span>) (<span style="color: #7a378b;">print-dup</span> @o w) (.write w <span style="color: #8b2252;">")"</span>))
 
@@ -2424,14 +2425,15 @@ return(val);
 <div class="org-src-container"><label class="org-src-name">ea-common()</label><pre class="src src-clojure">
 (clojure.core/<span style="color: #7a378b;">use</span> 'nstools.ns)
 (ns+ forex.module.ea 
-  (<span style="color: #7a378b;">:clone</span> clj.core)
+     (<span style="color: #7a378b;">:clone</span> clj.core)
+     (<span style="color: #7a378b;">:import</span> forex.util.core.AtomHash)
   (<span style="color: #7a378b;">:use</span> forex.util.core
         forex.util.general
         forex.util.spawn
         clojure.contrib.core)
   (<span style="color: #7a378b;">:import</span> clojure.lang.Atom)
   (<span style="color: #7a378b;">:require</span> [clj-time.core <span style="color: #7a378b;">:as</span> t])
-  (<span style="color: #7a378b;">:use</span> 
+  (<span style="color: #7a378b;">:use</span>  
    forex.util.emacs
    forex.util.log  
    forex.module.error 
@@ -2468,14 +2470,20 @@ return(val);
                                    (<span style="color: #7a378b;">concat</span> [msg] args)))))
 
 
-(<span style="color: #a020f0;">defn-</span> <span style="color: #0000ff;">copy-atoms</span> [map]
+(<span style="color: #a020f0;">defmulti</span> <span style="color: #0000ff;">copy-ea-obj</span> class)
+<span style="color: #b22222;">;;</span><span style="color: #b22222;">TODO: do we really want to copy these objects? yes, in most cases perhaps
+</span><span style="color: #b22222;">;;</span><span style="color: #b22222;">but we should add an option to the ea definition (we will do that later, before first release)
+</span>(<span style="color: #a020f0;">defmethod</span> <span style="color: #0000ff;">copy-ea-obj</span> <span style="color: #7a378b;">:default</span> [o] o)
+(<span style="color: #a020f0;">defmethod</span> <span style="color: #0000ff;">copy-ea-obj</span> clojure.lang.Atom [o] (<span style="color: #7a378b;">atom</span> @o))
+(<span style="color: #a020f0;">defmethod</span> <span style="color: #0000ff;">copy-ea-obj</span> clojure.lang.Ref [o] (<span style="color: #7a378b;">ref</span> @o))
+(<span style="color: #a020f0;">defmethod</span> <span style="color: #0000ff;">copy-ea-obj</span> forex.util.core.AtomHash [o] (atom-hash @o))
+
+(<span style="color: #a020f0;">defn-</span> <span style="color: #0000ff;">copy-ea-objs</span> [map]
   (<span style="color: #7a378b;">apply</span> hash-map
          (<span style="color: #7a378b;">mapcat</span> (<span style="color: #7a378b;">fn</span> [[key val]]
-                   (<span style="color: #7a378b;">list</span> key
-                         (<span style="color: #a020f0;">if</span> (<span style="color: #7a378b;">instance?</span> clojure.lang.Atom val)
-                           (<span style="color: #7a378b;">atom</span> @val)
-                           val)))
+                   (<span style="color: #7a378b;">list</span> key (copy-ea-obj val)))
                  map)))
+
 <span style="color: #b22222;">;;</span><span style="color: #b22222;">##ea implementation
 </span>(<span style="color: #a020f0;">defonce</span> <span style="color: #0000ff;">*eas*</span> (<span style="color: #7a378b;">atom</span> []))
 (<span style="color: #a020f0;">import</span> java.util.concurrent.locks.ReentrantReadWriteLock)
@@ -2523,7 +2531,7 @@ return(val);
   ([] (load-eas false))
   ([append]
      (<span style="color: #a020f0;">let</span> [eas (frm-load save-file)]
-       (<span style="color: #a020f0;">if</span> append (<span style="color: #7a378b;">swap!</span> *eas* conj eas) (<span style="color: #7a378b;">vec</span> eas)))))
+       (<span style="color: #a020f0;">if</span> append (<span style="color: #7a378b;">swap!</span> *eas* concat eas) (<span style="color: #7a378b;">vec</span> eas)))))
 
 
 (<span style="color: #7a378b;">require</span> 'clojure.contrib.error-kit)
@@ -2595,7 +2603,7 @@ return(val);
          (EA. (<span style="color: #7a378b;">format</span> <span style="color: #8b2252;">"%s %s, %s"</span> name symbol period) name ns
               init deinit start symbol period (<span style="color: #a020f0;">or</span> args {})
               nil run
-              (<span style="color: #7a378b;">merge</span> (copy-atoms (ns-vars ns)) vars)))))) 
+              (<span style="color: #7a378b;">merge</span> (copy-ea-objs (ns-vars ns)) vars)))))) 
 
 <span style="color: #b22222;">;;</span><span style="color: #b22222;">how to get it to access actual var? as long as we dont use set!
 </span>(<span style="color: #a020f0;">defmethod</span> <span style="color: #0000ff;">clojure.core/print-method</span> EA [o w]
@@ -3179,6 +3187,7 @@ use clj-forex&hellip;.
 <span style="color: #b22222;">;;</span><span style="color: #b22222;">TODO!!!: speed up ns+ by alot! and dont have it automatically reload it, please!!!
 </span>
 <span style="color: #b22222;">;;</span><span style="color: #b22222;">TODO: test reusing of account.utils
+</span><span style="color: #b22222;">;;</span><span style="color: #b22222;">TODO: defaults per currency
 </span>(<span style="color: #a020f0;">def</span> ^{<span style="color: #7a378b;">:var</span> true} <span style="color: #0000ff;">state</span> (<span style="color: #7a378b;">atom</span> <span style="color: #7a378b;">:monitor</span>)) 
 (<span style="color: #a020f0;">def</span> ^{<span style="color: #7a378b;">:var</span> true} <span style="color: #0000ff;">order</span> (atom-hash)) 
 (<span style="color: #a020f0;">def</span> ^{<span style="color: #7a378b;">:var</span> true} <span style="color: #0000ff;">trail-time-period</span> 5)
@@ -3252,6 +3261,7 @@ use clj-forex&hellip;.
             (<span style="color: #a020f0;">or</span> (<span style="color: #7a378b;">&gt;</span> (signal) (<span style="color: #228b22;">main</span>)) (<span style="color: #7a378b;">&gt;</span> (signal) (middle)))))))
 
 <span style="color: #b22222;">;;;</span><span style="color: #b22222;">LONG ORDER MANAGEMENT
+</span><span style="color: #b22222;">;;</span><span style="color: #b22222;">TODO: take profit via price action; if GBPJPY is owning, why not trail on 1 minute level?
 </span>(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">five-min-close?</span>
   <span style="color: #8b2252;">"This is a tight virtual stop on the five minute level. 
    For buy, if cci&gt;100, set cross-sl to previous middle value.
@@ -3305,7 +3315,7 @@ use clj-forex&hellip;.
    (<span style="color: #7a378b;">=</span> @state <span style="color: #7a378b;">:gobble</span>) (gobble order)))
 
 (<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">vars</span> [ea] (<span style="color: #7a378b;">:vars</span> ea))
-(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">get-var</span> [vvar ea] (<span style="color: #7a378b;">get</span> (<span style="color: #7a378b;">:vars</span> ea) vvar))
+(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">getv</span> [vvar ea] (<span style="color: #7a378b;">get</span> (<span style="color: #7a378b;">:vars</span> ea) vvar))
 </pre></div>
 
 
@@ -3315,7 +3325,7 @@ use clj-forex&hellip;.
 <div id="postamble">
 <p class="author"> Author: Seth Burleigh
 </p>
-<p class="date"> Date: 2011-02-04 10:52:18 CST</p>
+<p class="date"> Date: 2011-02-04 12:05:07 CST</p>
 <p class="creator">HTML generated by org-mode 7.4 in emacs 23</p>
 </div>
 </div>
