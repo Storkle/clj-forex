@@ -99,7 +99,7 @@ Yes, currently it is not very development start friendly. That will change!
 		   [org.clojure/clojure-contrib "1.2.0"]           
 		   [matchure "0.10.0"]
 		   [clj-time "0.2.0-SNAPSHOT"]            
-		   [mmemail "1.0.1"]
+		   [mmemail "1.0.1"] 
 		   [nstools "0.2.4"]
 		   [org.clojars.starry/clj-forex-indicators "0.1"]]   
     :dev-dependencies [[native-deps "1.0.5"]
@@ -2262,8 +2262,7 @@ Yes, currently it is not very development start friendly. That will change!
   ;;how to get it to access actual var? as long as we dont use set!
   (defmethod clojure.core/print-method EA [o w]
     (.write w  (format "<EA \"%s\" %s %s |%s|>"
-		       (:name o)
-		       (if (pid? (:pid o)) true false)                 
+		       (:name o) (pid? (:pid o))
 		       (:args o) (:vars o))))
 
   ;;TODO: pid without spawn!!
