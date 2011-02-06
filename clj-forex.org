@@ -898,7 +898,7 @@ Yes, currently it is not very development start friendly. That will change!
     (get @*mailboxes* tag))
   (defn pid? [pid]
     "test for valid pid"
-    (and (get-mailbox pid) true))
+    (if (get-mailbox pid) true false))
 
   (defonce- *mb* (ThreadLocal.))
   (defonce- *self* (ThreadLocal.)) 
@@ -1136,9 +1136,10 @@ Yes, currently it is not very development start friendly. That will change!
 #+begin_src clojure :tangle src/forex/util/spawn.clj
   (clojure.core/use 'nstools.ns)
   (ns+ forex.util.spawn
-    (:clone clj.core) 
-    (:use forex.util.general forex.util.zmq)
-    (:require [forex.util.fiber.spawn :as s]))
+       (:clone clj.core)
+       (:import forex.util.zmq.Poller)
+       (:use forex.util.general forex.util.zmq)
+       (:require [forex.util.fiber.spawn :as s]))
 
   (def- *pid* (atom []))
 
@@ -1166,18 +1167,11 @@ Yes, currently it is not very development start friendly. That will change!
     PSocket
     (raw [this] (.raw socket)) 
     (recv [this flags] 
-	  (let [r (.recv socket flags)]
-	    (s/?)))
+	  (when (.recv socket flags)	  
+	    (s/?)))  
     (recv [this] (recv this 0))
     (close [this] (.close socket))
     (hasMore [this] false))
-
-
-  (comment
-    (defn te []
-     (def pid (spawn #(do (pr "BEFORE") (pr local)
-			  (pformat "local %s%n" (first (event-seq [local])))
-			  (pr "AFTER"))))))
 
 
   (defonce- *local* (ThreadLocal.))
@@ -1207,23 +1201,53 @@ Yes, currently it is not very development start friendly. That will change!
 	 (swap! *pid* concat [pid])
 	 pid)))
 
+  (comment
+    (defn te []
+      (def pid (spawn #(let [seq (event-seq [local])]
+			 (pr (format "local %s %s%n"
+				     (first seq)
+				     (second seq))))))))
+
+
+
+
+  (defn recv-multi
+    ([sock] (recv-multi sock 0))
+    ([sock flags] 
+       (let [first-msg (.recv sock flags)]
+	 (when first-msg 
+	   (if (.hasMore sock)
+	     (loop [msg [(String. (.recv sock)) first-msg]]
+	       (if (.hasMore sock)
+		 (recur (cons (String. (.recv sock)) msg))
+		 msg))
+	     first-msg)))))
+
+  (defn recv-all
+    ([sock] (recv-all sock 0))
+    ([sock flags]
+       (let [first-msg (recv-multi sock flags)]
+	 (when first-msg
+	   (loop [messages [[sock first-msg]]]
+	     (if-let [new-msg (recv-multi sock +noblock+)]
+	       (recur (conj messages [sock new-msg]))
+	       messages))))))
+
+  (defn- event-seq* [p]
+    (lazy-seq
+     (let [amount (.poll p)]
+       (concat
+	;;TODO: memory overflow with getting all messsages? probably not ....
+	(doall
+	 (mapcat #(when (.pollin p %) (recv-all (.getSocket p %)))
+		 (range 0 (.getSize p))))
+	(event-seq* p)))))
+
+
   (defmulti event-seq class)
   (defmethod event-seq clojure.lang.IPersistentVector [v]
     (event-seq (new-poller v)))
-  (defmethod event-seq forex.util.zmq.Poller [p]
-    ((fn the-seq [p] 
-       (lazy-seq
-	(let [amount (.poll p)] 
-	  (concat (for [i (range 0 (.getSize p)) :when (.pollin p i)]
-		    (let [sock (.getSocket p i)
-			  msg 
-			  (loop [msg [(.recv sock 0)]]                    
-			    (if (.hasMore sock)
-			      (recur (cons (String. (.recv sock 0)) msg))
-			      msg))]
-		      [sock (if (= (count msg) 1) (first msg) (vec msg))]))
-		  (the-seq p)))))
-     p)) 
+  (defmethod event-seq Poller [p] (event-seq* p)) 
 
   ;;? with multiple sources or change to poll
   ;;!? (timeout)
@@ -1289,17 +1313,18 @@ Yes, currently it is not very development start friendly. That will change!
     (pollin [this i])) 
   (defrecord Poller [poll sockets] 
     PPoller 
-    (getSize [this] (.getSize (:poll this)))
-    (pollin [this i] (.pollin (:poll this) i))
-    (setTimeout [this timeout] (.setTimeout (:poll this) timeout))
-    (poll [this] (.poll (:poll this)))
-    (register [this socket]
-	      (.register (:poll this)
+    (getSize [_] (.getSize poll))
+    (pollin [_ i] (.pollin poll i))
+    (setTimeout [_ timeout] (.setTimeout poll timeout))
+    (poll [_] (.poll poll))
+    (register [_ socket]
+	      (.register poll
+			 ;;TODO: what if we reload? wont work?
 			 (if (extends? PSocket (class socket))
 			   (.raw socket)
 			   socket))
-	      (swap! (:sockets this) conj socket))
-    (getSocket [this i] (nth @(:sockets this) i)))
+	      (swap! sockets conj socket))
+    (getSocket [_ i] (nth @sockets i)))
 
   (defn new-poller
     ([sockets] (new-poller *context* sockets))
@@ -1495,7 +1520,7 @@ Yes, currently it is not very development start friendly. That will change!
 	forex.util.zmq forex.util.log
 	forex.util.spawn))
 
-  ;;TODO: 3ms or so per request, a little slow...
+  ;;TODO: 10ms or so per request, a little slow...
   ;;also, unfortunately, if we add more servers, speed doesn't increase linearly. so the bottleneck is in the clojure code ... a better designed socket service should really be made.
   ;; in addition, if servers drop out, we will be waiting forever for them. this is bad.
 
@@ -1514,11 +1539,11 @@ Yes, currently it is not very development start friendly. That will change!
   ;;socket service
   ;;TODO: send id then message
   (defn- mql-recv [msg] 
-    (catch-unexpected   
+    (catch-unexpected  
      (let [key (first msg)
 	   msg-ask (get @*ids* key)] 
        (if msg-ask
-	 (do
+	 (do 
 	   (deliver msg-ask (second msg))
 	   (swap! *ids* dissoc key))
 	 (warn "msg-ask corresponding to key %s is nil" key)))))
@@ -1529,10 +1554,11 @@ Yes, currently it is not very development start friendly. That will change!
 
   (comment ;;this causes problems ...deleted
     (if-not (satisfies?  PWait askin)
-       (warn "Ignoring invalid REQUEST which does not contain a PWait argument %s %s" 
-	     msg askin)))
+      (warn
+       "Ignoring invalid REQUEST which does not contain a PWait argument %s %s" 
+       msg askin)))
 
-  (defn- socket-service-match [events send receive]
+  (defn- socket-service-match [events send receive] 
     (match  
      (first events)
      [local "STOP"] (do (info "closing ...") "STOP")  
@@ -1580,7 +1606,8 @@ Yes, currently it is not very development start friendly. That will change!
       (! (:pid @*s*) "STOP")
       (warn "mql socket service is already stopped")))
 
-  ;;interact with mql 
+  ;;interact with mql
+  ;;TODO: if mql isnt alive and we retry/????
   (defn request [askin msg]
     (io!
      (if (pid? (:pid @*s*)) 
@@ -2047,6 +2074,8 @@ Yes, currently it is not very development start friendly. That will change!
 *** Ea
 #+srcname:ea-common
 #+begin_src clojure :tangle src/forex/module/ea.clj
+  ;;TODO: it would be awesome if we could directly modify vars of an ea. but we cant, we can only stop , merge, start. TOOD: lookup how set! works!
+
   (clojure.core/use 'nstools.ns)
   (ns+ forex.module.ea 
        (:clone clj.core)
@@ -2094,13 +2123,14 @@ Yes, currently it is not very development start friendly. That will change!
 				     (concat [msg] args)))))
 
 
-  (defmulti copy-ea-obj class)
+
   ;;TODO: do we really want to copy these objects? yes, in most cases perhaps
   ;;but we should add an option to the ea definition (we will do that later, before first release)
+  (defmulti copy-ea-obj class)
   (defmethod copy-ea-obj :default [o] o)
-  (defmethod copy-ea-obj clojure.lang.Atom [o] (atom @o))
-  (defmethod copy-ea-obj clojure.lang.Ref [o] (ref @o))
-  (defmethod copy-ea-obj forex.util.core.AtomHash [o] (atom-hash @o))
+  (defmethod copy-ea-obj clojure.lang.Atom [o] (atom (copy-ea-obj @o)))
+  (defmethod copy-ea-obj clojure.lang.Ref [o] (ref (copy-ea-obj @o)))
+  (defmethod copy-ea-obj forex.util.core.AtomHash [o] (atom-hash (copy-ea-obj @o)))
 
   (defn- copy-ea-objs [map]
     (apply hash-map
@@ -2112,7 +2142,7 @@ Yes, currently it is not very development start friendly. That will change!
   (defonce *eas* (atom []))
   (import java.util.concurrent.locks.ReentrantReadWriteLock)
   ;;TODO: lock orphaning
-  (defonce- *ea-pre-lock*
+  (defonce *ea-pre-lock*
     (java.util.concurrent.locks.ReentrantReadWriteLock. true))
 
   (defn every [pred coll]
@@ -2821,7 +2851,10 @@ use clj-forex....
 	      (or (> (signal) (main)) (> (signal) (middle)))))))
 
   ;;;LONG ORDER MANAGEMENT
-  ;;TODO: take profit via price action; if GBPJPY is owning, why not trail on 1 minute level?
+  ;;TODO: take profit via price action !!!!; if GBPJPY is owning, why not trail on 1 minute level? basically, alot of this take profit stuff and entering
+  ;;and exiting is based on a variety of conditions! Im sensing some AI like programming taking place! doesn't need to be ai, but how about using
+  ;;programming which takes into account the context? see http://web.media.mit.edu/~push/ and the phd thesis EM-ONE: An Architecture for Reflective Commonsense Thinking
+
   (defn five-min-close?
     "This is a tight virtual stop on the five minute level. 
      For buy, if cci>100, set cross-sl to previous middle value.
