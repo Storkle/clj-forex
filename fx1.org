@@ -1,0 +1,17 @@
+#+TITLE: FX1
+#+Author: Seth Burleigh
+#+Date: 
+#+Options: toc:nil
+#+LaTeX_HEADER: \usepackage{amsmath}
+#+LaTeX_HEADER: \usepackage{subfigure}
+#+LaTeX_CLASS: smarticle
+#+LaTeX_HEADER: \usepackage{courier}
+#+LaTeX_HEADER: \usepackage{libertine}
+#+LaTeX_HEADER: \usepackage{sectsty}
+#+LaTeX_HEADER: \sectionfont{\normalfont\scshape}
+#+LaTeX_HEADER: \subsectionfont{\normalfont\itshape}
+ 
+\newpage
+\setcounter{tocdepth}{3}
+\tableofcontents
+\newpage

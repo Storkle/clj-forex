@@ -1,0 +1,119 @@
+#+TITLE: DODO
+#+Author: Seth Burleigh
+#+Date: 
+#+Options: toc:nil
+#+LaTeX_HEADER: \usepackage{amsmath}
+#+LaTeX_HEADER: \usepackage{subfigure}
+#+LaTeX_CLASS: smarticle
+#+LaTeX_HEADER: \usepackage{courier}
+#+LaTeX_HEADER: \usepackage{libertine}
+#+LaTeX_HEADER: \usepackage{sectsty}
+#+LaTeX_HEADER: \sectionfont{\normalfont\scshape}
+#+LaTeX_HEADER: \subsectionfont{\normalfont\itshape}
+
+\newpage
+\setcounter{tocdepth}{3}
+\tableofcontents
+\newpage
+
+* Intro
+** What is Dodo?
+Dodo is/will be an agi (artificial general intelligence) experiment. For those
+who do not know what this is, artificial general intelligence is a computer
+program capable of human level intelligence. I.e., it can do anything a human can do,
+including learning new knowledge and even go to college :) 
+
+** Why? 
+Why Dodo? Why forex? Human level intelligence is a large undertaking. No, that
+is a understatement! It is a /humongous/ undertaking! Not only does one have to
+worry about the agi architecture, one has to worry about all the complex input that one
+has to support - particularly vision, which in itself involves
+a myriad of different ideas and concepts. So you have vision? How about relating all the objects in the world that it can see
+and making sense of all of that? It is large. It is complicated. Not that it cant be done, but why not eliminate this all 
+together and focus on the agi architecture: problem solving, imagination, language, etc? 
+
+It is simple - reduce the input to one relatively uncomplicated object - streams of price data, particularly forex! But can this single input
+support all of the architecture that we need to demonstrate? Well, lets see...
+1. Can it apply problem solving and imagination in forex ... yep! trading strategies, price action, order management, ....
+2. Can it apply language ... yep! language is a convenient to represent ideas between 2+ entities and also useful to think in terms of
+3. Can it demonstrate reflective thinking, consciousness, ... yep! sure, its a small world with it /only/ knowing about price streams, but this form of thinking is needed for #1 ....
+
+As we can see, using one sensory input wouldn't prevent us from fleshing out and demonstrating a whole architecture! What it /does/ do is take out the complexity
+that complex sensory inputs would present to agi. This is highly desirable, because With complexity comes a tunnel like approach: \\
+
+
+/Will this awesome idea i just came up with about how to create agi work out?/
+/Well, lets see, i have all of these sensory inputs i have to have support for. Lets just work on this for months/years to see if my one idea works..../ \\
+ 
+
+Or, equally worse, the idea would be tested on /toy problems/ which really aren't representative of what an agi needs to be able to do. Forex is not a 'toy'
+problem. It is a world in which only one sensory input is needed - but, as we saw above, a relatively complete agi architecture will be needed
+in evolving from a 'baby' agi up to an 'adult' forex agi. 
+
+Another advantage of this approach is that it is fun! Forex=money if one is successful with Dodo! Not that the money is the fun part - it is getting a profit via AGI
+applied to a chaotic market that is fun! Best yet, there are plenty of free forex demo accounts using metatrader that one can use. And it is really trivial to get 
+a live account. Of course, we will not use metatrader to program our AGI in! See [[https://github.com/Storkle/clj-forex]]. 
+It will use the java platform, but not java (heck no!), probably clojure+scala. 
+
+* Requirements
+** World
+We define a /world/ as a place in which an agent can receive sensory inputs. Furthermore, an agent 
+can be considered to have 'general intelligence' in any such world. /General/, in this sense, means it can achieve human level competance in the world it lives
+in, not just in results, but in commonsense thinking, goal planning, etc necessary in the world.
+It does not mean general in the sense that it can reason about anything (i.e. an agent in the forex market with only access to forex price stream data
+might be considered general even if it has no clue about the outside world. After all, the ouside world is not one of its sensory inputs). Certain worlds are
+better than others at developing an agi which can eventually scale to the sensory inputs of a human and all of the reasoning that goes with that. It was argued
+in the introduction that a forex market would be a good world. On the other hand, a world which requires complex prior knowledge, such as a stream of data 
+from scientific measurements, would be a horrible choise. Similarly, attempting to tackle everything (i.e. common sense with random facts
+as inputs) would be an equally horrible ideal. In general, the following are necessary conditions (in my opinion!) for a useful world/agent combo.
+
+1. /General Intelligence/ - Ability to exercise  general intelligence in the world. 
+2. /Scalability/ - Exercise most/all aspects, albeit on a smaller scale, that a similar agent would have to exercise in the human world. /But what are most-all aspects?/
+3. /Quick turn around/ - Allow quick experimentation of ideas. 
+4. /Fun Factor/ - This is a long term project -in order to be sustained, it has to be fun, fun, fun!
+
+Some correlaries:  
+ 
+1. /Non complex sensory input(s)/ - Raw sensory input(s) that do not detract from quick experimentation with ideas - i.e. not complex. /But what is a non-complex sensory input?/
+   Have a very small, non-high dimensional, sensory input(s) (i.e. not vision)
+2. /Non trivial sensory input(s)/ -  Have raw sensory input(s) which allow the exercising of aspects that one would encounter in the human world - i.e. not trivial 
+
+For reasons described in the Introduction, *forex price streams* have been chosen as /The World/.
+ 
+* Research
+Such a large task, even on a small world such as forex, will require many smaller goals. Accordingly, each goal will receive a brief description here, but
+will be developed in a separate org file. 
+** FX1
+FX1 will clone the experiment described in the [[http://web.media.mit.edu/~push/push-thesis.html][EM-ONE Thesis]], except in clojure. The architecture is based on the /Emotion Machine/, and it is the best
+high level architecture that I have read about. I *highly* recommend reading /Emotion Machine/, anyone can understand it. Anyways, FX1 will act as the bare scaffolding
+on which we will further develop/experiment with concepts. 
+
+Questions to think on:
+
+/A main assumption is that we have to use symbols or words as representations. But maybe we should be thinking of why symbols are useful? In the humand mind/
+/words have various meanings in various contexts. They allow us to express ourselves abstractly so we dont have to go into unecessary/
+/details which might be so common that it is uneccessary to repeat them, or are otherwise irrelevant. Somewhere below the symbolic language, is a hierarchy/
+/which encompasses the raw sensory input, that abstracts the world in a certain way (verbs,objects,associations  per context). Is there a better or alternative way/
+/to do this than 'labels'?/
+
+* Resources
+** /Emotion Machine/ and /Society of Mind/ 
+Books
+** [[http://opencog.org/][OpenCog]] 
+** [[http://mmp.mit.edu/][MMP]] initiative (core part is an architecture based on Emotion Machine)
+*** About
+[[http://web.mit.edu/newsoffice/2009/ai-overview-1207.html][MMP Article]]
+*** [[http://web.media.mit.edu/~push/push-thesis.html][EM-ONE Thesis]]
+*** Funk2
+[[http://www.funk2.org/][Funk2]] is an open source programming language that has been created to make the Emotion Machine
+architecture. It is a core part of the MMP. This work started by being based off of Push Singh's [[http://web.media.mit.edu/~push/push-thesis.html][EM-ONE Thesis]] in which
+he implements a limited form of the Emotion Machine architecture in common lisp. A thesis
+proposal for Funk2 is here [[http://docs.google.com/viewer?a=v&q=cache:IJPOxQF1dvAJ:neuromin.de/rct/morgan2010-a_computational_theory_of_the_communication_of_problem_solving_knowledge_between_parents_and_children.pdf+push+singh+em-one+code&hl=en&gl=us&pid=bl&srcid=ADGEESgR7BLxpluU3kNnMpeGPdcw9VRiq8_RzntV0H4i1QgtUB7D7vq-Mw721Gd1zmWZZeKLOFCJdqK2nbhhQ80oS1D4zDf_-4R78s8Uaf_i5gah33OO9Ed-qqbzHyuuMPLQ4orUSLrE&sig=AHIEtbSbAjz9K2KhyXLR6FdRKqxwrX1GNQ][Funk2 Thesis Proposal]].
+
+[[https://github.com/bunuelo][Github Repository]]
+
+
+
+** Other Websites
+http://neuromin.de/an/neuralmom.html
+ 
