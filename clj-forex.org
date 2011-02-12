@@ -3075,7 +3075,6 @@ Yes, currently it is not very development start friendly. That will change!
     ([save-file]
        (debugging "Save EA:"
 	(try
-	  (info "Attempting to acquire writeLock of *ea-pre-lock* ...")
 	  (locking-write-timeout [*ea-pre-lock* 1000] 
 				 (info "saving ...")
 				 (frm-save save-file @*eas*)
