@@ -1005,6 +1005,11 @@ Yes, currently it is not very development start friendly. That will change!
   (defonce *debug* true)
   (defn debug [msg & args]
     (when *debug* (apply out (str "DEBUG: " msg) args)))
+  ;;TODO: we need a combination of saving using byte straems and saving as clojure! that way clojure stuff is compatible with later stuff 
+
+  (defn- make-exception [a] (Exception. a))
+  (defmethod print-dup Exception [o w]
+    (.write w (str "#=(forex.util.core/make-exception \"" (.getMessage o) "\")")))
 
   ;;TODO: memoize pow?
   ;;used from http://groups.google.com/group/clojure/browse_thread/thread/cb5246d07142a3dc?fwc=2&pli=1
@@ -1179,6 +1184,11 @@ Yes, currently it is not very development start friendly. That will change!
        (binding [*out* ~arg]
 	 ~@body)))
 
+  (defn add-shutdown-hook [a]
+    (try
+      (.addShutdownHook (Runtime/getRuntime) a)
+      true
+      (catch Exception e false)))
 
   (defn dump-threads []
     (let [info (.dumpAllThreads (ManagementFactory/getThreadMXBean) false false)]
@@ -1672,7 +1682,14 @@ Yes, currently it is not very development start friendly. That will change!
 #+srcname:forex-util-emacs
 #+begin_src clojure :tangle src/forex/util/emacs.clj
   (ns forex.util.emacs (:use forex.util.general))
-  (defn- val-of [a] (if (var? a) (var-get a) a))
+
+  (defn fn-meta [function meta]
+    (let [ns-from *ns*]
+      (proxy [clojure.lang.AFn clojure.lang.Fn  clojure.lang.IMeta] []
+	(invoke [& args] (apply function args))
+	(meta [] (merge (meta function) (merge {:ns ns-from} meta))))))
+
+  (defn- val-of [a] (if (var? a) (var-get a) a)) 
   ;;TODO: add log to this
   (defn- apply-fn [a args]
     (try (apply (val-of a) args)
@@ -1684,10 +1701,11 @@ Yes, currently it is not very development start friendly. That will change!
 	    (catch Exception e# (println 
 				 (format "error in hook %s %s: %s" a# (val-of a#) e#))))))
 
-  (defn- as-ns [a] (condp = (class a)
-		       String (find-ns (symbol a))
-		       clojure.lang.Symbol (find-ns a)
-		       a))
+  (defn- as-ns [a]
+    (condp = (class a)
+	String (find-ns (symbol a))
+	clojure.lang.Symbol (find-ns a)
+	a))
   (defn ns-metas
     ([fn] (ns-metas *ns* fn))
     ([ns fn]
@@ -1721,19 +1739,59 @@ Yes, currently it is not very development start friendly. That will change!
     ([value list test]
        (some #(test % value) list)))
 
-  (defn pushnew [var arg]
-    (when-not (member arg (var-get var))
-      (alter-var-root var (fn [it] (concat (list arg) it)))))
+  (defn- pushnew* [hook arg id replace] 
+    (if replace 
+      (alter-var-root hook (fn [old]
+			     (doall (concat
+				     (list arg)
+				     (filter #(and (if id (not (= (:id (meta %)) id)) true)
+						  (not (= % arg))) old)))))
+      (alter-var-root hook (fn [old] 
+			     (doall (if (empty? (take 1 (filter #(or (when id (= (:id (meta %)) id)) (= % arg)) old)))
+				      (concat (list arg) old)
+				      old))))))
+  (defmulti pushnew (fn [a b & args] [(if (fn? a) ::fn (type a)) (if (fn? b) ::fn (type b))]))
+  (defmethod pushnew [clojure.lang.Var ::fn]
+    ([hook function] (pushnew hook function *ns* true))
+    ([hook function id] (pushnew hook function id true))
+    ([hook function id replace] 
+       (let [new-function (if (:id (meta function)) function (if id (fn-meta function {:id id}) function))]
+	 (pushnew* hook new-function id replace))))
+  (defmethod pushnew [clojure.lang.Var clojure.lang.Var]
+    ([hook var] (pushnew hook var nil false))
+    ([hook var id] (pushnew hook var id false)) 
+    ([hook var id replace] (pushnew* hook var id replace)))
 
-  (defn add-to-list [var arg]
-    (when-not (member arg (var-get var))
-      (alter-var-root var (fn [it] (concat (list arg) it)))))
 
-  (defn push [var val]
-    (alter-var-root var (fn [it] (concat (list val) it))))
+  (defn- add-to-list* [hook arg id replace] 
+    (if replace 
+      (alter-var-root hook (fn [old]
+			     (doall (concat
+				     (filter #(and (if id (not (= (:id (meta %)) id)) true)
+						  (not (= % arg))) old)
+				     (list arg)))))
+      (alter-var-root hook (fn [old]
+			     (doall (if (empty? (take 1 (filter #(or (when id (= (:id (meta %)) id)) (= % arg)) old)))
+				      (concat old (list arg))
+				      old))))))
+  (defmulti add-to-list (fn [a b & args] [(if (fn? a) ::fn (type a)) (if (fn? b) ::fn (type b))]))
+  (defmethod add-to-list [clojure.lang.Var ::fn]
+    ([hook function] (add-to-list hook function *ns* true))
+    ([hook function id] (add-to-list hook function id true))
+    ([hook function id replace] 
+       (let [new-function (if (:id (meta function)) function (if id (fn-meta function {:id id}) function))]
+	 (add-to-list* hook new-function id replace))))
+  (defmethod add-to-list [clojure.lang.Var clojure.lang.Var]
+    ([hook var] (add-to-list hook var nil false))
+    ([hook var id] (add-to-list hook var id false)) 
+    ([hook var id replace] (add-to-list* hook var id replace)))
+
+  (comment
+    (defn push [var val]
+      (alter-var-root var (fn [it] (concat (list val) it))))) 
 
   (defn add-hook [hook function] (pushnew hook function))
-  (defn add-hooks [hook functions] (doall (map #(push hook %) functions)))
+  (defn add-hooks [hook functions] (doall (map #(pushnew hook %) functions)))
 
   ;;RUNNING hooks
   (defn run-hooks [& hooks]
@@ -1742,6 +1800,7 @@ Yes, currently it is not very development start friendly. That will change!
   (defn run-hook-with-args [hook & args]
     (mapc #(apply-fn % args) hook))
 
+
   (defn run-hook-with-args-until-success [hook & args]
     (is (sequence? hook) "hook %s isnt a list" hook)
     (loop [funcs hook]
@@ -1749,7 +1808,7 @@ Yes, currently it is not very development start friendly. That will change!
 	(empty? funcs) nil
 	true (if-let [it (apply-fn (first funcs) args)]
 	       it
-	       (recur (rest funcs))))))
+	       (recur (rest funcs)))))) 
 
   (defn run-hook-with-args-until-failure [hook & args]
     (is (sequence? hook) "hook %s isnt a list" hook)
@@ -2819,7 +2878,7 @@ Yes, currently it is not very development start friendly. That will change!
 	forex.module.indicator 
 	forex.module.account)
        (:import forex.util.core.AtomHash  java.util.concurrent.TimeUnit))
-  (defvar save-file nil)
+  (defvar save-file nil) 
   (defvar ea-on-exit-hook)
   (defvar ea-on-start-hook)
   (defonce *ea-registry* (atom []))
@@ -3071,11 +3130,12 @@ Yes, currently it is not very development start friendly. That will change!
   (defn clear-eas [] (count (reset! *eas* (filter alive? @*eas*))))
   ;;SAVE/LOAD
   (defn save-eas
-    ([] (save-eas save-file))
-    ([save-file]
+    ([] (save-eas save-file 1000))
+    ([save-file] (save-eas save-file 1000))
+    ([save-file timeout]
        (debugging "Save EA:"
 	(try
-	  (locking-write-timeout [*ea-pre-lock* 1000] 
+	  (locking-write-timeout [*ea-pre-lock* (or timeout 1000)] 
 				 (info "saving ...")
 				 (frm-save save-file @*eas*)
 				 (count @*eas*))
@@ -3090,8 +3150,7 @@ Yes, currently it is not very development start friendly. That will change!
 	(try
 	  (let [eas (frm-load file)]
 	    (is? [(or (empty? eas) (every #(instance? EA %) eas))])
-	    (if append (swap! *eas* concat eas) (vec eas))
-	    (count eas))
+	    (if append (do (swap! *eas* concat eas) (count eas)) (vec eas)))
 	  (catch Exception e
 	    (warn "failed to load eas %s %s: %s" file append e))))))
 #+end_src
@@ -3884,6 +3943,8 @@ Yes, currently it is not very development start friendly. That will change!
 	  (new-logger (.replaceAll
 		       (format "log_%s.txt" (now)) ":" "_"))))
 
+
+  ;;ALL ABOUT AUTOSAVING
   (defvar ea-auto-save-minutes  5)
   (defvar ea-auto-save-file
     (let [file (format "%s/.forex/auto/ea-auto-save"
@@ -3892,10 +3953,19 @@ Yes, currently it is not very development start friendly. That will change!
       file))  
   (defonce ea-auto-save-thread (doto (thread
 				      (loop []
-					(save-eas ea-auto-save-file)
 					(sleep (* 60 ea-auto-save-minutes))
+					(save-eas ea-auto-save-file)
 					(recur)))
 				 (.setName "ea auto save")))
+
+  (add-to-list #'ea-on-exit-hook #(save-eas ea-auto-save-file))
+  (add-to-list #'ea-on-start-hook #(save-eas ea-auto-save-file))
+
+  (defonce ea-shutdown-hook (Thread. #(save-eas ea-auto-save-file 500)))
+  (add-shutdown-hook ea-shutdown-hook)
+  ;;;
+
+
 
   (comment 
     (setq gui-frame-title "MINE!"
