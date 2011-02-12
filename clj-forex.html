@@ -7,7 +7,7 @@ lang="en" xml:lang="en">
 <title>CLJ-FOREX</title>
 <meta http-equiv="Content-Type" content="text/html;charset=utf-8"/>
 <meta name="generator" content="Org-mode"/>
-<meta name="generated" content="2011-02-12 10:18:49 CST"/>
+<meta name="generated" content="2011-02-12 14:50:59 CST"/>
 <meta name="author" content="Seth Burleigh"/>
 <meta name="description" content=""/>
 <meta name="keywords" content=""/>
@@ -1258,6 +1258,11 @@ Raise an exception if any deletion fails unless silently is true."</span>
 (<span style="color: #a020f0;">defonce</span> <span style="color: #0000ff;">*debug*</span> true)
 (<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">debug</span> [msg &amp; args]
   (<span style="color: #a020f0;">when</span> *debug* (<span style="color: #7a378b;">apply</span> out (<span style="color: #7a378b;">str</span> <span style="color: #8b2252;">"DEBUG: "</span> msg) args)))
+<span style="color: #b22222;">;;</span><span style="color: #b22222;">TODO: we need a combination of saving using byte straems and saving as clojure! that way clojure stuff is compatible with later stuff 
+</span>
+(<span style="color: #a020f0;">defn-</span> <span style="color: #0000ff;">make-exception</span> [a] (Exception. a))
+(<span style="color: #a020f0;">defmethod</span> <span style="color: #0000ff;">print-dup</span> Exception [o w]
+  (.write w (<span style="color: #7a378b;">str</span> <span style="color: #8b2252;">"#=(forex.util.core/make-exception \""</span> (.getMessage o) <span style="color: #8b2252;">"\")"</span>)))
 
 <span style="color: #b22222;">;;</span><span style="color: #b22222;">TODO: memoize pow?
 </span><span style="color: #b22222;">;;</span><span style="color: #b22222;">used from http://groups.google.com/group/clojure/browse_thread/thread/cb5246d07142a3dc?fwc=2&amp;pli=1
@@ -1443,6 +1448,11 @@ Raise an exception if any deletion fails unless silently is true."</span>
      (<span style="color: #a020f0;">binding</span> [*out* ~arg]
        ~@body)))
 
+(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">add-shutdown-hook</span> [a]
+  (<span style="color: #a020f0;">try</span>
+    (.addShutdownHook (Runtime/getRuntime) a)
+    true
+    (<span style="color: #a020f0;">catch</span> Exception e false)))
 
 (<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">dump-threads</span> []
   (<span style="color: #a020f0;">let</span> [info (.dumpAllThreads (ManagementFactory/getThreadMXBean) false false)]
@@ -1964,7 +1974,14 @@ Raise an exception if any deletion fails unless silently is true."</span>
 
 <div class="org-src-container"><label class="org-src-name">forex-util-emacs()</label><pre class="src src-clojure">
 (<span style="color: #a020f0;">ns</span> forex.util.emacs (<span style="color: #7a378b;">:use</span> forex.util.general))
-(<span style="color: #a020f0;">defn-</span> <span style="color: #0000ff;">val-of</span> [a] (<span style="color: #a020f0;">if</span> (<span style="color: #7a378b;">var?</span> a) (<span style="color: #7a378b;">var-get</span> a) a))
+
+(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">fn-meta</span> [function meta]
+  (<span style="color: #a020f0;">let</span> [ns-from *ns*]
+    (<span style="color: #7a378b;">proxy</span> [clojure.lang.AFn clojure.lang.Fn  clojure.lang.IMeta] []
+      (invoke [&amp; args] (<span style="color: #7a378b;">apply</span> function args))
+      (<span style="color: #7a378b;">meta</span> [] (<span style="color: #7a378b;">merge</span> (<span style="color: #7a378b;">meta</span> function) (<span style="color: #7a378b;">merge</span> {<span style="color: #7a378b;">:ns</span> ns-from} meta))))))
+
+(<span style="color: #a020f0;">defn-</span> <span style="color: #0000ff;">val-of</span> [a] (<span style="color: #a020f0;">if</span> (<span style="color: #7a378b;">var?</span> a) (<span style="color: #7a378b;">var-get</span> a) a)) 
 <span style="color: #b22222;">;;</span><span style="color: #b22222;">TODO: add log to this
 </span>(<span style="color: #a020f0;">defn-</span> <span style="color: #0000ff;">apply-fn</span> [a args]
   (<span style="color: #a020f0;">try</span> (<span style="color: #7a378b;">apply</span> (val-of a) args)
@@ -1976,10 +1993,11 @@ Raise an exception if any deletion fails unless silently is true."</span>
           (<span style="color: #a020f0;">catch</span> Exception e# (<span style="color: #7a378b;">println</span> 
                                (<span style="color: #7a378b;">format</span> <span style="color: #8b2252;">"error in hook %s %s: %s"</span> a# (val-of a#) e#))))))
 
-(<span style="color: #a020f0;">defn-</span> <span style="color: #0000ff;">as-ns</span> [a] (<span style="color: #a020f0;">condp</span> = (<span style="color: #7a378b;">class</span> a)
-                     String (<span style="color: #7a378b;">find-ns</span> (<span style="color: #7a378b;">symbol</span> a))
-                     clojure.lang.Symbol (<span style="color: #7a378b;">find-ns</span> a)
-                     a))
+(<span style="color: #a020f0;">defn-</span> <span style="color: #0000ff;">as-ns</span> [a]
+  (<span style="color: #a020f0;">condp</span> = (<span style="color: #7a378b;">class</span> a)
+      String (<span style="color: #7a378b;">find-ns</span> (<span style="color: #7a378b;">symbol</span> a))
+      clojure.lang.Symbol (<span style="color: #7a378b;">find-ns</span> a)
+      a))
 (<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">ns-metas</span>
   ([fn] (ns-metas *ns* fn))
   ([ns fn]
@@ -2013,19 +2031,59 @@ Raise an exception if any deletion fails unless silently is true."</span>
   ([value list test]
      (<span style="color: #7a378b;">some</span> #(<span style="color: #7a378b;">test</span> % value) list)))
 
-(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">pushnew</span> [var arg]
-  (<span style="color: #a020f0;">when-not</span> (member arg (<span style="color: #7a378b;">var-get</span> var))
-    (<span style="color: #7a378b;">alter-var-root</span> var (<span style="color: #7a378b;">fn</span> [it] (<span style="color: #7a378b;">concat</span> (<span style="color: #7a378b;">list</span> arg) it)))))
+(<span style="color: #a020f0;">defn-</span> <span style="color: #0000ff;">pushnew*</span> [hook arg id replace] 
+  (<span style="color: #a020f0;">if</span> replace 
+    (<span style="color: #7a378b;">alter-var-root</span> hook (<span style="color: #7a378b;">fn</span> [old]
+                           (<span style="color: #a020f0;">doall</span> (<span style="color: #7a378b;">concat</span>
+                                   (<span style="color: #7a378b;">list</span> arg)
+                                   (<span style="color: #7a378b;">filter</span> #(<span style="color: #a020f0;">and</span> (<span style="color: #a020f0;">if</span> id (<span style="color: #7a378b;">not</span> (<span style="color: #7a378b;">=</span> (<span style="color: #7a378b;">:id</span> (<span style="color: #7a378b;">meta</span> %)) id)) true)
+                                                (<span style="color: #7a378b;">not</span> (<span style="color: #7a378b;">=</span> % arg))) old)))))
+    (<span style="color: #7a378b;">alter-var-root</span> hook (<span style="color: #7a378b;">fn</span> [old] 
+                           (<span style="color: #a020f0;">doall</span> (<span style="color: #a020f0;">if</span> (<span style="color: #7a378b;">empty?</span> (<span style="color: #7a378b;">take</span> 1 (<span style="color: #7a378b;">filter</span> #(<span style="color: #a020f0;">or</span> (<span style="color: #a020f0;">when</span> id (<span style="color: #7a378b;">=</span> (<span style="color: #7a378b;">:id</span> (<span style="color: #7a378b;">meta</span> %)) id)) (<span style="color: #7a378b;">=</span> % arg)) old)))
+                                    (<span style="color: #7a378b;">concat</span> (<span style="color: #7a378b;">list</span> arg) old)
+                                    old))))))
+(<span style="color: #a020f0;">defmulti</span> <span style="color: #0000ff;">pushnew</span> (<span style="color: #7a378b;">fn</span> [a b &amp; args] [(<span style="color: #a020f0;">if</span> (<span style="color: #7a378b;">fn?</span> a) <span style="color: #7a378b;">::fn</span> (<span style="color: #7a378b;">type</span> a)) (<span style="color: #a020f0;">if</span> (<span style="color: #7a378b;">fn?</span> b) <span style="color: #7a378b;">::fn</span> (<span style="color: #7a378b;">type</span> b))]))
+(<span style="color: #a020f0;">defmethod</span> <span style="color: #0000ff;">pushnew</span> [clojure.lang.Var <span style="color: #7a378b;">::fn</span>]
+  ([hook function] (pushnew hook function *ns* true))
+  ([hook function id] (pushnew hook function id true))
+  ([hook function id replace] 
+     (<span style="color: #a020f0;">let</span> [new-function (<span style="color: #a020f0;">if</span> (<span style="color: #7a378b;">:id</span> (<span style="color: #7a378b;">meta</span> function)) function (<span style="color: #a020f0;">if</span> id (fn-meta function {<span style="color: #7a378b;">:id</span> id}) function))]
+       (pushnew* hook new-function id replace))))
+(<span style="color: #a020f0;">defmethod</span> <span style="color: #0000ff;">pushnew</span> [clojure.lang.Var clojure.lang.Var]
+  ([hook var] (pushnew hook var nil false))
+  ([hook var id] (pushnew hook var id false)) 
+  ([hook var id replace] (pushnew* hook var id replace)))
 
-(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">add-to-list</span> [var arg]
-  (<span style="color: #a020f0;">when-not</span> (member arg (<span style="color: #7a378b;">var-get</span> var))
-    (<span style="color: #7a378b;">alter-var-root</span> var (<span style="color: #7a378b;">fn</span> [it] (<span style="color: #7a378b;">concat</span> (<span style="color: #7a378b;">list</span> arg) it)))))
 
-(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">push</span> [var val]
-  (<span style="color: #7a378b;">alter-var-root</span> var (<span style="color: #7a378b;">fn</span> [it] (<span style="color: #7a378b;">concat</span> (<span style="color: #7a378b;">list</span> val) it))))
+(<span style="color: #a020f0;">defn-</span> <span style="color: #0000ff;">add-to-list*</span> [hook arg id replace] 
+  (<span style="color: #a020f0;">if</span> replace 
+    (<span style="color: #7a378b;">alter-var-root</span> hook (<span style="color: #7a378b;">fn</span> [old]
+                           (<span style="color: #a020f0;">doall</span> (<span style="color: #7a378b;">concat</span>
+                                   (<span style="color: #7a378b;">filter</span> #(<span style="color: #a020f0;">and</span> (<span style="color: #a020f0;">if</span> id (<span style="color: #7a378b;">not</span> (<span style="color: #7a378b;">=</span> (<span style="color: #7a378b;">:id</span> (<span style="color: #7a378b;">meta</span> %)) id)) true)
+                                                (<span style="color: #7a378b;">not</span> (<span style="color: #7a378b;">=</span> % arg))) old)
+                                   (<span style="color: #7a378b;">list</span> arg)))))
+    (<span style="color: #7a378b;">alter-var-root</span> hook (<span style="color: #7a378b;">fn</span> [old]
+                           (<span style="color: #a020f0;">doall</span> (<span style="color: #a020f0;">if</span> (<span style="color: #7a378b;">empty?</span> (<span style="color: #7a378b;">take</span> 1 (<span style="color: #7a378b;">filter</span> #(<span style="color: #a020f0;">or</span> (<span style="color: #a020f0;">when</span> id (<span style="color: #7a378b;">=</span> (<span style="color: #7a378b;">:id</span> (<span style="color: #7a378b;">meta</span> %)) id)) (<span style="color: #7a378b;">=</span> % arg)) old)))
+                                    (<span style="color: #7a378b;">concat</span> old (<span style="color: #7a378b;">list</span> arg))
+                                    old))))))
+(<span style="color: #a020f0;">defmulti</span> <span style="color: #0000ff;">add-to-list</span> (<span style="color: #7a378b;">fn</span> [a b &amp; args] [(<span style="color: #a020f0;">if</span> (<span style="color: #7a378b;">fn?</span> a) <span style="color: #7a378b;">::fn</span> (<span style="color: #7a378b;">type</span> a)) (<span style="color: #a020f0;">if</span> (<span style="color: #7a378b;">fn?</span> b) <span style="color: #7a378b;">::fn</span> (<span style="color: #7a378b;">type</span> b))]))
+(<span style="color: #a020f0;">defmethod</span> <span style="color: #0000ff;">add-to-list</span> [clojure.lang.Var <span style="color: #7a378b;">::fn</span>]
+  ([hook function] (add-to-list hook function *ns* true))
+  ([hook function id] (add-to-list hook function id true))
+  ([hook function id replace] 
+     (<span style="color: #a020f0;">let</span> [new-function (<span style="color: #a020f0;">if</span> (<span style="color: #7a378b;">:id</span> (<span style="color: #7a378b;">meta</span> function)) function (<span style="color: #a020f0;">if</span> id (fn-meta function {<span style="color: #7a378b;">:id</span> id}) function))]
+       (add-to-list* hook new-function id replace))))
+(<span style="color: #a020f0;">defmethod</span> <span style="color: #0000ff;">add-to-list</span> [clojure.lang.Var clojure.lang.Var]
+  ([hook var] (add-to-list hook var nil false))
+  ([hook var id] (add-to-list hook var id false)) 
+  ([hook var id replace] (add-to-list* hook var id replace)))
+
+(<span style="color: #7a378b;">comment</span>
+  (<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">push</span> [var val]
+    (<span style="color: #7a378b;">alter-var-root</span> var (<span style="color: #7a378b;">fn</span> [it] (<span style="color: #7a378b;">concat</span> (<span style="color: #7a378b;">list</span> val) it))))) 
 
 (<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">add-hook</span> [hook function] (pushnew hook function))
-(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">add-hooks</span> [hook functions] (<span style="color: #a020f0;">doall</span> (<span style="color: #7a378b;">map</span> #(push hook %) functions)))
+(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">add-hooks</span> [hook functions] (<span style="color: #a020f0;">doall</span> (<span style="color: #7a378b;">map</span> #(pushnew hook %) functions)))
 
 <span style="color: #b22222;">;;</span><span style="color: #b22222;">RUNNING hooks
 </span>(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">run-hooks</span> [&amp; hooks]
@@ -2034,6 +2092,7 @@ Raise an exception if any deletion fails unless silently is true."</span>
 (<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">run-hook-with-args</span> [hook &amp; args]
   (mapc #(apply-fn % args) hook))
 
+
 (<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">run-hook-with-args-until-success</span> [hook &amp; args]
   (<span style="color: #228b22;">is</span> (sequence? hook) <span style="color: #8b2252;">"hook %s isnt a list"</span> hook)
   (<span style="color: #a020f0;">loop</span> [funcs hook]
@@ -2041,7 +2100,7 @@ Raise an exception if any deletion fails unless silently is true."</span>
       (<span style="color: #7a378b;">empty?</span> funcs) nil
       true (<span style="color: #a020f0;">if-let</span> [it (apply-fn (<span style="color: #7a378b;">first</span> funcs) args)]
              it
-             (<span style="color: #a020f0;">recur</span> (<span style="color: #7a378b;">rest</span> funcs))))))
+             (<span style="color: #a020f0;">recur</span> (<span style="color: #7a378b;">rest</span> funcs)))))) 
 
 (<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">run-hook-with-args-until-failure</span> [hook &amp; args]
   (<span style="color: #228b22;">is</span> (sequence? hook) <span style="color: #8b2252;">"hook %s isnt a list"</span> hook)
@@ -3210,7 +3269,7 @@ return(val);
       forex.module.indicator 
       forex.module.account)
      (<span style="color: #7a378b;">:import</span> forex.util.core.AtomHash  java.util.concurrent.TimeUnit))
-(<span style="color: #a020f0;">defvar</span> <span style="color: #0000ff;">save-file</span> nil)
+(<span style="color: #a020f0;">defvar</span> <span style="color: #0000ff;">save-file</span> nil) 
 (<span style="color: #a020f0;">defvar</span> <span style="color: #0000ff;">ea-on-exit-hook</span>)
 (<span style="color: #a020f0;">defvar</span> <span style="color: #0000ff;">ea-on-start-hook</span>)
 (<span style="color: #a020f0;">defonce</span> <span style="color: #0000ff;">*ea-registry*</span> (<span style="color: #7a378b;">atom</span> []))
@@ -3462,12 +3521,12 @@ return(val);
 (<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">clear-eas</span> [] (<span style="color: #7a378b;">count</span> (<span style="color: #7a378b;">reset!</span> *eas* (<span style="color: #7a378b;">filter</span> alive? @*eas*))))
 <span style="color: #b22222;">;;</span><span style="color: #b22222;">SAVE/LOAD
 </span>(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">save-eas</span>
-  ([] (save-eas save-file))
-  ([save-file]
+  ([] (save-eas save-file 1000))
+  ([save-file] (save-eas save-file 1000))
+  ([save-file timeout]
      (debugging <span style="color: #8b2252;">"Save EA:"</span>
       (<span style="color: #a020f0;">try</span>
-        (info <span style="color: #8b2252;">"Attempting to acquire writeLock of *ea-pre-lock* ..."</span>)
-        (locking-write-timeout [*ea-pre-lock* 1000] 
+        (locking-write-timeout [*ea-pre-lock* (<span style="color: #a020f0;">or</span> timeout 1000)] 
                                (info <span style="color: #8b2252;">"saving ..."</span>)
                                (frm-save save-file @*eas*)
                                (<span style="color: #7a378b;">count</span> @*eas*))
@@ -3482,8 +3541,7 @@ return(val);
       (<span style="color: #a020f0;">try</span>
         (<span style="color: #a020f0;">let</span> [eas (frm-load file)]
           (is? [(<span style="color: #a020f0;">or</span> (<span style="color: #7a378b;">empty?</span> eas) (every #(<span style="color: #7a378b;">instance?</span> EA %) eas))])
-          (<span style="color: #a020f0;">if</span> append (<span style="color: #7a378b;">swap!</span> *eas* concat eas) (<span style="color: #7a378b;">vec</span> eas))
-          (<span style="color: #7a378b;">count</span> eas))
+          (<span style="color: #a020f0;">if</span> append (<span style="color: #a020f0;">do</span> (<span style="color: #7a378b;">swap!</span> *eas* concat eas) (<span style="color: #7a378b;">count</span> eas)) (<span style="color: #7a378b;">vec</span> eas)))
         (<span style="color: #a020f0;">catch</span> Exception e
           (warn <span style="color: #8b2252;">"failed to load eas %s %s: %s"</span> file append e))))))
 </pre></div>
@@ -4333,7 +4391,9 @@ This will stop all running expert advisors."</span> gui-frame-title))
         (new-logger (.replaceAll
                      (<span style="color: #7a378b;">format</span> <span style="color: #8b2252;">"log_%s.txt"</span> (now)) <span style="color: #8b2252;">":"</span> <span style="color: #8b2252;">"_"</span>))))
 
-(<span style="color: #a020f0;">defvar</span> <span style="color: #0000ff;">ea-auto-save-minutes</span>  5)
+
+<span style="color: #b22222;">;;</span><span style="color: #b22222;">ALL ABOUT AUTOSAVING
+</span>(<span style="color: #a020f0;">defvar</span> <span style="color: #0000ff;">ea-auto-save-minutes</span>  5)
 (<span style="color: #a020f0;">defvar</span> <span style="color: #0000ff;">ea-auto-save-file</span>
   (<span style="color: #a020f0;">let</span> [file (<span style="color: #7a378b;">format</span> <span style="color: #8b2252;">"%s/.forex/auto/ea-auto-save"</span>
                      (System/getProperty <span style="color: #8b2252;">"user.home"</span>))]
@@ -4341,10 +4401,19 @@ This will stop all running expert advisors."</span> gui-frame-title))
     file))  
 (<span style="color: #a020f0;">defonce</span> <span style="color: #0000ff;">ea-auto-save-thread</span> (<span style="color: #a020f0;">doto</span> (thread
                                     (<span style="color: #a020f0;">loop</span> []
-                                      (save-eas ea-auto-save-file)
                                       (sleep (<span style="color: #7a378b;">*</span> 60 ea-auto-save-minutes))
+                                      (save-eas ea-auto-save-file)
                                       (<span style="color: #a020f0;">recur</span>)))
                                (.setName <span style="color: #8b2252;">"ea auto save"</span>)))
+
+(add-to-list #'ea-on-exit-hook #(save-eas ea-auto-save-file))
+(add-to-list #'ea-on-start-hook #(save-eas ea-auto-save-file))
+
+(<span style="color: #a020f0;">defonce</span> <span style="color: #0000ff;">ea-shutdown-hook</span> (Thread. #(save-eas ea-auto-save-file 500)))
+(add-shutdown-hook ea-shutdown-hook)
+<span style="color: #b22222;">;;;</span><span style="color: #b22222;">
+</span>
+
 
 (<span style="color: #7a378b;">comment</span> 
   (setq gui-frame-title <span style="color: #8b2252;">"MINE!"</span>
@@ -4708,7 +4777,7 @@ use clj-forex&hellip;.
 <div id="postamble">
 <p class="author"> Author: Seth Burleigh
 </p>
-<p class="date"> Date: 2011-02-12 10:18:49 CST</p>
+<p class="date"> Date: 2011-02-12 14:50:59 CST</p>
 <p class="creator">HTML generated by org-mode 7.4 in emacs 23</p>
 </div>
 </div>
