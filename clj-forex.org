@@ -89,24 +89,26 @@ to give noweb support for babel so that i can break up the blocks.
 
 Yes, currently it is not very development start friendly. That will change!
 * From Ideas to Implementation - Metatrader Backend
-* Code
+* Code 
 ** Project
 #+srcname:project
 #+begin_src clojure :tangle project.clj
-  (defproject clj-forex "0.1"
+  (defproject clj-forex "0.1-SNAPSHOT"
     :description "non graphical library for automated trading for forex market with various backends like metatrader"
     :dependencies [[org.clojure/clojure "1.2.0"]
 		   [org.clojure/clojure-contrib "1.2.0"]           
 		   [matchure "0.10.0"]
-		   [clj-time "0.2.0-SNAPSHOT"]            
+		   [clj-time "0.2.0-SNAPSHOT"]
 		   [mmemail "1.0.1"] 
 		   [nstools "0.2.4"]
-		   [org.clojars.starry/clj-forex-indicators "0.1"]]   
+		   [com.miglayout/miglayout "3.7.4"]]   
     :dev-dependencies [[native-deps "1.0.5"]
-		       [swank-clojure "1.3.0-SNAPSHOT"]] 
-    :native-dependencies [[org.clojars.starry/jzmq-native-deps "2.0.10.1"]]
+		       [swank-clojure "1.3.0-SNAPSHOT"]]  
+    :native-dependencies [[org.clojars.starry/jzmq-native-deps "2.0.10.2"]]
+    :main forex.interface.main
+    :repositories {"miglayout" "http://www.miglayout.com/mavensite/"} 
+    :run-aliases {:izpack forex.dev.install} 
     ;; :jvm-opts      ["-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=8030"]
-    ;;:main forex.binding
     ;;:aot :all
     )
 #+end_src 
@@ -345,7 +347,7 @@ Yes, currently it is not very development start friendly. That will change!
 #+source:clj-core
 #+begin_src clojure :tangle src/clj/core.clj
   (ns clj.core
-    (:refer-clojure :exclude [promise swap! reset! defrecord])
+    (:refer-clojure :exclude [promise swap! reset! defrecord spit file])
     (:require clj.third-party.defrecord2)
     (:import clojure.lang.APersistentMap java.io.Writer))
   (defmacro defrecord [name fields & protocols]
@@ -397,6 +399,597 @@ Yes, currently it is not very development start friendly. That will change!
     (.write w "#=(clojure.core/atom ") (print-dup @o w) (.write w ")"))
   (defmethod print-dup clojure.lang.Ref [o w]
     (.write w "#=(clojure.core/ref ") (print-dup @o w) (.write w ")"))
+#+end_src
+
+#+source:clj-io
+#+begin_src clojure :tangle src/clj/io.clj
+  ;;; duck_streams.clj -- duck-typed I/O streams for Clojure
+
+  ;; by Stuart Sierra, http://stuartsierra.com/
+  ;; May 13, 2009
+
+  ;; Copyright (c) Stuart Sierra, 2009. All rights reserved.  The use
+  ;; and distribution terms for this software are covered by the Eclipse
+  ;; Public License 1.0 (http://opensource.org/licenses/eclipse-1.0.php)
+  ;; which can be found in the file epl-v10.html at the root of this
+  ;; distribution.  By using this software in any fashion, you are
+  ;; agreeing to be bound by the terms of this license.  You must not
+  ;; remove this notice, or any other, from this software.
+
+
+  ;; This file defines "duck-typed" I/O utility functions for Clojure.
+  ;; The 'reader' and 'writer' functions will open and return an
+  ;; instance of java.io.BufferedReader and java.io.BufferedWriter,
+  ;; respectively, for a variety of argument types -- filenames as
+  ;; strings, URLs, java.io.File's, etc.  'reader' even works on http
+  ;; URLs.
+  ;;
+  ;; Note: this is not really "duck typing" as implemented in languages
+  ;; like Ruby.  A better name would have been "do-what-I-mean-streams"
+  ;; or "just-give-me-a-stream", but ducks are funnier.
+
+
+  ;; CHANGE LOG
+  ;;
+  ;; May 13, 2009: added functions to open writers for appending
+  ;;
+  ;; May 3, 2009: renamed file to file-str, for compatibility with
+  ;; clojure.contrib.java.  reader/writer no longer use this
+  ;; function.
+  ;;
+  ;; February 16, 2009: (lazy branch) fixed read-lines to work with lazy
+  ;; Clojure.
+  ;;
+  ;; January 10, 2009: added *default-encoding*, so streams are always
+  ;; opened as UTF-8.
+  ;;
+  ;; December 19, 2008: rewrote reader and writer as multimethods; added
+  ;; slurp*, file, and read-lines
+  ;;
+  ;; April 8, 2008: first version
+
+
+
+  (ns
+   #^{:author "Stuart Sierra",
+      :doc "This file defines polymorphic I/O utility functions for Clojure.
+
+	     The Streams protocol defines reader, writer, input-stream and
+	     output-stream methods that return BufferedReader, BufferedWriter,
+	     BufferedInputStream and BufferedOutputStream instances (respectively),
+	     with default implementations extended to a variety of argument
+	     types: URLs or filenames as strings, java.io.File's, Sockets, etc."}
+   clj.io
+   (:refer-clojure :exclude (spit))
+   (:import 
+    (java.io Reader InputStream InputStreamReader PushbackReader
+	     BufferedReader File OutputStream
+	     OutputStreamWriter BufferedWriter Writer
+	     FileInputStream FileOutputStream ByteArrayOutputStream
+	     StringReader ByteArrayInputStream
+	     BufferedInputStream BufferedOutputStream
+	     CharArrayReader)
+    (java.net URI URL MalformedURLException Socket)))
+
+  (defmulti #^File ^{:private true} as-file 
+    "Interpret a String or a java.io.File as a File. Building block
+     for clojure.contrib.java/file, which you should prefer
+     in most cases."
+    class)
+  (defmethod ^{:private true} as-file String [#^String s] (File. s))
+  (defmethod ^{:private true} as-file File [f] f)
+
+
+  (def
+   #^{:doc "Name of the default encoding to use when reading & writing.
+    Default is UTF-8."
+      :tag "java.lang.String"}
+   *default-encoding* "UTF-8")
+
+  (def
+   #^{:doc "Size, in bytes or characters, of the buffer used when
+    copying streams."}
+   *buffer-size* 1024)
+
+  (def
+   #^{:doc "Type object for a Java primitive byte array."}
+   *byte-array-type* (class (make-array Byte/TYPE 0)))
+
+  (def
+   #^{:doc "Type object for a Java primitive char array."}
+   *char-array-type* (class (make-array Character/TYPE 0)))
+
+
+  (defn #^File file-str
+    "Concatenates args as strings and returns a java.io.File.  Replaces
+    all / and \\ with File/separatorChar.  Replaces ~ at the start of
+    the path with the user.home system property."
+    [& args]
+    (let [#^String s (apply str args)
+	  s (.replace s \\ File/separatorChar)
+	  s (.replace s \/ File/separatorChar)
+	  s (if (.startsWith s "~")
+	      (str (System/getProperty "user.home")
+		   File/separator (subs s 1))
+	      s)]
+      (File. s)))
+
+  (def
+   #^{:doc "If true, writer, output-stream and spit will open files in append mode.
+	    Defaults to false.  Instead of binding this var directly, use append-writer,
+	    append-output-stream or append-spit."
+      :tag "java.lang.Boolean"}
+   *append* false)
+
+  (defn- assert-not-appending []
+    (when *append*
+      (throw (Exception. "Cannot change an open stream to append mode."))))
+
+  ;; @todo -- Both simple and elaborate methods for controlling buffering of
+  ;; in the Streams protocol were implemented, considered, and postponed
+  ;; see http://groups.google.com/group/clojure-dev/browse_frm/thread/3e39e9b3982f542b
+  (defprotocol Streams
+    (reader [x]
+      "Attempts to coerce its argument into an open java.io.Reader.
+       The default implementations of this protocol always return a
+       java.io.BufferedReader.
+
+       Default implementations are provided for Reader, BufferedReader,
+       InputStream, File, URI, URL, Socket, byte arrays, character arrays,
+       and String.
+
+       If argument is a String, it tries to resolve it first as a URI, then
+       as a local file name.  URIs with a 'file' protocol are converted to
+       local file names.  If this fails, a final attempt is made to resolve
+       the string as a resource on the CLASSPATH.
+
+       Uses *default-encoding* as the text encoding.
+
+       Should be used inside with-open to ensure the Reader is properly
+       closed.")
+    (writer [x]
+      "Attempts to coerce its argument into an open java.io.Writer.
+       The default implementations of this protocol always return a
+       java.io.BufferedWriter.
+
+       Default implementations are provided for Writer, BufferedWriter,
+       OutputStream, File, URI, URL, Socket, and String.
+
+       If the argument is a String, it tries to resolve it first as a URI, then
+       as a local file name.  URIs with a 'file' protocol are converted to
+       local file names.
+
+       Should be used inside with-open to ensure the Writer is properly
+       closed.")
+    (input-stream [x]
+      "Attempts to coerce its argument into an open java.io.InputStream.
+       The default implementations of this protocol always return a
+       java.io.BufferedInputStream.
+
+       Default implementations are defined for OutputStream, File, URI, URL,
+       Socket, byte array, and String arguments.
+
+       If the argument is a String, it tries to resolve it first as a URI, then
+       as a local file name.  URIs with a 'file' protocol are converted to
+       local file names.
+
+       Should be used inside with-open to ensure the InputStream is properly
+       closed.")
+    (output-stream [x]
+      "Attempts to coerce its argument into an open java.io.OutputStream.
+       The default implementations of this protocol always return a
+       java.io.BufferedOutputStream.
+
+       Default implementations are defined for OutputStream, File, URI, URL,
+       Socket, and String arguments.
+
+       If the argument is a String, it tries to resolve it first as a URI, then
+       as a local file name.  URIs with a 'file' protocol are converted to
+       local file names.
+
+       Should be used inside with-open to ensure the OutputStream is
+       properly closed."))
+
+  (def default-streams-impl
+    {:reader #(reader (input-stream %))
+     :writer #(writer (output-stream %))
+     :input-stream #(throw (Exception. (str "Cannot open <" (pr-str %) "> as an InputStream.")))
+     :output-stream #(throw (Exception. (str "Cannot open <" (pr-str %) "> as an OutputStream.")))})
+
+  (extend File
+    Streams
+    (assoc default-streams-impl
+      :input-stream #(input-stream (FileInputStream. #^File %))
+      :output-stream #(let [stream (FileOutputStream. #^File % *append*)]
+			(binding [*append* false]
+			  (output-stream stream)))))
+  (extend URL
+    Streams
+    (assoc default-streams-impl
+      :input-stream (fn [#^URL x]
+		      (input-stream (if (= "file" (.getProtocol x))
+				      (FileInputStream. (.getPath x))
+				      (.openStream x))))
+      :output-stream (fn [#^URL x]
+		       (if (= "file" (.getProtocol x))
+			 (output-stream (File. (.getPath x)))
+			 (throw (Exception. (str "Can not write to non-file URL <" x ">")))))))
+  (extend URI
+    Streams
+    (assoc default-streams-impl
+      :input-stream #(input-stream (.toURL #^URI %))
+      :output-stream #(output-stream (.toURL #^URI %))))
+  (extend String
+    Streams
+    (assoc default-streams-impl
+      :input-stream #(try
+		       (input-stream (URL. %))
+		       (catch MalformedURLException e
+			 (input-stream (File. #^String %))))
+      :output-stream #(try
+			(output-stream (URL. %))
+			(catch MalformedURLException err
+			  (output-stream (File. #^String %))))))
+  (extend Socket
+    Streams
+    (assoc default-streams-impl
+      :input-stream #(.getInputStream #^Socket %)
+      :output-stream #(output-stream (.getOutputStream #^Socket %))))
+  (extend *byte-array-type*
+    Streams
+    (assoc default-streams-impl :input-stream #(input-stream (ByteArrayInputStream. %))))
+  (extend *char-array-type*
+    Streams
+    (assoc default-streams-impl :reader #(reader (CharArrayReader. %))))
+  (extend Object
+    Streams
+    default-streams-impl)
+
+  (extend Reader
+    Streams
+    (assoc default-streams-impl :reader #(BufferedReader. %)))
+  (extend BufferedReader
+    Streams
+    (assoc default-streams-impl :reader identity))
+  (defn- inputstream->reader
+    [#^InputStream is]
+    (reader (InputStreamReader. is *default-encoding*)))
+  (extend InputStream
+    Streams
+    (assoc default-streams-impl :input-stream #(BufferedInputStream. %)
+      :reader inputstream->reader))
+  (extend BufferedInputStream
+    Streams
+    (assoc default-streams-impl
+      :input-stream identity
+      :reader inputstream->reader))
+
+  (extend Writer
+    Streams
+    (assoc default-streams-impl :writer #(do (assert-not-appending)
+					     (BufferedWriter. %))))
+  (extend BufferedWriter
+    Streams
+    (assoc default-streams-impl :writer #(do (assert-not-appending) %)))
+  (defn- outputstream->writer
+    [#^OutputStream os]
+    (assert-not-appending)
+    (writer (OutputStreamWriter. os *default-encoding*)))
+  (extend OutputStream
+    Streams
+    (assoc default-streams-impl
+      :output-stream #(do (assert-not-appending)
+			  (BufferedOutputStream. %))
+      :writer outputstream->writer))
+  (extend BufferedOutputStream
+    Streams
+    (assoc default-streams-impl
+      :output-stream #(do (assert-not-appending) %)
+	:writer outputstream->writer))
+
+  (defn append-output-stream
+    "Like output-stream but opens file for appending.  Does not work on streams
+    that are already open."
+    [x]
+    (binding [*append* true]
+      (output-stream x)))
+
+  (defn append-writer
+    "Like writer but opens file for appending.  Does not work on streams
+    that are already open."
+    [x]
+    (binding [*append* true]
+      (writer x)))
+
+  (defn write-lines
+    "Writes lines (a seq) to f, separated by newlines.  f is opened with
+    writer, and automatically closed at the end of the sequence."
+    [f lines]
+    (with-open [#^BufferedWriter writer (writer f)]
+      (loop [lines lines]
+	(when-let [line (first lines)]
+	  (.write writer (str line))
+	  (.newLine writer)
+	  (recur (rest lines))))))
+
+  (defn read-lines
+    "Like clojure.core/line-seq but opens f with reader.  Automatically
+    closes the reader AFTER YOU CONSUME THE ENTIRE SEQUENCE."
+    [f]
+    (let [read-line (fn this [#^BufferedReader rdr]
+		      (lazy-seq
+		       (if-let [line (.readLine rdr)]
+			 (cons line (this rdr))
+			 (.close rdr))))]
+      (read-line (reader f))))
+
+  (defn #^String slurp*
+    "Like clojure.core/slurp but opens f with reader."
+    [f]
+    (with-open [#^BufferedReader r (reader f)]
+	(let [sb (StringBuilder.)]
+	  (loop [c (.read r)]
+	    (if (neg? c)
+	      (str sb)
+	      (do (.append sb (char c))
+		  (recur (.read r))))))))
+
+  (defn spit
+    "Opposite of slurp.  Opens f with writer, writes content, then
+    closes f."
+    [f content]
+    (with-open [#^Writer w (writer f)]
+      (.write w content)))
+
+  (defn append-spit
+    "Like spit but appends to file."
+    [f content]
+    (with-open [#^Writer w (append-writer f)]
+      (.write w content)))
+
+  (defn pwd
+    "Returns current working directory as a String.  (Like UNIX 'pwd'.)
+    Note: In Java, you cannot change the current working directory."
+    []
+    (System/getProperty "user.dir"))
+
+
+
+  (defmacro with-out-writer
+    "Opens a writer on f, binds it to *out*, and evalutes body.
+    Anything printed within body will be written to f."
+    [f & body]
+    `(with-open [stream# (writer ~f)]
+       (binding [*out* stream#]
+	 ~@body)))
+
+  (defmacro with-out-append-writer
+    "Like with-out-writer but appends to file."
+    [f & body]
+    `(with-open [stream# (append-writer ~f)]
+       (binding [*out* stream#]
+	 ~@body)))
+
+  (defmacro with-in-reader
+    "Opens a PushbackReader on f, binds it to *in*, and evaluates body."
+    [f & body]
+    `(with-open [stream# (PushbackReader. (reader ~f))]
+       (binding [*in* stream#]
+	 ~@body)))
+
+  (defmulti
+    #^{:doc "Copies input to output.  Returns nil.
+    Input may be an InputStream, Reader, File, byte[], or String.
+    Output may be an OutputStream, Writer, or File.
+
+    Does not close any streams except those it opens itself 
+    (on a File).
+
+    Writing a File fails if the parent directory does not exist."
+       :arglists '([input output])}
+    copy
+    (fn [input output]
+      [(if (string? input) File (type input))
+       (if (string? output) File (type output))]))
+
+  (defmethod copy [InputStream OutputStream] [#^InputStream input #^OutputStream output]
+    (let [buffer (make-array Byte/TYPE *buffer-size*)]
+      (loop []
+	(let [size (.read input buffer)]
+	  (when (pos? size)
+	    (do (.write output buffer 0 size)
+		(recur)))))))
+
+  (defmethod copy [InputStream Writer] [#^InputStream input #^Writer output]
+    (let [#^"[B" buffer (make-array Byte/TYPE *buffer-size*)]
+      (loop []
+	(let [size (.read input buffer)]
+	  (when (pos? size)
+	    (let [chars (.toCharArray (String. buffer 0 size *default-encoding*))]
+	      (do (.write output chars)
+		  (recur))))))))
+
+
+  (defmethod copy [InputStream File] [#^InputStream input #^File output]
+    (with-open [out (FileOutputStream. output)]
+      (copy input out)))
+
+  (defmethod copy [Reader OutputStream] [#^Reader input #^OutputStream output]
+    (let [#^"[C" buffer (make-array Character/TYPE *buffer-size*)]
+      (loop []
+	(let [size (.read input buffer)]
+	  (when (pos? size)
+	    (let [bytes (.getBytes (String. buffer 0 size) *default-encoding*)]
+	      (do (.write output bytes)
+		  (recur))))))))
+
+  (defmethod copy [Reader Writer] [#^Reader input #^Writer output]
+    (let [#^"[C" buffer (make-array Character/TYPE *buffer-size*)]
+      (loop []
+	(let [size (.read input buffer)]
+	  (when (pos? size)
+	    (do (.write output buffer 0 size)
+		(recur)))))))
+
+  (defmethod copy [Reader File] [#^Reader input #^File output]
+    (with-open [out (FileOutputStream. output)]
+      (copy input out)))
+
+  (defmethod copy [File OutputStream] [#^File input #^OutputStream output]
+    (with-open [in (FileInputStream. input)]
+      (copy in output)))
+
+  (defmethod copy [File Writer] [#^File input #^Writer output]
+    (with-open [in (FileInputStream. input)]
+      (copy in output)))
+
+  (defmethod copy [File File] [input output]
+    (with-open [in (FileInputStream. (as-file input))
+		out (FileOutputStream. (as-file output))]
+      (copy in out)))
+
+  (defmethod copy [String OutputStream] [#^String input #^OutputStream output]
+    (copy (StringReader. input) output))
+
+  (defmethod copy [String Writer] [#^String input #^Writer output]
+    (copy (StringReader. input) output))
+
+  (defmethod copy [String File] [#^String input #^File output]
+    (copy (StringReader. input) output))
+
+  (defmethod copy [*char-array-type* OutputStream] [input #^OutputStream output]
+    (copy (CharArrayReader. input) output))
+
+  (defmethod copy [*char-array-type* Writer] [input #^Writer output]
+    (copy (CharArrayReader. input) output))
+
+  (defmethod copy [*char-array-type* File] [input #^File output]
+    (copy (CharArrayReader. input) output))
+
+  (defmethod copy [*byte-array-type* OutputStream] [#^"[B" input #^OutputStream output]
+    (copy (ByteArrayInputStream. input) output))
+
+  (defmethod copy [*byte-array-type* Writer] [#^"[B" input #^Writer output]
+    (copy (ByteArrayInputStream. input) output))
+
+  (defmethod copy [*byte-array-type* File] [#^"[B" input #^Writer output]
+    (copy (ByteArrayInputStream. input) output))
+
+
+  (defmulti
+    #^{:doc "Converts argument into a Java byte array.  Argument may be
+    a String, File, InputStream, or Reader.  If the argument is already
+    a byte array, returns it."
+      :arglists '([arg])}
+    to-byte-array type)
+
+  (defmethod to-byte-array *byte-array-type* [x] x)
+
+  (defmethod to-byte-array String [#^String x]
+    (.getBytes x *default-encoding*))
+
+  (defmethod to-byte-array File [#^File x]
+    (with-open [input (FileInputStream. x)
+		buffer (ByteArrayOutputStream.)]
+      (copy input buffer)
+      (.toByteArray buffer)))
+
+  (defmethod to-byte-array InputStream [#^InputStream x]
+    (let [buffer (ByteArrayOutputStream.)]
+      (copy x buffer)
+      (.toByteArray buffer)))
+
+  (defmethod to-byte-array Reader [#^Reader x]
+    (.getBytes (slurp* x) *default-encoding*))
+
+  (defmulti relative-path-string 
+    "Interpret a String or java.io.File as a relative path string. 
+     Building block for clojure.contrib.java/file."
+    class)
+
+  (defmethod relative-path-string String [#^String s]
+    (relative-path-string (File. s)))
+
+  (defmethod relative-path-string File [#^File f]
+    (if (.isAbsolute f)
+      (throw (IllegalArgumentException. (str f " is not a relative path")))
+      (.getPath f)))
+
+
+  (defn #^File file
+    "Returns a java.io.File from string or file args."
+    ([arg]                      
+       (as-file arg))
+    ([parent child]             
+       (File. #^File (as-file parent) #^String (relative-path-string child)))
+    ([parent child & more]
+       (reduce file (file parent child) more)))
+
+  (defn delete-file
+    "Delete file f. Raise an exception if it fails unless silently is true."
+    [f & [silently]]
+    (or (.delete (file f))
+	silently
+	(throw (java.io.IOException. (str "Couldn't delete " f)))))
+
+  (defn delete-file-recursively
+    "Delete file f. If it's a directory, recursively delete all its contents.
+  Raise an exception if any deletion fails unless silently is true."
+    [f & [silently]]
+    (let [f (file f)]
+      (if (.isDirectory f)
+	(doseq [child (.listFiles f)]
+	  (delete-file-recursively child silently)))
+      (delete-file f silently)))
+
+  (defmulti
+    #^{:doc "Coerces argument (URL, URI, or String) to a java.net.URL."
+       :arglists '([arg])}
+    as-url type)
+
+  (defmethod as-url URL [x] x)
+
+  (defmethod as-url URI [#^URI x] (.toURL x))
+
+  (defmethod as-url String [#^String x] (URL. x))
+
+  (defmethod as-url File [#^File x] (.toURL x))
+
+
+
+  (defn make-parents
+    "Creates all parent directories of file."
+    [file]
+    (.mkdirs (.getParentFile (as-file file))))
+
+
+  (defn copy-dir [source target]
+    (let [source (as-file source) target (as-file target)]
+      (make-parents target)
+      (loop [source source target target]
+	(if (.isDirectory source)
+	  (do (if (not (.exists target)) (.mkdir target))
+	      (doseq [child (.list source)]             
+		(copy-dir (file source child) (file target child))))
+	  (if (.exists source) (copy source target))))))
+
+  (defn file-type [f]
+    (if (.isFile f)
+      (let [a (.split (.getName f) "\\.")]
+	(if (> (count a) 1)
+	  (last a)
+	  ""))
+      ""))
+
+  (defn list-files [source]
+    (let [source (as-file source)
+	  files (.listFiles source)]
+      (lazy-seq
+       (if (empty? files)
+	 nil
+	 (apply concat (vec files) (map list-files (filter #(.isDirectory %) files)))))))
+
+  ;;(count (filter #(= (file-type %) "clj") (list-files "/home/seth/Dropbox/.rep/clj-forex/")))
 #+end_src
 
 *** Core
@@ -491,8 +1084,9 @@ Yes, currently it is not very development start friendly. That will change!
   (defn atom-hash
     ([] (atom-hash {}))
     ([val]
-       (is (map? val))
-       (AtomHash. (atom val))))
+       (let [val (if (nil? val) {} val)]
+	(is (map? val))
+	(AtomHash. (atom val)))))
 
   (defn symbolicate
     "symbolicate symbols together. ignores things like whitespaces, just drops them!"
@@ -577,6 +1171,15 @@ Yes, currently it is not very development start friendly. That will change!
 	      [clojure.contrib.def :as d])
     (:use clojure.contrib.macro-utils))
 
+  (defmacro with-out-str+
+    "Evaluates exprs in a context in which *out* is bound to a fresh
+    StringWriter.  Returns the string created by any nested printing
+    calls."  {:added "1.0"} [arg & body]
+    `(let [~arg (new java.io.StringWriter)]
+       (binding [*out* ~arg]
+	 ~@body)))
+
+
   (defn dump-threads []
     (let [info (.dumpAllThreads (ManagementFactory/getThreadMXBean) false false)]
      (doall
@@ -633,7 +1236,7 @@ Yes, currently it is not very development start friendly. That will change!
   (defn var-root-set [var val]
     (alter-var-root var (constantly val)))
 
-  ;;copied from 
+  ;;copied from  
   (defprotocol PCachingStrategy
     "A caching strategy implements the backend for memoize. It handles the
     underlying cache and might define different strategies to remove old
@@ -726,13 +1329,13 @@ Yes, currently it is not very development start friendly. That will change!
 	   ([& {:keys ~fields :or ~default-map}] 
 	      (new ~record-name ~@fields))))))
 
-
   (binding [*out* *out*] (defn- log [e] (.println *out* (str "ERROR!: " e))))
 
   ;;TODO: get rid of!
   (defmacro mapc [& args] `(dorun (map ~@args)))
   (defmacro thread [& body]
-    `(let [thread# (Thread. (bound-fn [] (try (do ~@body) (catch Exception e# (log e#)))))]
+    `(let [thread# (Thread.
+		    (bound-fn [] (try (do ~@body) (catch Exception e# (println "error in thread " e#)))))]
        (.start thread#)
        thread#))
 
@@ -801,8 +1404,9 @@ Yes, currently it is not very development start friendly. That will change!
 
   ;;TODO: minor mode
   (defvar log-dir "%h/.forex")
+  (defvar log-file)
 
-  (defn- formatter []
+  (defn- formatter [] 
     (let [d (java.util.Date.)]
       (proxy [java.util.logging.Formatter] []
 	(format [r] 
@@ -812,36 +1416,34 @@ Yes, currently it is not very development start friendly. That will change!
 				     (.getMessage r))))))
 
   ;;wrap the PrintWriter *out* in an OutputStream to be used in ConsoleHandler
-  (defn- new-out-stream [out]
-    (proxy [java.io.OutputStream] []
-      (close [] (.close out))
-      (flush [] (.flush out))
-      (write ([b] (.print out (String. b)))
-	     ([b off len] (.print out (String. b off len))))))
+  (comment
+    (defn- new-out-stream [out]
+      (proxy [java.io.OutputStream] []
+	(close [] (.close out))
+	(flush [] (.flush out))
+	(write ([b] (.print out (String. b)))
+	       ([b off len] (.print out (String. b off len)))))))
 
-  ;;TODO: if user deletes log file, it will not be recreated
-  ;;this will create a logger which logs to /home/dir/.forex/log.log and will output to System/out (in emacs+slime, this is in the *inferior-lisp* buffer
-  ;;or in the *shell* if you do lein swank
+  (defn new-logger
+    ([file] (new-logger file true))
+    ([file make-file]
+       (when make-file
+	 (let [file (format "%s/.forex/%s" (System/getProperty "user.home")
+			    file)]
+	   (f/make-parents
+	    (java.io.File. file))
+	   (var-root-set #'log-file file)))
+       (let [l (java.util.logging.Logger/getLogger (str *ns*))]
+	 (mapc #(.removeHandler l %) (.getHandlers l))
+	 (.addHandler l (doto (ConsoleHandler.) (.setFormatter (formatter))))
+	 (when make-file
+	   (.addHandler l (doto (FileHandler. (str log-dir "/" file))
+			    (.setFormatter (formatter)))))
+	 (.setUseParentHandlers l false)
+	 l)))
 
-  (defn- new-logger [file]
-    (f/make-parents
-     (java.io.File. (format "%s/.forex/%s" (System/getProperty "user.home") file)))
-    (let [l (java.util.logging.Logger/getLogger (str *ns*))]
-      (mapc #(.removeHandler l %) (.getHandlers l))
-      (.addHandler l (doto (ConsoleHandler.) (.setFormatter (formatter))) ;;(new-out-stream *out*) = to *out*, but sort of clutters everything
-		   )
-      (.addHandler l (doto (FileHandler. (str log-dir "/" file))
-		       (.setFormatter (formatter))))
-      (.setUseParentHandlers l false)
-      l))
+  (defvar log (new-logger "forex-log" false))
 
-  (defonce- log (java.util.logging.Logger/getLogger (str *ns*)))
-
-  ;;TODO: only use one log file!!! eh?
-  (defn init-logger []
-    (if-not log
-     (def- log (new-logger "log"))))
-  (init-logger)
   ;;TODO: set filtering levels
   ;;fine,finer,finest wont log
 
@@ -855,12 +1457,12 @@ Yes, currently it is not very development start friendly. That will change!
     (apply info msg args)
     nil)
 
-   (defn fine [msg & args]
+  (defn fine [msg & args]
      (.fine log (apply format  (str *debug-info* " " msg) args)))
-   (defn finer [msg & args]
+  (defn finer [msg & args]
      (.finer log (apply format (str *debug-info* " " msg) args)))
-   (defn finest [msg & args]
-     (.finest log (apply format (str *debug-info* " " msg) args)))
+  (defn finest [msg & args]
+    (.finest log (apply format (str *debug-info* " " msg) args)))
   (defn severe [msg & args]
     (let [s (apply format (str *debug-info* " " msg) args)]
       (.severe log s)
@@ -1070,11 +1672,34 @@ Yes, currently it is not very development start friendly. That will change!
 #+srcname:forex-util-emacs
 #+begin_src clojure :tangle src/forex/util/emacs.clj
   (ns forex.util.emacs (:use forex.util.general))
+  (defn- val-of [a] (if (var? a) (var-get a) a))
+  ;;TODO: add log to this
+  (defn- apply-fn [a args]
+    (try (apply (val-of a) args)
+	 (catch Exception e
+	   (println (format "error in hook %s %s: %s" a (val-of a) e)))))
+  (defmacro- run-fn [a & args]
+    `(let [a# ~a]
+       (try ((val-of a#) ~@args)
+	    (catch Exception e# (println 
+				 (format "error in hook %s %s: %s" a# (val-of a#) e#))))))
 
+  (defn- as-ns [a] (condp = (class a)
+		       String (find-ns (symbol a))
+		       clojure.lang.Symbol (find-ns a)
+		       a))
+  (defn ns-metas
+    ([fn] (ns-metas *ns* fn))
+    ([ns fn]
+       (is (as-ns ns) "%s is not a ns, or cant find it" ns)
+       (let [vars (filter fn (vals (ns-interns (as-ns ns))))]
+	 (apply hash-map (interleave vars (map var-get vars))))))
   (defn ns-vars
     ([] (ns-vars *ns*))
-    ([ns] (let [vars (filter #(:var (meta  %)) (vals (ns-interns ns)))]
-	    (apply hash-map (interleave vars (map var-get vars))))))
+    ([ns]
+       (is (as-ns ns) "%s is not an ns, or cant find it" ns)
+       (let [vars (filter #(:var (meta  %)) (vals (ns-interns (as-ns ns))))]
+	 (apply hash-map (interleave vars (map var-get vars))))))
 
   (defmacro defvar
     ([name]
@@ -1083,7 +1708,7 @@ Yes, currently it is not very development start friendly. That will change!
     ([name init]
        (let [new-name (with-meta name (assoc (meta name) :var true))]
 	 `(defonce ~new-name ~init))))
-
+  (defmacro defhook [& args] `(defvar ~@args)) 
   (defmacro setq [& args]
     `(do ~@(map
 	    (fn [[var val]]
@@ -1096,6 +1721,10 @@ Yes, currently it is not very development start friendly. That will change!
     ([value list test]
        (some #(test % value) list)))
 
+  (defn pushnew [var arg]
+    (when-not (member arg (var-get var))
+      (alter-var-root var (fn [it] (concat (list arg) it)))))
+
   (defn add-to-list [var arg]
     (when-not (member arg (var-get var))
       (alter-var-root var (fn [it] (concat (list arg) it)))))
@@ -1103,20 +1732,22 @@ Yes, currently it is not very development start friendly. That will change!
   (defn push [var val]
     (alter-var-root var (fn [it] (concat (list val) it))))
 
-  (defn add-hook [hook function] (push hook function))
+  (defn add-hook [hook function] (pushnew hook function))
+  (defn add-hooks [hook functions] (doall (map #(push hook %) functions)))
 
+  ;;RUNNING hooks
   (defn run-hooks [& hooks]
-    (mapc (fn [hook] (mapc #(%) hook)) hooks))
+    (mapc (fn [hook] (mapc #(run-fn %) hook)) hooks))
 
   (defn run-hook-with-args [hook & args]
-    (mapc #(apply % args) hook))
+    (mapc #(apply-fn % args) hook))
 
   (defn run-hook-with-args-until-success [hook & args]
     (is (sequence? hook) "hook %s isnt a list" hook)
     (loop [funcs hook]
       (cond
 	(empty? funcs) nil
-	true (if-let [it (apply (first funcs) args)]
+	true (if-let [it (apply-fn (first funcs) args)]
 	       it
 	       (recur (rest funcs))))))
 
@@ -1125,7 +1756,7 @@ Yes, currently it is not very development start friendly. That will change!
     (loop [funcs hook]
       (cond
 	(empty? funcs) true
-	true (when (apply (first funcs) args)
+	true (when (apply-fn (first funcs) args)
 	       (recur (rest funcs))))))
 
 
@@ -1136,9 +1767,9 @@ Yes, currently it is not very development start friendly. That will change!
 #+begin_src clojure :tangle src/forex/util/spawn.clj
   (clojure.core/use 'nstools.ns)
   (ns+ forex.util.spawn
-       (:clone clj.core)
-       (:import forex.util.zmq.Poller)
+       (:clone clj.core)   
        (:use forex.util.general forex.util.zmq)
+       (:import forex.util.zmq.Poller)
        (:require [forex.util.fiber.spawn :as s]))
 
   (def- *pid* (atom []))
@@ -1167,7 +1798,7 @@ Yes, currently it is not very development start friendly. That will change!
     PSocket
     (raw [this] (.raw socket)) 
     (recv [this flags] 
-	  (when (.recv socket flags)	  
+	  (when (.recv socket flags)      
 	    (s/?)))  
     (recv [this] (recv this 0))
     (close [this] (.close socket))
@@ -1233,15 +1864,17 @@ Yes, currently it is not very development start friendly. That will change!
 	       (recur (conj messages [sock new-msg]))
 	       messages))))))
 
+  ;;TODO: fair queue? prevent too much messages hogging sequence? who knows! ...
+
   (defn- event-seq* [p]
     (lazy-seq
      (let [amount (.poll p)]
        (concat
 	;;TODO: memory overflow with getting all messsages? probably not ....
 	(doall
-	 (mapcat #(when (.pollin p %) (recv-all (.getSocket p %)))
+	 (mapcat #(when (or (.pollin p %) (.pollout p %)) (recv-all (.getSocket p %)))
 		 (range 0 (.getSize p))))
-	(event-seq* p)))))
+	(event-seq* p))))) 
 
 
   (defmulti event-seq class)
@@ -1310,11 +1943,13 @@ Yes, currently it is not very development start friendly. That will change!
     (register [this socket])
     (getSocket [this i])
     (getSize [this])
-    (pollin [this i])) 
+    (pollin [this i])
+    (pollout [this i])) 
   (defrecord Poller [poll sockets] 
     PPoller 
     (getSize [_] (.getSize poll))
     (pollin [_ i] (.pollin poll i))
+    (pollout [_ i] (.pollout poll i))
     (setTimeout [_ timeout] (.setTimeout poll timeout))
     (poll [_] (.poll poll))
     (register [_ socket]
@@ -1371,13 +2006,105 @@ Yes, currently it is not very development start friendly. That will change!
       ([context socket-type ]
 	 (.socket context socket-type))))
 #+end_src
+*** GUI
+#+srcname:forex-util-gui
+#+begin_src clojure :tangle src/forex/util/gui.clj
+  (ns forex.util.gui
+    (:require swank.swank)
+    (:use forex.util.general clojure.contrib.miglayout forex.util.emacs forex.util.log)
+    (:import 
+     (java.awt Dimension Font event.MouseListener
+	       event.MouseAdapter Toolkit event.ActionListener event.KeyListener)
+     (javax.swing JComboBox JPopupMenu JMenuItem
+		  ImageIcon
+		  table.AbstractTableModel
+		  JScrollPane JTable
+		  JFrame JPanel JTextField JLabel JButton
+		  SwingUtilities)))
+
+  (import javax.swing.JOptionPane)
+  (defn inform [msg & args]
+    (JOptionPane/showMessageDialog
+     nil (apply format (str msg) args) "!" JOptionPane/INFORMATION_MESSAGE)) 
+  (defn prompt
+    ([msg & args]     
+       (let [no-default true
+	     p (if no-default 
+		 (JOptionPane/showOptionDialog (JPanel.)
+					       (apply format (str msg) args) "???"
+					       JOptionPane/YES_NO_OPTION
+					       JOptionPane/QUESTION_MESSAGE
+					       nil
+					       (into-array  ["Yes" "No"])
+					       "No")
+		 (JOptionPane/showConfirmDialog
+		  nil (apply format (str msg) args)
+		  "???" JOptionPane/YES_NO_OPTION))]
+	 (if (= JOptionPane/YES_OPTION p)
+	   true
+	   false))))
+
+
+  (defn create-image [path]
+    (.getImage (Toolkit/getDefaultToolkit) path))
+  (defn create-icon [path]
+    (try
+      (ImageIcon. (create-image path))
+      (catch Exception e
+	(warn "couldnt create image %s" path)
+	nil)))
+
+  (defn- get-fn [a] (if (var? a) (var-get a) a))
+  (defn- call-fn [a & args]
+    (thread
+     (let [f (get-fn a)]
+       (if (fn? f) 
+	 (apply f args)
+	 (warn "in listener, in var %s,val %s is not a function" a f)))))
+
+  (defn add-key-listener [obj f]
+    (when (fn? (get-fn f))
+      (.addKeyListener obj (proxy [KeyListener] []
+			     (keyReleased [e] (call-fn f e))
+			     (keyPressed [e])
+			     (keyTyped [e])))))
+
+  (defn add-action-listener [item val]
+    (when (or (and (var? val) (fn? (var-get val))) (fn? val))
+      (let [f (bound-fn [e] (call-fn val e))]
+	(.addActionListener item
+			    (proxy [ActionListener] nil 
+			      (actionPerformed [e]
+					       (try
+						 (f e)
+						 (catch Exception e
+						   (severe "error in action listener %s" e)))))))))
+  (defn add-popup-listener [obj f]
+    (when  (fn? (get-fn f))
+      (let [f (bound-fn [e] (call-fn f e))]
+       (.addMouseListener
+	obj
+	(proxy [MouseAdapter] nil
+	  (mousePressed [e] (when (.isPopupTrigger e) (f e)))
+	  (mouseReleased [e] (when (.isPopupTrigger e) (f e)))))))
+    obj)
+  ;;TODO; println stack trace
+  (defmacro invoke-later [& args]
+    `(SwingUtilities/invokeLater (bound-fn []
+					   (try (do ~@args)
+
+						(catch Exception e#
+						  (.printStackTrace e#)
+						  (println e#))))))
+#+end_src
+
 *** Devel
 #+srcname:forex-util-mql-devel
 #+begin_src clojure :tangle src/forex/util/mql_devel.clj
   (clojure.core/use 'nstools.ns)
-  (ns forex.utils.mql-devel
-    (:clone clj.core)
-    (:use utils.general))
+  (ns+ forex.util.mql-devel
+       (:clone clj.core)
+       (:use forex.util.general))
 
 
   (defmacro cond-out [& args]
@@ -1414,7 +2141,7 @@ Yes, currently it is not very development start friendly. That will change!
 #+begin_src clojure :tangle src/forex/util/mql_indicator_devel.clj
   (clojure.core/use 'nstools.ns)
   ;;this file allows one to automatically produce binding code for metatrader custom indicators
-  (ns+ forex.utils.mql-indicator-devel
+  (ns+ forex.util.mql-indicator-devel
     (:clone clj.core)
     (:import java.io.File))
 
@@ -1594,7 +2321,7 @@ Yes, currently it is not very development start friendly. That will change!
        "MQL Socket Service")})) 
 
   ;;global socket service
-  (defonce- *s* (atom nil))
+  (defonce- *s* (atom nil)) 
   (defn alive? []
     (pid? (:pid @*s*))) 
   (defn start []
@@ -1797,7 +2524,7 @@ Yes, currently it is not very development start friendly. That will change!
     ([num] (lot num (env :symbol)))
     ([num symbol]
        (let [a (to-big num)
-	     b (to-big (mode-minlot symbol))]
+	     b (to-big (or val (mode-minlot symbol)))]
 	 (* b (.intValue (/ a b))))))
 
 
@@ -2078,20 +2805,32 @@ Yes, currently it is not very development start friendly. That will change!
 
   (clojure.core/use 'nstools.ns)
   (ns+ forex.module.ea 
-       (:clone clj.core)
-       (:import forex.util.core.AtomHash)
-    (:use forex.util.core
-	  forex.util.general
-	  forex.util.spawn
-	  clojure.contrib.core)
-    (:import clojure.lang.Atom)
-    (:require [clj-time.core :as t])
-    (:use  
-     forex.util.emacs
-     forex.util.log  
-     forex.module.error 
-     forex.module.indicator 
-     forex.module.account))   
+       (:clone clj.core) 
+       (:use forex.util.core
+	     forex.util.general 
+	     forex.util.spawn forex.util.emacs
+	     clojure.contrib.core)
+       (:import clojure.lang.Atom)
+       (:require [clj-time.core :as t])
+       (:use  
+	forex.util.emacs
+	forex.util.log  
+	forex.module.error 
+	forex.module.indicator 
+	forex.module.account)
+       (:import forex.util.core.AtomHash  java.util.concurrent.TimeUnit))
+  (defvar save-file nil)
+  (defvar ea-on-exit-hook)
+  (defvar ea-on-start-hook)
+  (defonce *ea-registry* (atom []))
+  (defn register-ea []
+    (swap! *ea-registry*
+	   (fn [old]
+	     (filter #(find-ns (symbol %))
+		     (if (some #(= % (str *ns*)) old)
+		       old
+		       (conj old (str *ns*)))))))
+
   (defn- get-fn [a] (if (var? a) (var-get a) a)) 
   (defonce *ea* nil)
   (defonce *args* nil) 
@@ -2110,6 +2849,11 @@ Yes, currently it is not very development start friendly. That will change!
     `(let [l# (.writeLock ~lock)]
        (try (do (.lock l#) ~@body)
 	    (finally (.unlock l#)))))
+  (defmacro locking-write-timeout [[ lock timeout] & body]
+    `(let [l# (.writeLock ~lock)]
+       (if (.tryLock l# ~timeout TimeUnit/MILLISECONDS)
+	 (try (do  ~@body)
+	      (finally (.unlock l#))))))
 
 
   (deferror *ea-stop* [*clj-forex-error*] [message]
@@ -2171,22 +2915,6 @@ Yes, currently it is not very development start friendly. That will change!
 	  (catch Exception e#
 	    (severe "%s - caught unexpected error %s" ~prefix e#))))
 
-  ;;TODO: place in forex-user
-  (defvar save-file "/home/seth/Desktop/eas")
-
-  (defn save-eas []
-    (println "Attempting to acquire writeLock of *ea-pre-lock* ...")
-    (locking-write *ea-pre-lock*
-		   (println "saving ...")
-		   (frm-save save-file @*eas*)
-		   (count @*eas*)))
-
-  (defn load-eas
-    ([] (load-eas false))
-    ([append]
-       (let [eas (frm-load save-file)]
-	 (if append (swap! *eas* concat eas) (vec eas)))))
-
 
   (require 'clojure.contrib.error-kit)
   ;;TODO; how to create unbound var for error-kit???
@@ -2195,16 +2923,17 @@ Yes, currently it is not very development start friendly. That will change!
   ;;TODO: we need a monitor which pings and then sets something.... like in erlang
 
   (defn run-by-tick [{:keys [deinit init start] :as ea}]
-    (with-ea [ea]
+    (with-ea [ea]   
       (try
+	(run-hooks ea-on-start-hook)
 	(clojure.contrib.error-kit/with-handler
 	  (loop [prev-close nil]
 	    (sleep 1) 
 	    (when-not
 		(match (? 0) 
-		       "STOPGRR" (do (out "GOT STOP!!!!") true)
+		       "STOP" true
 		       "PING" (do (out "ping") nil)) 
-	      (let [new-close (close)] 
+	      (let [new-close (close)]  
 		(when-not (= new-close prev-close)
 		  (let [func (get-fn start)]
 		    (if (fn? func)
@@ -2215,19 +2944,22 @@ Yes, currently it is not very development start friendly. That will change!
 	  (clojure.contrib.error-kit/handle *ea-stop* [message] (out "stopping ea ... %s" message)))  
 	(catch Exception e 
 	  (severe "stopping ea... caught exception %s" e)
+	  (reset! (:exit ea) e)
 	  (.printStackTrace e))
 	(finally
+	 (when-not @(:exit ea) (reset! (:exit ea) true))
 	 (info "running deinit ...")
 	 (catch-unexpected
 	  "deinit" 
 	  (let [de (get-fn deinit)]
 	    (if (fn? de)
 	      (de)
-	      (warn "deinit %s is not a function. ignoring ...." de))))))))
+	      (warn "deinit %s is not a function. ignoring ...." de))))))
+      (run-hooks ea-on-exit-hook)))
 
   (defn- timeframe? [a] (number? a))
   (defrecord EA [name type ns init deinit start symbol period args
-		 pid run vars])
+		 pid run vars exit]) 
 
   (defn- constant-map [& args] {})
   (defn- constant-true [& args] {})
@@ -2236,7 +2968,7 @@ Yes, currently it is not very development start friendly. That will change!
     ([{:keys [ns symbol period run args vars] :or {symbol (env :symbol)
 						   run run-by-tick
 						   vars {}
-						 period (env :period)}}]
+						   period (env :period)}}]
        (let [ns (cond
 		 (nil? ns) *ns*
 		 (symbol? ns) (find-ns ns)
@@ -2251,13 +2983,15 @@ Yes, currently it is not very development start friendly. That will change!
 			constant-map)
 	       deinit (or (let [fn (ns-symbol 'deinit ns)]
 			    (if (get-fn fn) fn))
-			   constant-true)]
+			  constant-true)] 
 	   (is? [(fn? (get-fn init)) (fn? (get-fn deinit)) (string? name)
 		 (string? symbol) (fn? run) (timeframe? period)])
-	   (EA. (format "%s %s, %s" name symbol period) name ns
+	   (EA. (format "%s %s, %s" name symbol period) (last (.split name "\\."))
+		ns
 		init deinit start symbol period (or args {})
 		nil run
-		(merge (copy-ea-objs (ns-vars ns)) vars)))))) 
+		(merge (copy-ea-objs (ns-vars ns)) vars)
+		(atom 0)))))) 
 
   ;;how to get it to access actual var? as long as we dont use set!
   (defmethod clojure.core/print-method EA [o w]
@@ -2268,35 +3002,57 @@ Yes, currently it is not very development start friendly. That will change!
   ;;TODO: pid without spawn!!
 
   (defn run-start [ea]
-    (with-ea [ea "START"] 
-      (with-bindings (:vars ea)
-	(let [new-ea (merge ea {:pid (spawn
-				      #((:run ea) ea)
-				      (:name ea))})]
-	  (swap! *eas* conj new-ea)
-	  new-ea))))
+    (let [ea (merge ea {:exit (atom false)})]
+     (with-ea [ea "START"] 
+       (with-bindings (:vars ea)
+	 (let [new-ea (merge ea {:pid (spawn
+				     #((:run ea) ea)
+				     (:name ea))})]
+	   (swap! *eas* conj new-ea) 
+	   new-ea)))))
 
-  ;;TODO: check return type
+
+  (defn restart [ea]  
+    (when (not (alive? ea))
+      ;;TODO: for some reason, if we change it to (hash old), it screws up! what!
+      (let [old (swap! *eas*
+		       (fn [old] (doall (filter #(not (= (hash ea) (hash %))) old))))]
+	(try
+	  (run-start ea)
+	  (catch Exception e (swap! *eas* conj ea)
+		 (.printStackTrace e)
+		 (out "caught exception when running start %s" e))))))
+
+   ;;TODO: check return type
   (defn run-init [ea]
     (with-ea [ea "INIT"]
       (let [result ((get-fn (:init ea)) (:args ea))]
-	(if result
+	(if (map? result)
 	  (merge ea {:vars (merge (:vars ea) result)})))))
 
   (defn run-all [ea]
-    (with-ea [ea "ALL"]
-      (let [new-ea (run-init ea)]
-	(if (instance? EA new-ea)
-	  (run-start new-ea) 
-	  (warn "failed to start - returned nil from init" (:name ea))))))
+    (try
+      (with-ea [ea "ALL"]
+	(let [new-ea (run-init ea)]
+	  (if (instance? EA new-ea)
+	    (run-start new-ea)))
+	(catch Exception e
+	  (out "caught exception %s" e)))))
+
+  (defn- filter-map [f map]
+    (let [vals (mapcat identity (filter (fn [[key val]]
+					  (f key)) map))]
+      (if (empty? vals) {} (apply hash-map vals))))
 
   (defn run
     ([] (run *ns* {}))
-    ([args] (run *ns* args {}))
-    ([args vars] (run *ns* args vars))
-    ([ns args vars]
+    ([args] (run *ns* args))
+    ([ns args] 
        ;;todo: not default, no nil
-       (run-all (new-ea {:ns ns :args args :vars vars
+       (run-all (new-ea {:ns ns 
+			 :args (filter-map #(and (not (var? %))
+						 (not (#{:symbol :period} %))) args)
+			 :vars (filter-map var? args)
 			 :symbol (or (:symbol args) (env :symbol))
 			 :period (or (:period args) (env :period))}))))
 
@@ -2306,13 +3062,39 @@ Yes, currently it is not very development start friendly. That will change!
   (defn stop [ea]
     (let [stop-it (fn [e]
 		    (if (pid? (:pid e))
-		      (do (! (:pid e) "STOPGRR") 
+		      (do (! (:pid e) "STOP") 
 			  true)))]
       (if (map? ea)
 	(stop-it ea)
 	(map stop-it ea))))
 
   (defn clear-eas [] (count (reset! *eas* (filter alive? @*eas*))))
+  ;;SAVE/LOAD
+  (defn save-eas
+    ([] (save-eas save-file))
+    ([save-file]
+       (debugging "Save EA:"
+	(try
+	  (info "Attempting to acquire writeLock of *ea-pre-lock* ...")
+	  (locking-write-timeout [*ea-pre-lock* 1000] 
+				 (info "saving ...")
+				 (frm-save save-file @*eas*)
+				 (count @*eas*))
+	  (catch Exception e
+	    (warn "failed to save eas %s" e))))))
+
+  (defn load-eas 
+    ([] (load-eas save-file false))
+    ([append] (load-eas save-file append))
+    ([file append]
+       (debugging "Load EA:"
+	(try
+	  (let [eas (frm-load file)]
+	    (is? [(or (empty? eas) (every #(instance? EA %) eas))])
+	    (if append (swap! *eas* concat eas) (vec eas))
+	    (count eas))
+	  (catch Exception e
+	    (warn "failed to load eas %s %s: %s" file append e))))))
 #+end_src
 *** Error
 #+srcname:error-common 
@@ -2615,16 +3397,510 @@ Yes, currently it is not very development start friendly. That will change!
      (>= (close) val )
      true (throwf "invalid order type %s" order)))
 #+end_src
+** Interface
+#+srcname:interface-ea-new
+#+begin_src clojure :tangle src/forex/interface/ea_new.clj
+  ;;TODO: still a work in progress. for now, lets just execute a function in user
+  ;;ea ns, and that function will prompt user and run ea!
+
+  (ns forex.interface.ea-new
+    (:use forex.util.log clojure.contrib.with-ns
+	  forex.module.ea
+	  clojure.contrib.miglayout forex.util.emacs 
+	  forex.util.gui)
+    (:use forex.interface.gui) 
+    (:import 
+     (java.awt Dimension Font event.MouseListener
+	       event.MouseAdapter Toolkit event.ActionListener event.KeyListener)
+     (javax.swing JComboBox JPopupMenu JMenuItem
+		  ImageIcon
+		  table.AbstractTableModel 
+		  JScrollPane JTable
+		  JFrame JPanel JTextField JLabel JButton
+		  SwingUtilities)))
+
+  (defn ns-args [ns]
+    (ns-metas ns (fn [s] (:arg (meta s)))))
+
+  (defn ea-new-gui []
+    (when-let [it (and (:selector gui)
+		       (.getSelectedItem (:selector gui)))]
+      (when-let [ns (find-ns (symbol it))]
+	(println "selection is " ns))))
+  (defn var-name [a]
+    (last (.split (str a) "/")))
+  ;;TODO: throw slot value not working!s + add metadata to jlabel,etc
+  (defn read-eval [a]
+    (let [a (try (read-string (.getText a))
+		 (catch Exception e (.getText a)))]
+      (if (or (string? a) (symbol? a)) (str a) (eval a))))
+
+  (defn on-start [frame panel]
+    (println "result is " (keys (components panel))))
+
+  (defn generate-ea-gui [ns] 
+    (let [args (ns-args ns)
+	  panel (JPanel.) frame (jframe (str (ns-name ns)))]
+      (doto frame
+	(.add (apply miglayout panel
+		     (concat
+		      (mapcat (fn [[key val]]
+				(let [label (JLabel. (var-name key))]
+				  [label (JTextField. 30)         
+				   :wrap]))
+			      args)
+		      [(doto (JButton. "start")
+			 (add-action-listener (fn [e] (on-start frame panel))))
+		       "push,growx,span,center"])))
+	(.pack)
+	(.setVisible true)))) 
+
+  (defn run-init-gui []
+    (let [ns (symbol (.getSelectedItem (:selector gui)))]
+     (if-let [it (get (ns-map ns) 'init-gui)]
+       (if (fn? (var-get it))
+	 (binding [*ns* (the-ns ns)]
+	   ((var-get it))) 
+	 (inform "symbol init-gui in namespace %s is not a function" ns ))
+       (inform "%s does not have an init-gui function" ns)))) 
+
+  (alter-var-root
+   #'forex.interface.gui/gui-key-map
+   merge {\n #'run-init-gui})
+#+end_src
+ 
+#+srcname:interface-ea-table
+#+begin_src clojure :tangle src/forex/interface/ea_table.clj
+  (ns forex.interface.ea-table
+    (:require swank.swank) 
+    (:use forex.util.log 
+	  clojure.contrib.miglayout forex.util.emacs 
+	  forex.util.gui forex.interface.tray)
+    (:use forex.module.ea forex.interface.gui)
+    (:import
+     (java.awt
+      Dimension Font event.MouseListener
+      event.MouseAdapter Toolkit event.ActionListener event.KeyListener)
+     (javax.swing JComboBox JPopupMenu JMenuItem
+		  ImageIcon
+		  table.AbstractTableModel 
+		  JScrollPane JTable
+		  JFrame JPanel JTextField JLabel JButton
+		  SwingUtilities))) 
+
+  (defonce ea-table-gui  nil)
+  (defn- italic [a] (format "<html><i>%s</i><html>" a))
+  (defn- color [a color]
+    (format "<html><color=%s><b>%s</b></color><html>" color a))
+
+  (defn add-watcher [var key f]
+    (add-watch var key
+	       (bound-fn [& args]
+			 (try (apply f args)
+			      (catch Exception e
+
+				(severe "caught exception in watcher %s: %s"
+					[var key] e)
+				(.printStackTrace e))))))
+
+
+  (defn table-model [titles data]
+    (proxy [AbstractTableModel] []
+      (getRowCount [] (count data))
+      (getColumnCount [] (count titles))
+      (getValueAt [row column] (nth (nth data  row) column))
+      (getColumnClass [_] String)
+      (getColumnName [col] (nth titles col))))
+
+
+  (defn ea-table-model [eas] 
+    (table-model
+     [(italic "Name") (italic "Symbol") (italic "Period") (italic "Running?") (italic "Args")]
+     (map (fn [ea] 
+	    [(:type ea) (:symbol ea) (:period ea)
+	     (let [exit @(:exit ea)]
+	       (cond
+		(and (alive? ea) (= exit false)) (color true "blue")
+		true  (if-not (= true  exit)
+			(color false "red")
+			false)))
+	     (:args ea)
+	     ea])
+	  eas)))
+
+  (defn update-table [table eas]
+    (locking table
+     (.setModel table (ea-table-model eas))))
+
+  (defn update-ea-table
+    ([] (update-ea-table false))
+    ([force]
+       (let [{:keys [table frame]} ea-table-gui]
+	 (when (and table frame (or force (.isVisible frame))) 
+	   (update-table table @*eas*)))))
+
+  (defn add-ea-table-watch []
+    (add-hook #'ea-on-start-hook #'update-ea-table)
+    ;;TODOD: better add-to-list, not repeat, maybe per *ns*?
+    (add-hook #'ea-on-exit-hook #'update-ea-table)
+    (add-watcher *eas* "table update" (fn [& args]
+					(update-ea-table))))
+
+  ;;
+  (defn gui-new-table [frame]
+    (let [eas @*eas*
+	  table (JTable. (ea-table-model eas))
+	  panel
+	  (miglayout (JPanel.)
+		     (JScrollPane. table) 
+		     "span,grow" :wrap 
+		     (doto  (JButton. "refresh")
+		       (add-action-listener
+			(fn [e] (update-table table @*eas*))))
+		     ;;TODO: technically, is thread safe, oh well, do we care?
+		     (doto (JButton. "stop")
+		       (add-action-listener
+			(fn [e] 
+			  (locking table 
+			    (let [i (.getSelectedRow table)
+				  ea (when (>= i 0) (.getValueAt (.getModel table)
+								 i (.getColumnCount table)))]
+			      (when (and (>= i 0)
+					 (prompt "do you really want to stop ea %s" i))
+				(stop ea))))))) 
+		     (doto (JButton. "clear")
+		       (add-action-listener
+			(fn [e]
+			  (when (prompt "Do you really want to clear stopped eas?" true)
+			    (update-table
+			     table
+			     (swap! *eas* (fn [old]
+					    (filter alive? old)))))))))]
+      (alter-var-root  #'ea-table-gui (constantly {:table table :frame frame}))
+      panel))
+
+  (defn display-ea-table []
+    (if-not (:frame ea-table-gui)
+      (let [frame (jframe "expert advisors")]
+	(doto frame 
+	  (.add (gui-new-table frame))
+	  (.pack)
+	  (.setVisible true))
+	(add-ea-table-watch))
+      (do (update-ea-table true) 
+	  (.setVisible (:frame ea-table-gui) true))))
+
+  (alter-var-root
+   #'forex.interface.gui/gui-key-map
+   merge {\v #'display-ea-table})
+#+end_src
+
+#+srcname:interface-gui
+#+begin_src clojure :tangle src/forex/interface/gui.clj
+  ;;(clojure.core/use 'nstools.ns)
+  (ns forex.interface.gui
+    (:require swank.swank)  
+    (:use
+     forex.util.general
+     forex.util.log
+     forex.module.ea forex.util.general
+     clojure.contrib.miglayout forex.util.emacs 
+     forex.util.gui forex.interface.tray)
+    (:import 
+     (java.awt Dimension Font event.MouseListener
+	       event.MouseAdapter Toolkit event.ActionListener event.KeyListener)
+     (javax.swing JComboBox JPopupMenu JMenuItem
+		  ImageIcon SwingConstants
+		  table.AbstractTableModel 
+		  JScrollPane JTable
+		  JFrame JPanel JTextField JLabel JButton JFileChooser
+		  SwingUtilities)))
+  ;;TODO: all action listeners should be vars for maximum flexibility - because sometimes it all goes away!
+
+  ;;Useful User Vars
+  (defonce gui nil) 
+  (defonce toplevel nil)
+  (defn message [msg & args]
+    (when-let [it (:status gui)]
+      (.setText it (apply format msg args))))
+
+  ;;LOADING EAS
+  (defonce prev-load-file (atom nil))
+  (defn on-load-eas []
+    (let [fileopen (if @prev-load-file (JFileChooser. @prev-load-file) (JFileChooser.))
+	  ret (.showDialog fileopen nil "Load")] 
+      (if (= ret JFileChooser/APPROVE_OPTION)
+	(let [file (.getSelectedFile fileopen)]
+	  (with-out-str+ out (if-let [it (load-eas file true)] (message "loaded %s eas" it) (inform (str out))))
+	  (reset! prev-load-file (.getParentFile file))))))
+
+  ;;SAVING EAS
+  (defonce prev-save-file (atom nil))
+  (defn on-save-eas []
+    (message "saving ...")
+    (let [fileopen
+	  (if @prev-save-file (JFileChooser. @prev-save-file) (JFileChooser.))
+	  ret (.showDialog fileopen nil "Save")]
+      (if (= ret JFileChooser/APPROVE_OPTION)
+	(let [file (.getSelectedFile fileopen)]
+	  (reset! prev-save-file (.getParentFile file))
+	  (if-let [it (save-eas file)]
+	    (message "saved %s eas" it)
+	    (inform "unable to acquire ea write lock in order to save all eas")))))) 
+  (defn on-log []
+    (message "open log file @ %s/.forex/" (System/getProperty "user.home"))) 
+  ;;User Customization
+  (defhook gui-on-exit-hooks) 
+  (defhook gui-create-pre-hook)
+  (defhook gui-create-post-hook)
+  (defvar swank-port 4005) 
+  (defvar gui-image "pictures/clojure.gif")
+  (defvar gui-icon-image "pictures/clojure.gif")
+  (defvar gui-window-image "pictures/clojure.gif")
+
+  (defvar gui-key-map 
+    {\l #'on-log  
+     \s 
+     #(do
+	(swank.swank/start-repl swank-port)
+	(message "started swank on port %s" swank-port))})
+  (defn on-restart-eas []
+    (dorun (map restart @*eas*))
+    (message "restarted %s eas" (count @*eas*))) 
+  (defvar
+    gui-menu-items
+    [{:name "new ea" :key \n}
+     {:name "save eas" :action #'on-save-eas}
+     {:name "load eas" :action #'on-load-eas}
+     {:name "view eas" :key \v} 
+     {:name "log" :key \l :action #'on-log}
+     {:name "start swank" :key \s}
+     {:name "restart eas" :key \r :action #'on-restart-eas} 
+     {:name "load forex-user" 
+      :action #(try       
+		 (message "loading ...")
+		 (require :reload 'forex-user)
+		 (message "loaded forex-user")
+		 (catch Exception e
+		   (message "failed to load forex-user")
+		   (inform "failed to load forex-user %s" e)))}
+     {:name "preferences" :key \p}])
+  (defvar gui-frame-title "clj-forex")
+  (defvar gui-reminder-visible true) 
+  ;;;;
+  ;;;
+  (defn jframe [title]
+    (doto
+	(JFrame. title)
+      (.setIconImage (create-image gui-window-image))))
+
+  (defn- get-fn [a] (if (var? a) (var-get a) a))
+  (defn on-key [e] 
+    (when-let [it (get-fn (get gui-key-map (.getKeyChar e)))]
+      (try (when (fn? it) (it))
+	   (catch Exception e
+	     (.printStackTrace e)
+	     (severe e))))) 
+  (defn add-menu-item [parent {:keys [name key action]}]
+    (let [item (JMenuItem. (str name " (" key ")"))]
+      (add-action-listener 
+       item (or (and (not action) (bound-fn
+				   [e]
+				   (let [key-map-fn (get-fn (get gui-key-map key))]
+				     (when (fn? key-map-fn) (key-map-fn)))))
+		(bound-fn [e] (thread (action))))) ;;no e
+      (.add parent item)
+      item)) 
+  (defn on-popup [e] 
+    (try
+      (let [menu (JPopupMenu.)]
+	(dorun (map #(add-menu-item menu %) gui-menu-items))
+	(.show menu
+	       (.getComponent e)
+	       (.getX e) (.getY e)))
+      (catch Exception e (println e))))
+  (defn on-exit [icon] 
+    (if (empty? gui-on-exit-hooks)
+      (remove-system-icon icon)
+      (run-hook-with-args gui-on-exit-hooks icon)))
+  (defn on-click [icon]
+    (.setVisible (:frame toplevel) true))
+  (defn gui-make-icon []
+    (system-icon
+     {:image gui-icon-image
+      :on-click  on-click 
+      :on-exit on-exit}))
+
+  (defn new-gui []
+    (alter-var-root #'gui (constantly nil))
+    (alter-var-root #'toplevel (constantly nil))
+    (run-hooks gui-create-pre-hook)
+    (let [icon (gui-make-icon)
+	  image (if (string? gui-image) (create-icon gui-image))
+	  panel
+	  (doto (miglayout  
+		 (JPanel.)  :column "center" 
+		 (JLabel. (if image image ""))  "width 245!" "span,growx,pushx" :wrap 
+		 (JComboBox. (into-array String @*ea-registry*))
+		 {:id :selector} "span,growx,pushx"  :wrap
+		 (doto (JLabel. "<html>n = new ea<br>v = view eas<br>l = log<br>s = start swank<html>") (.setHorizontalAlignment SwingConstants/CENTER))
+
+		 {:id :reminder} :wrap
+		 (doto (JLabel. "")
+		   (.setFont (Font. "SansSerif" Font/ITALIC 12)))
+		 {:id :status} "h 20!" "growx,align left,span"))  
+	  frame (doto (jframe gui-frame-title)
+		  (.setDefaultCloseOperation JFrame/HIDE_ON_CLOSE) 
+		  (.add panel)
+		  (.pack)) 
+	  {:keys [selector reminder view]} (components panel)] 
+      (when-not gui-reminder-visible (.setVisible reminder false))
+      ;; (add-action-listener selector (bound-fn* on-selector))
+      (dorun (map (fn [obj]
+		    (add-key-listener obj #'on-key)
+		    (add-popup-listener obj #'on-popup))
+		  (conj (vals (components panel)) panel)))
+      (alter-var-root  #'gui (constantly (components panel)))
+      (alter-var-root #'toplevel (constantly {:frame frame :panel panel
+					      :icon icon}))
+      (run-hooks gui-create-post-hook)
+      frame))
+
+
+  (defn add-ea-registry-watch []
+    (add-watch
+     *ea-registry* "registry-add"
+     (bound-fn [key ref old new] 
+       (when-let [it (:selector gui)]
+	 (.removeAllItems it)
+	 (dorun (map #(.addItem it %) new))))))
+
+  (defn invoke-new-gui
+    ([] (invoke-new-gui ""))
+    ([msg] 
+       (invoke-later
+	(when (:icon toplevel)
+	  (remove-system-icon (:icon toplevel)))
+	(when (:frame toplevel)
+	  (.setVisible (:frame toplevel) false))
+	(new-gui)
+	(.setVisible (:frame toplevel) true) 
+	(add-system-icon (:icon toplevel)) 
+	(when msg (message msg))
+	(add-ea-registry-watch))))
+#+end_src
+ 
+#+srcname:interface-main
+#+begin_src clojure :tangle src/forex/interface/main.clj
+  (ns forex.interface.main
+    (:require swank.swank)
+    (:use forex.interface.gui forex.interface.ea-table forex.interface.ea-new)
+    (:use forex.util.emacs forex.util.gui forex.interface.tray))
+
+  (defn on-system-exit [icon]
+    (when (prompt (format "Do you really want to exit %s?
+  This will stop all running expert advisors." gui-frame-title))
+      (System/exit 0)))
+
+  (defn -main [& args]
+    (let [user-exception 
+	  (try
+	    (require 'forex-user) 
+	    nil
+	    (catch Exception e 
+	      (.printStackTrace e)
+	      e))] 
+      (add-to-list  
+       #'gui-on-exit-hooks on-system-exit)
+      (invoke-new-gui (when user-exception 
+			"error when loading forex-user: check log"))))
+#+end_src
+
+#+srcname:interface-tray
+#+begin_src clojure :tangle src/forex/interface/tray.clj
+  (ns forex.interface.tray
+    (:use forex.util.gui)
+    (:import                        
+     (javax.swing JFrame)
+     (java.awt Toolkit SystemTray  EventQueue TrayIcon TrayIcon$MessageType PopupMenu MenuItem)
+     (java.awt.event ActionListener)))
+
+  (defn remove-system-icon [icon] (.remove (SystemTray/getSystemTray) icon))
+  (defn- setup-popup-menu
+    ([menu icon] (setup-popup-menu menu icon (constantly true)))
+    ([menu icon on-exit]
+       (let [exit (MenuItem. "Exit")]
+	 (add-action-listener
+	  exit (if on-exit
+		 (bound-fn [e] (try
+				 (on-exit icon)
+				 (catch Exception e
+				   (.printStackTrace e)
+				   (println "ERROR IN ON-EXIT %s" e))))
+		 (fn [e] (remove-system-icon icon))))
+	 (.add menu exit)
+	 menu)))
+
+  (defn system-icon [{:keys [image on-exit on-click on-exit]}]
+    {:pre [(string? image)]}
+    (let [menu (PopupMenu.)
+	  tray-icon
+	  (doto (TrayIcon. (.getImage (Toolkit/getDefaultToolkit) image)
+			   nil menu)
+	    (.setImageAutoSize true))]
+      (setup-popup-menu menu tray-icon on-exit) 
+      (when on-click (add-action-listener tray-icon (bound-fn [e] (try (on-click tray-icon) (catch Exception e (println "ERROR IN ON-CLICK %s" e))))))  
+      tray-icon)) 
+  (defn add-system-icon [icon] (.add (SystemTray/getSystemTray) icon) icon)
+
+  (defn icon-info
+    ([icon txt] (icon-info icon "info" txt))
+    ([icon caption txt] (.displayMessage icon caption txt TrayIcon$MessageType/INFO)))
+  (defn icon-warning
+    ([icon txt] (icon-warning icon "warning" txt))
+    ([icon caption txt] (.displayMessage icon caption txt TrayIcon$MessageType/WARNING)))
+  (defn icon-error
+    ([icon txt] (icon-error icon "error" txt))
+    ([icon caption txt] (.displayMessage icon caption txt TrayIcon$MessageType/ERROR)))
+
+  ;;(def icon (add-system-icon (system-icon {:image  "/home/seth/Desktop/clojure.gif" :on-click (fn [_] (println "HI"))})))
+#+end_src
+  
 ** User 
 #+srcname:forex_user
 #+begin_src clojure :tangle src/forex_user.clj
-  (clojure.core/use 'nstools.ns)
-  (ns+ forex-user
-       (:like forex.default)
-       (:use utils.general))
-  ;;TODO: mql error 146
-
   ;;forex_user is the ns in which customization will occur
+
+  (clojure.core/use 'nstools.ns)
+  (ns+ forex-user 
+       (:clone forex.default)
+       (:use forex.interface.gui forex.util.log clj.io))
+  (require :reload 'forex.examples.timeout-ea.timeout-ea)
+  ;;(require :reload-all 'forex.interface.main)
+  (when-not (backend/alive?)
+    (backend/start))
+
+  (when-not log-file
+    (setq forex.util.log/log
+	  (new-logger (.replaceAll
+		       (format "log_%s.txt" (now)) ":" "_"))))
+
+  (defvar ea-auto-save-minutes  5)
+  (defvar ea-auto-save-file
+    (let [file (format "%s/.forex/auto/ea-auto-save"
+		       (System/getProperty "user.home"))]
+      (make-parents file)
+      file))  
+  (defonce ea-auto-save-thread (doto (thread
+				      (loop []
+					(save-eas ea-auto-save-file)
+					(sleep (* 60 ea-auto-save-minutes))
+					(recur)))
+				 (.setName "ea auto save")))
+
+  (comment 
+    (setq gui-frame-title "MINE!"
+	  gui-reminder-visible true))
 #+end_src
 
 ** Templates
@@ -2633,9 +3909,30 @@ Yes, currently it is not very development start friendly. That will change!
   (clojure.core/use 'nstools.ns)
   (ns+ forex.default
        (:clone clj.core)
+       (:use forex.util.general)
        (:use forex.util.core
 	     forex.util.emacs
 	     forex.util.log) 
+       (:use forex.module.error
+	     forex.module.ea
+	     forex.module.indicator
+	     forex.module.account forex.module.account.utils
+	     [clj-time.core :exclude [extend start]])
+       (:require
+	[forex.backend.mql.socket-service :as backend]))
+#+end_src
+
+#+source: gui-template
+#+begin_src clojure :tangle src/forex/gui.clj 
+  (clojure.core/use 'nstools.ns)
+  (ns+ forex.gui 
+       (:clone clj.core)
+       (:import (javax.swing JScrollPane JFrame JPanel JTextArea
+			     JLabel JButton SwingUtilities))
+       (:use forex.util.general forex.util.gui clojure.contrib.miglayout)
+       (:use forex.util.core
+	     forex.util.emacs
+	     forex.util.log)  
        (:use forex.module.error
 	     forex.module.ea
 	     forex.module.indicator
@@ -2656,28 +3953,31 @@ use clj-forex....
   ;;forex.examples.timeout-ea : ea which manages the orders of a trade
   (clojure.core/use 'nstools.ns)
   (ns+ forex.examples.timeout-ea.timeout-ea
-       (:like forex.default)
-       (:use utils.general
-	     forex.examples.timeout-ea.utils))
+       (:clone forex.gui) 
+       (:use forex.examples.timeout-ea.utils
+	     forex.interface.gui)
+       (:import (javax.swing JScrollPane)))
+  (register-ea)
    ;;ea vars   
   (defvar state (atom :timeout))
   (defvar end-time)
   (defvar order) 
-  ;;  
-  ;;TODO: when we order, and modify fails, how do we get the error? later :)...
-  (defn init [{:keys [type sl price]}]
-    (aif (order! (atom-hash {:type type :sl sl :price price
-			     :lots (* (mode-minlot) 2)}))
-	 {#'end-time (plus (now) (hours 12))
-	  #'order it} 
-	 (out "MQL error %s" (:e it))))
+  ;; 
   (declare timeout break-even trail)
+
+  ;;TODO: when we order, and modify fails, how do we get the error? later :)...
+  (defn init [{:keys [type sl price hour]}]
+    (aif (order! {:type type :sl sl :price price
+		  :lots (* (mode-minlot) 2)})
+	 {#'end-time (plus (now) (hours hour))
+	  #'order (atom-hash it)} 
+	 (:e it))) 
+
   (defn start [args]
     (cond
      (close? order) (exit "order is now closed")
      (= @state :timeout) (timeout args)
      (= @state :break-even) (break-even args))) 
-
 
   (defn timeout [_]
     (cond
@@ -2692,47 +3992,59 @@ use clj-forex....
      (after? (now) end-time)
      (awhen (delete! order) (exit "order timed out"))))
 
-  (defn break-even [{:keys [tp2 tp1]}]
-    (when (hit? order tp1)
-      (out "closing to half ...")
-      (awhen (-> (modify! order {:sl (:price order) :tp tp2})
-		 (close! (lot (/ (:lots order) 2))))
-	     (exit "finished break even"))))
+  (defn break-even [{:keys [sl tp2 tp1]}]
+    (if (hit? order tp1)
+      (do (out "closing to half ...")
+	  (awhen (-> (modify! order {:sl (:price order) :tp tp2})
+		     (close! (lot (/ (:lots order) 2))))
+		 (exit "finished break even")))
+      (modify! order {:sl sl})))
 
   (defn hh [a]
     (apply max (map high (range 1 (inc a)))))
   (defn ll [a]
     (apply min (map low (range 1 (inc a)))))
   (defn trail [_]
-    (modify! order 
-	     {:sl (if (sell? order)
-		    (min (:sl order) (hh 3))
-		    (max (:sl order) (ll 3)))}))
+    (modify! order {:sl (omax (:sl order) (if (sell? order) (hh 3) (ll 3)))})) 
+  ;;;GUI
+  (defn init-gui []
+    (let [panel (JPanel.) text (JTextArea. 20 30)
+	  frame (jframe "timeout ea")]
+      (doto frame
+	(.add (miglayout
+	       panel :layout "center" :column "center" :row "center"
+	       (JLabel. "paste email text") :wrap
+	       (JScrollPane. text) "span,grow" :wrap
+	       (doto (JButton. "ok")
+		 (add-action-listener
+		  (fn [e] 
+		    (let [parsed (match-method (.getText text))]
+		      (if parsed
+			(when (prompt "is order %s ok?" parsed)
+			  (with-out-str+ out
+			    (if-not (run parsed) 
+			      (inform "failed to run ea %s" (str out))
+			      (.setVisible frame false)))) 
+			(inform "failed to match input text"))))))
+	       "w 50%"
+	       (doto (JButton. "cancel")
+		 (add-action-listener (fn [_] (.setVisible frame false))))
+	       "w 50%"))
+	(.pack)
+	(.setVisible true))))
 #+end_src
   
 #+source: timeout-ea-utils
 #+begin_src clojure :tangle src/forex/examples/timeout_ea/utils.clj
   (clojure.core/use 'nstools.ns)
   (ns+ forex.examples.timeout-ea.utils
-       (:like forex.default)
-       (:use utils.general))
-  (defn pip-price
-    ([] (pip-price (env :symbol)))
-    ([symbol] (mode-tickvalue symbol)))
-  ;;TODO: mql err on point? no way! we should throw an error
+       (:clone forex.default)
+       (:use forex.util.general)) 
 
-  (defn point 
-    ([] (point (env :symbol)))
-    ([symbol]
-       (* 10 (mode-point symbol))))
-  (defn pips   
-    ([price] (pips price (env :symbol)))
-    ([price symbol] 
-       (/ price (point symbol)))) 
-  (defn price-of 
-    ([val] (price-of val (env :symbol)))
-    ([val symbol]
-       (* (pip-price symbol) (pips val)))) 
+  (defn price
+    ([val] (price val (env :symbol)))
+    ([val symbol] 
+       (* (mode-tickvalue symbol) (point val)))) 
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
   (def method-regex
     (re-pattern (.replaceAll
@@ -2752,8 +4064,10 @@ use clj-forex....
       (debugging "Matching Profit Multiplier Trade: "
 		 (catch-un 
 		  (when-let [it (first (re-seq method-regex (.replaceAll s "[\\r\\n]+" " ")))]
-		    (let [[method-type symbol type price stop tp1 tp2] (rest it)]
-		      {:method (.toLowerCase method-type)
+		    (let [[method-type symbol type price stop tp1 tp2] (rest it)
+			  method (.toLowerCase method-type)]
+		      {:method method
+		       :hour (if (= method "spring") 4 12)
 		       :symbol (.replaceAll symbol "/" "")
 		       :type (condp = (.toLowerCase type)
 				 "buy" :buy-stop
@@ -2770,15 +4084,15 @@ use clj-forex....
   (ns+ forex.examples.renko.renko
        (:clone forex.default) 
        (:use forex.util.general)) 
+  (register-ea) 
   ;;TODO: *ea-stop* already refers to: #'forex.module.ea/*ea-stop* in namespace: forex.default 
-  ;;TODO: on GBP/JPY, why did it enter so late????
-
+  ;;TODO: on GBP/JPY, why did it enter so late???? 
   ;;TODO!!!: speed up ns+ by alot! and dont have it automatically reload it, please!!!
 
   ;;TODO: test reusing of account.utils
   ;;TODO: defaults per currency
   (def ^{:var true} state (atom :monitor)) 
-  (def ^{:var true} order (atom-hash)) 
+  (def ^{:var true} order (atom-hash))
   (def ^{:var true} trail-time-period 5)
 
   (def main (partial vma [2 2 100 1]))
@@ -2835,32 +4149,25 @@ use clj-forex....
   (defmulti close-condition (fn [o & args] (:category o)))
   (defmulti check (fn [o & args] (:category o)))
   ;;;SCALP ORDER MANAGEMENT
-  (defn enough-profit? [o] 
-    ;;20 pips + spread
-    (>= (profit o) 10))
   (defn should-close? [{:keys [type] :as o}] 
     (cond
      (= type :buy)
-     (or (or (< (signal 1) (main 1)) (< (signal 1) (middle 1)))
-	 (and (enough-profit? o)
-	      (or (< (signal) (main)) (< (signal) (middle)))))
+     (or (< (signal 1) (main 1)) (< (signal 1) (middle 1)))
      (= type :sell)
-     (or (or (> (signal 1) (main 1)) (> (signal 1) (middle 1)))
-	 (and (enough-profit? o)
-	      (or (> (signal) (main)) (> (signal) (middle)))))))
+     (or (> (signal 1) (main 1)) (> (signal 1) (middle 1)))))
 
   ;;;LONG ORDER MANAGEMENT
   ;;TODO: take profit via price action !!!!; if GBPJPY is owning, why not trail on 1 minute level? basically, alot of this take profit stuff and entering
   ;;and exiting is based on a variety of conditions! Im sensing some AI like programming taking place! doesn't need to be ai, but how about using
   ;;programming which takes into account the context? see http://web.media.mit.edu/~push/ and the phd thesis EM-ONE: An Architecture for Reflective Commonsense Thinking
 
-  (defn five-min-close?
+  (defn cci-close?
     "This is a tight virtual stop on the five minute level. 
      For buy, if cci>100, set cross-sl to previous middle value.
      If signal(1) is less than cross-sl, then exit. Opposite for sell"
-    [{:keys [type state] :as o}] 
+    [{:keys [type state] :as o} period] 
     (when (= state :trail) 
-      (wenv {:period trail-time-period}    
+      (wenv {:period period}    
 	    ;;modify cross-sl 
 	    (when (or (> (cci 30 1) 100) (< (cci 30 1) -100))
 	      ;;we will not update the cross-sl so that it will generate  a close signal, this would be bad!
@@ -2874,20 +4181,22 @@ use clj-forex....
 
   (defmethod close-condition :long [{:keys [type state] :as o}] 
     (if (= state :init)
-      (should-close? o)
-      (or (cond
-	   (= type :buy)
-	   (< (signal 1) (main 1))
-	   (= type :sell)
-	   (> (signal 1) (main 1)))
-	  (five-min-close? o)))) 
+      (and (should-close? o)
+	   (do (out "init close") true)) ;;TODO: GBPUSD screwed up for -30 pips how to effectively close this? how bout pick better entry poitns? or dont pick exhaustion
+      (or (and (cond
+		(= type :buy)
+		(< (signal 1) (main 1))
+		(= type :sell)
+		(> (signal 1) (main 1)))
+	       (do (out "cross close") true))
+	  (and (cci-close? o trail-time-period) (do (out "cci close") true))))) 
 
   (defmethod check :long [o]
-    (when (>= (profit o) 20) (modify! o {:state :trail}))
+    (when (and (>= (profit o) 20) (not (= (:state o) :trail))) (modify! o {:state :trail}) (out "changed to trail"))
     ;;actual sl the server sees. this is a safety stop, in case our ea gets screwed up, turns off, etc.
     (when (or (= (:sl o) 0) (= (:state o) :trail))
       (modify! o {:sl (omax o (:sl o) (o- o (main 1) (pip 20)))})))  
-
+  ;;(run)
   ;;MAIN  
   (defn gobble [o] 
     (if (close? o) 
@@ -2900,8 +4209,9 @@ use clj-forex....
       (awhen (order! (merge o  {:type type :lots (calculate-lots)})) 
 	     (reset! order it)
 	     (reset! state :gobble)   
-	     (out "entered %s %s order" type category)))) 
-  (defn start [args]  
+	     (out "entered %s %s order" type category))))
+
+  (defn start [args] 
     (cond
      (= @state :monitor) (monitor)
      (= @state :gobble) (gobble order)))
@@ -2909,3 +4219,4 @@ use clj-forex....
   (defn vars [ea] (:vars ea))
   (defn getv [vvar ea] (get (:vars ea) vvar))
 #+end_src
+ 

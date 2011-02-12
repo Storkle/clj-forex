@@ -7,7 +7,7 @@ lang="en" xml:lang="en">
 <title>CLJ-FOREX</title>
 <meta http-equiv="Content-Type" content="text/html;charset=utf-8"/>
 <meta name="generator" content="Org-mode"/>
-<meta name="generated" content="2011-02-04 12:05:07 CST"/>
+<meta name="generated" content="2011-02-12 10:10:09 CST"/>
 <meta name="author" content="Seth Burleigh"/>
 <meta name="description" content=""/>
 <meta name="keywords" content=""/>
@@ -112,7 +112,8 @@ lang="en" xml:lang="en">
 <li><a href="#sec-4_2_6">4.2.6 Fiber </a></li>
 <li><a href="#sec-4_2_7">4.2.7 Spawn </a></li>
 <li><a href="#sec-4_2_8">4.2.8 ZMQ </a></li>
-<li><a href="#sec-4_2_9">4.2.9 Devel </a></li>
+<li><a href="#sec-4_2_9">4.2.9 GUI </a></li>
+<li><a href="#sec-4_2_10">4.2.10 Devel </a></li>
 </ul>
 </li>
 <li><a href="#sec-4_3">4.3 Backend </a>
@@ -128,9 +129,10 @@ lang="en" xml:lang="en">
 <li><a href="#sec-4_4_4">4.4.4 Indicator </a></li>
 </ul>
 </li>
-<li><a href="#sec-4_5">4.5 User </a></li>
-<li><a href="#sec-4_6">4.6 Templates </a></li>
-<li><a href="#sec-4_7">4.7 Examples </a></li>
+<li><a href="#sec-4_5">4.5 Interface </a></li>
+<li><a href="#sec-4_6">4.6 User </a></li>
+<li><a href="#sec-4_7">4.7 Templates </a></li>
+<li><a href="#sec-4_8">4.8 Examples </a></li>
 </ul>
 </li>
 </ul>
@@ -303,20 +305,22 @@ Yes, currently it is not very development start friendly. That will change!
 
 
 <div class="org-src-container"><label class="org-src-name">project()</label><pre class="src src-clojure">
-(defproject clj-forex <span style="color: #8b2252;">"0.1"</span>
+(defproject clj-forex <span style="color: #8b2252;">"0.1-SNAPSHOT"</span>
   <span style="color: #7a378b;">:description</span> <span style="color: #8b2252;">"non graphical library for automated trading for forex market with various backends like metatrader"</span>
   <span style="color: #7a378b;">:dependencies</span> [[org.clojure/clojure <span style="color: #8b2252;">"1.2.0"</span>]
                  [org.clojure/clojure-contrib <span style="color: #8b2252;">"1.2.0"</span>]           
                  [matchure <span style="color: #8b2252;">"0.10.0"</span>]
-                 [clj-time <span style="color: #8b2252;">"0.2.0-SNAPSHOT"</span>]            
-                 [mmemail <span style="color: #8b2252;">"1.0.1"</span>]
+                 [clj-time <span style="color: #8b2252;">"0.2.0-SNAPSHOT"</span>]
+                 [mmemail <span style="color: #8b2252;">"1.0.1"</span>] 
                  [nstools <span style="color: #8b2252;">"0.2.4"</span>]
-                 [org.clojars.starry/clj-forex-indicators <span style="color: #8b2252;">"0.1"</span>]]   
+                 [com.miglayout/miglayout <span style="color: #8b2252;">"3.7.4"</span>]]   
   <span style="color: #7a378b;">:dev-dependencies</span> [[native-deps <span style="color: #8b2252;">"1.0.5"</span>]
-                     [swank-clojure <span style="color: #8b2252;">"1.3.0-SNAPSHOT"</span>]] 
-  <span style="color: #7a378b;">:native-dependencies</span> [[org.clojars.starry/jzmq-native-deps <span style="color: #8b2252;">"2.0.10.1"</span>]]
+                     [swank-clojure <span style="color: #8b2252;">"1.3.0-SNAPSHOT"</span>]]  
+  <span style="color: #7a378b;">:native-dependencies</span> [[org.clojars.starry/jzmq-native-deps <span style="color: #8b2252;">"2.0.10.2"</span>]]
+  <span style="color: #7a378b;">:main</span> forex.interface.main
+  <span style="color: #7a378b;">:repositories</span> {<span style="color: #8b2252;">"miglayout"</span> <span style="color: #8b2252;">"http://www.miglayout.com/mavensite/"</span>} 
+  <span style="color: #7a378b;">:run-aliases</span> {<span style="color: #7a378b;">:izpack</span> forex.dev.install} 
   <span style="color: #b22222;">;; </span><span style="color: #b22222;">:jvm-opts      ["-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=8030"]
-</span>  <span style="color: #b22222;">;;</span><span style="color: #b22222;">:main forex.binding
 </span>  <span style="color: #b22222;">;;</span><span style="color: #b22222;">:aot :all
 </span>  )
 </pre></div>
@@ -583,7 +587,7 @@ Yes, currently it is not very development start friendly. That will change!
 
 <div class="org-src-container"><label class="org-src-name">clj-core()</label><pre class="src src-clojure">
 (<span style="color: #a020f0;">ns</span> clj.core
-  (<span style="color: #7a378b;">:refer-clojure</span> <span style="color: #7a378b;">:exclude</span> [promise swap! reset! defrecord])
+  (<span style="color: #7a378b;">:refer-clojure</span> <span style="color: #7a378b;">:exclude</span> [promise swap! reset! defrecord spit file])
   (<span style="color: #7a378b;">:require</span> clj.third-party.defrecord2)
   (<span style="color: #7a378b;">:import</span> clojure.lang.APersistentMap java.io.Writer))
 (<span style="color: #a020f0;">defmacro</span> <span style="color: #0000ff;">defrecord</span> [name fields &amp; protocols]
@@ -636,6 +640,599 @@ Yes, currently it is not very development start friendly. That will change!
 (<span style="color: #a020f0;">defmethod</span> <span style="color: #0000ff;">print-dup</span> clojure.lang.Ref [o w]
   (.write w <span style="color: #8b2252;">"#=(clojure.core/ref "</span>) (<span style="color: #7a378b;">print-dup</span> @o w) (.write w <span style="color: #8b2252;">")"</span>))
 </pre></div>
+
+
+
+
+<div class="org-src-container"><label class="org-src-name">clj-io()</label><pre class="src src-clojure">
+<span style="color: #b22222;">;;; </span><span style="color: #b22222;">duck_streams.clj -- duck-typed I/O streams for Clojure
+</span>
+<span style="color: #b22222;">;; </span><span style="color: #b22222;">by Stuart Sierra, http://stuartsierra.com/
+</span><span style="color: #b22222;">;; </span><span style="color: #b22222;">May 13, 2009
+</span>
+<span style="color: #b22222;">;; </span><span style="color: #b22222;">Copyright (c) Stuart Sierra, 2009. All rights reserved.  The use
+</span><span style="color: #b22222;">;; </span><span style="color: #b22222;">and distribution terms for this software are covered by the Eclipse
+</span><span style="color: #b22222;">;; </span><span style="color: #b22222;">Public License 1.0 (http://opensource.org/licenses/eclipse-1.0.php)
+</span><span style="color: #b22222;">;; </span><span style="color: #b22222;">which can be found in the file epl-v10.html at the root of this
+</span><span style="color: #b22222;">;; </span><span style="color: #b22222;">distribution.  By using this software in any fashion, you are
+</span><span style="color: #b22222;">;; </span><span style="color: #b22222;">agreeing to be bound by the terms of this license.  You must not
+</span><span style="color: #b22222;">;; </span><span style="color: #b22222;">remove this notice, or any other, from this software.
+</span>
+
+<span style="color: #b22222;">;; </span><span style="color: #b22222;">This file defines "duck-typed" I/O utility functions for Clojure.
+</span><span style="color: #b22222;">;; </span><span style="color: #b22222;">The 'reader' and 'writer' functions will open and return an
+</span><span style="color: #b22222;">;; </span><span style="color: #b22222;">instance of java.io.BufferedReader and java.io.BufferedWriter,
+</span><span style="color: #b22222;">;; </span><span style="color: #b22222;">respectively, for a variety of argument types -- filenames as
+</span><span style="color: #b22222;">;; </span><span style="color: #b22222;">strings, URLs, java.io.File's, etc.  'reader' even works on http
+</span><span style="color: #b22222;">;; </span><span style="color: #b22222;">URLs.
+</span><span style="color: #b22222;">;;</span><span style="color: #b22222;">
+</span><span style="color: #b22222;">;; </span><span style="color: #b22222;">Note: this is not really "duck typing" as implemented in languages
+</span><span style="color: #b22222;">;; </span><span style="color: #b22222;">like Ruby.  A better name would have been "do-what-I-mean-streams"
+</span><span style="color: #b22222;">;; </span><span style="color: #b22222;">or "just-give-me-a-stream", but ducks are funnier.
+</span>
+
+<span style="color: #b22222;">;; </span><span style="color: #b22222;">CHANGE LOG
+</span><span style="color: #b22222;">;;</span><span style="color: #b22222;">
+</span><span style="color: #b22222;">;; </span><span style="color: #b22222;">May 13, 2009: added functions to open writers for appending
+</span><span style="color: #b22222;">;;</span><span style="color: #b22222;">
+</span><span style="color: #b22222;">;; </span><span style="color: #b22222;">May 3, 2009: renamed file to file-str, for compatibility with
+</span><span style="color: #b22222;">;; </span><span style="color: #b22222;">clojure.contrib.java.  reader/writer no longer use this
+</span><span style="color: #b22222;">;; </span><span style="color: #b22222;">function.
+</span><span style="color: #b22222;">;;</span><span style="color: #b22222;">
+</span><span style="color: #b22222;">;; </span><span style="color: #b22222;">February 16, 2009: (lazy branch) fixed read-lines to work with lazy
+</span><span style="color: #b22222;">;; </span><span style="color: #b22222;">Clojure.
+</span><span style="color: #b22222;">;;</span><span style="color: #b22222;">
+</span><span style="color: #b22222;">;; </span><span style="color: #b22222;">January 10, 2009: added *default-encoding*, so streams are always
+</span><span style="color: #b22222;">;; </span><span style="color: #b22222;">opened as UTF-8.
+</span><span style="color: #b22222;">;;</span><span style="color: #b22222;">
+</span><span style="color: #b22222;">;; </span><span style="color: #b22222;">December 19, 2008: rewrote reader and writer as multimethods; added
+</span><span style="color: #b22222;">;; </span><span style="color: #b22222;">slurp*, file, and read-lines
+</span><span style="color: #b22222;">;;</span><span style="color: #b22222;">
+</span><span style="color: #b22222;">;; </span><span style="color: #b22222;">April 8, 2008: first version
+</span>
+
+
+(<span style="color: #a020f0;">ns</span>
+ #^{<span style="color: #7a378b;">:author</span> <span style="color: #8b2252;">"Stuart Sierra"</span>,
+    <span style="color: #7a378b;">:doc</span> <span style="color: #8b2252;">"This file defines polymorphic I/O utility functions for Clojure.
+
+           The Streams protocol defines reader, writer, input-stream and
+           output-stream methods that return BufferedReader, BufferedWriter,
+           BufferedInputStream and BufferedOutputStream instances (respectively),
+           with default implementations extended to a variety of argument
+           types: URLs or filenames as strings, java.io.File's, Sockets, etc."</span>}
+ clj.io
+ (<span style="color: #7a378b;">:refer-clojure</span> <span style="color: #7a378b;">:exclude</span> (spit))
+ (<span style="color: #7a378b;">:import</span> 
+  (java.io Reader InputStream InputStreamReader PushbackReader
+           BufferedReader File OutputStream
+           OutputStreamWriter BufferedWriter Writer
+           FileInputStream FileOutputStream ByteArrayOutputStream
+           StringReader ByteArrayInputStream
+           BufferedInputStream BufferedOutputStream
+           CharArrayReader)
+  (java.net URI URL MalformedURLException Socket)))
+
+(<span style="color: #a020f0;">defmulti</span> <span style="color: #228b22;">#^File</span> ^{<span style="color: #7a378b;">:private</span> true} <span style="color: #0000ff;">as-file</span> 
+  <span style="color: #8b2252;">"Interpret a String or a java.io.File as a File. Building block
+   for clojure.contrib.java/file, which you should prefer
+   in most cases."</span>
+  class)
+(<span style="color: #a020f0;">defmethod</span> ^{<span style="color: #7a378b;">:private</span> true} <span style="color: #0000ff;">as-file</span> String [<span style="color: #228b22;">#^String</span> s] (File. s))
+(<span style="color: #a020f0;">defmethod</span> ^{<span style="color: #7a378b;">:private</span> true} <span style="color: #0000ff;">as-file</span> File [f] f)
+
+
+(<span style="color: #a020f0;">def</span>
+ #^{<span style="color: #7a378b;">:doc</span> <span style="color: #8b2252;">"Name of the default encoding to use when reading &amp; writing.
+  Default is UTF-8."</span>
+    <span style="color: #7a378b;">:tag</span> <span style="color: #8b2252;">"java.lang.String"</span>}
+ <span style="color: #0000ff;">*default-encoding*</span> <span style="color: #8b2252;">"UTF-8"</span>)
+
+(<span style="color: #a020f0;">def</span>
+ #^{<span style="color: #7a378b;">:doc</span> <span style="color: #8b2252;">"Size, in bytes or characters, of the buffer used when
+  copying streams."</span>}
+ <span style="color: #0000ff;">*buffer-size*</span> 1024)
+
+(<span style="color: #a020f0;">def</span>
+ #^{<span style="color: #7a378b;">:doc</span> <span style="color: #8b2252;">"Type object for a Java primitive byte array."</span>}
+ <span style="color: #0000ff;">*byte-array-type*</span> (<span style="color: #7a378b;">class</span> (<span style="color: #7a378b;">make-array</span> Byte/TYPE 0)))
+
+(<span style="color: #a020f0;">def</span>
+ #^{<span style="color: #7a378b;">:doc</span> <span style="color: #8b2252;">"Type object for a Java primitive char array."</span>}
+ <span style="color: #0000ff;">*char-array-type*</span> (<span style="color: #7a378b;">class</span> (<span style="color: #7a378b;">make-array</span> Character/TYPE 0)))
+
+
+(<span style="color: #a020f0;">defn</span> <span style="color: #228b22;">#^File</span> <span style="color: #0000ff;">file-str</span>
+  <span style="color: #8b2252;">"Concatenates args as strings and returns a java.io.File.  Replaces
+  all / and \\ with File/separatorChar.  Replaces ~ at the start of
+  the path with the user.home system property."</span>
+  [&amp; args]
+  (<span style="color: #a020f0;">let</span> [<span style="color: #228b22;">#^String</span> s (<span style="color: #7a378b;">apply</span> str args)
+        s (.replace s \\ File/separatorChar)
+        s (.replace s \/ File/separatorChar)
+        s (<span style="color: #a020f0;">if</span> (.startsWith s <span style="color: #8b2252;">"~"</span>)
+            (<span style="color: #7a378b;">str</span> (System/getProperty <span style="color: #8b2252;">"user.home"</span>)
+                 File/separator (<span style="color: #7a378b;">subs</span> s 1))
+            s)]
+    (File. s)))
+
+(<span style="color: #a020f0;">def</span>
+ #^{<span style="color: #7a378b;">:doc</span> <span style="color: #8b2252;">"If true, writer, output-stream and spit will open files in append mode.
+          Defaults to false.  Instead of binding this var directly, use append-writer,
+          append-output-stream or append-spit."</span>
+    <span style="color: #7a378b;">:tag</span> <span style="color: #8b2252;">"java.lang.Boolean"</span>}
+ <span style="color: #0000ff;">*append*</span> false)
+
+(<span style="color: #a020f0;">defn-</span> <span style="color: #0000ff;">assert-not-appending</span> []
+  (<span style="color: #a020f0;">when</span> *append*
+    (<span style="color: #a020f0;">throw</span> (Exception. <span style="color: #8b2252;">"Cannot change an open stream to append mode."</span>))))
+
+<span style="color: #b22222;">;; </span><span style="color: #b22222;">@todo -- Both simple and elaborate methods for controlling buffering of
+</span><span style="color: #b22222;">;; </span><span style="color: #b22222;">in the Streams protocol were implemented, considered, and postponed
+</span><span style="color: #b22222;">;; </span><span style="color: #b22222;">see http://groups.google.com/group/clojure-dev/browse_frm/thread/3e39e9b3982f542b
+</span>(<span style="color: #a020f0;">defprotocol</span> <span style="color: #0000ff;">Streams</span>
+  (reader [x]
+    <span style="color: #8b2252;">"Attempts to coerce its argument into an open java.io.Reader.
+     The default implementations of this protocol always return a
+     java.io.BufferedReader.
+
+     Default implementations are provided for Reader, BufferedReader,
+     InputStream, File, URI, URL, Socket, byte arrays, character arrays,
+     and String.
+
+     If argument is a String, it tries to resolve it first as a URI, then
+     as a local file name.  URIs with a 'file' protocol are converted to
+     local file names.  If this fails, a final attempt is made to resolve
+     the string as a resource on the CLASSPATH.
+
+     Uses *default-encoding* as the text encoding.
+
+     Should be used inside with-open to ensure the Reader is properly
+     closed."</span>)
+  (writer [x]
+    <span style="color: #8b2252;">"Attempts to coerce its argument into an open java.io.Writer.
+     The default implementations of this protocol always return a
+     java.io.BufferedWriter.
+
+     Default implementations are provided for Writer, BufferedWriter,
+     OutputStream, File, URI, URL, Socket, and String.
+
+     If the argument is a String, it tries to resolve it first as a URI, then
+     as a local file name.  URIs with a 'file' protocol are converted to
+     local file names.
+
+     Should be used inside with-open to ensure the Writer is properly
+     closed."</span>)
+  (input-stream [x]
+    <span style="color: #8b2252;">"Attempts to coerce its argument into an open java.io.InputStream.
+     The default implementations of this protocol always return a
+     java.io.BufferedInputStream.
+
+     Default implementations are defined for OutputStream, File, URI, URL,
+     Socket, byte array, and String arguments.
+
+     If the argument is a String, it tries to resolve it first as a URI, then
+     as a local file name.  URIs with a 'file' protocol are converted to
+     local file names.
+
+     Should be used inside with-open to ensure the InputStream is properly
+     closed."</span>)
+  (output-stream [x]
+    <span style="color: #8b2252;">"Attempts to coerce its argument into an open java.io.OutputStream.
+     The default implementations of this protocol always return a
+     java.io.BufferedOutputStream.
+
+     Default implementations are defined for OutputStream, File, URI, URL,
+     Socket, and String arguments.
+
+     If the argument is a String, it tries to resolve it first as a URI, then
+     as a local file name.  URIs with a 'file' protocol are converted to
+     local file names.
+
+     Should be used inside with-open to ensure the OutputStream is
+     properly closed."</span>))
+
+(<span style="color: #a020f0;">def</span> <span style="color: #0000ff;">default-streams-impl</span>
+  {<span style="color: #7a378b;">:reader</span> #(reader (input-stream %))
+   <span style="color: #7a378b;">:writer</span> #(writer (output-stream %))
+   <span style="color: #7a378b;">:input-stream</span> #(<span style="color: #a020f0;">throw</span> (Exception. (<span style="color: #7a378b;">str</span> <span style="color: #8b2252;">"Cannot open &lt;"</span> (<span style="color: #7a378b;">pr-str</span> %) <span style="color: #8b2252;">"&gt; as an InputStream."</span>)))
+   <span style="color: #7a378b;">:output-stream</span> #(<span style="color: #a020f0;">throw</span> (Exception. (<span style="color: #7a378b;">str</span> <span style="color: #8b2252;">"Cannot open &lt;"</span> (<span style="color: #7a378b;">pr-str</span> %) <span style="color: #8b2252;">"&gt; as an OutputStream."</span>)))})
+
+(<span style="color: #7a378b;">extend</span> File
+  Streams
+  (<span style="color: #7a378b;">assoc</span> default-streams-impl
+    <span style="color: #7a378b;">:input-stream</span> #(input-stream (FileInputStream. <span style="color: #228b22;">#^File</span> %))
+    <span style="color: #7a378b;">:output-stream</span> #(<span style="color: #a020f0;">let</span> [stream (FileOutputStream. <span style="color: #228b22;">#^File</span> % *append*)]
+                      (<span style="color: #a020f0;">binding</span> [*append* false]
+                        (output-stream stream)))))
+(<span style="color: #7a378b;">extend</span> URL
+  Streams
+  (<span style="color: #7a378b;">assoc</span> default-streams-impl
+    <span style="color: #7a378b;">:input-stream</span> (<span style="color: #7a378b;">fn</span> [<span style="color: #228b22;">#^URL</span> x]
+                    (input-stream (<span style="color: #a020f0;">if</span> (<span style="color: #7a378b;">=</span> <span style="color: #8b2252;">"file"</span> (.getProtocol x))
+                                    (FileInputStream. (.getPath x))
+                                    (.openStream x))))
+    <span style="color: #7a378b;">:output-stream</span> (<span style="color: #7a378b;">fn</span> [<span style="color: #228b22;">#^URL</span> x]
+                     (<span style="color: #a020f0;">if</span> (<span style="color: #7a378b;">=</span> <span style="color: #8b2252;">"file"</span> (.getProtocol x))
+                       (output-stream (File. (.getPath x)))
+                       (<span style="color: #a020f0;">throw</span> (Exception. (<span style="color: #7a378b;">str</span> <span style="color: #8b2252;">"Can not write to non-file URL &lt;"</span> x <span style="color: #8b2252;">"&gt;"</span>)))))))
+(<span style="color: #7a378b;">extend</span> URI
+  Streams
+  (<span style="color: #7a378b;">assoc</span> default-streams-impl
+    <span style="color: #7a378b;">:input-stream</span> #(input-stream (.toURL <span style="color: #228b22;">#^URI</span> %))
+    <span style="color: #7a378b;">:output-stream</span> #(output-stream (.toURL <span style="color: #228b22;">#^URI</span> %))))
+(<span style="color: #7a378b;">extend</span> String
+  Streams
+  (<span style="color: #7a378b;">assoc</span> default-streams-impl
+    <span style="color: #7a378b;">:input-stream</span> #(<span style="color: #a020f0;">try</span>
+                     (input-stream (URL. %))
+                     (<span style="color: #a020f0;">catch</span> MalformedURLException e
+                       (input-stream (File. <span style="color: #228b22;">#^String</span> %))))
+    <span style="color: #7a378b;">:output-stream</span> #(<span style="color: #a020f0;">try</span>
+                      (output-stream (URL. %))
+                      (<span style="color: #a020f0;">catch</span> MalformedURLException err
+                        (output-stream (File. <span style="color: #228b22;">#^String</span> %))))))
+(<span style="color: #7a378b;">extend</span> Socket
+  Streams
+  (<span style="color: #7a378b;">assoc</span> default-streams-impl
+    <span style="color: #7a378b;">:input-stream</span> #(.getInputStream <span style="color: #228b22;">#^Socket</span> %)
+    <span style="color: #7a378b;">:output-stream</span> #(output-stream (.getOutputStream <span style="color: #228b22;">#^Socket</span> %))))
+(<span style="color: #7a378b;">extend</span> *byte-array-type*
+  Streams
+  (<span style="color: #7a378b;">assoc</span> default-streams-impl <span style="color: #7a378b;">:input-stream</span> #(input-stream (ByteArrayInputStream. %))))
+(<span style="color: #7a378b;">extend</span> *char-array-type*
+  Streams
+  (<span style="color: #7a378b;">assoc</span> default-streams-impl <span style="color: #7a378b;">:reader</span> #(reader (CharArrayReader. %))))
+(<span style="color: #7a378b;">extend</span> Object
+  Streams
+  default-streams-impl)
+
+(<span style="color: #7a378b;">extend</span> Reader
+  Streams
+  (<span style="color: #7a378b;">assoc</span> default-streams-impl <span style="color: #7a378b;">:reader</span> #(BufferedReader. %)))
+(<span style="color: #7a378b;">extend</span> BufferedReader
+  Streams
+  (<span style="color: #7a378b;">assoc</span> default-streams-impl <span style="color: #7a378b;">:reader</span> identity))
+(<span style="color: #a020f0;">defn-</span> <span style="color: #0000ff;">inputstream-&gt;reader</span>
+  [<span style="color: #228b22;">#^InputStream</span> is]
+  (reader (InputStreamReader. is *default-encoding*)))
+(<span style="color: #7a378b;">extend</span> InputStream
+  Streams
+  (<span style="color: #7a378b;">assoc</span> default-streams-impl <span style="color: #7a378b;">:input-stream</span> #(BufferedInputStream. %)
+    <span style="color: #7a378b;">:reader</span> inputstream-&gt;reader))
+(<span style="color: #7a378b;">extend</span> BufferedInputStream
+  Streams
+  (<span style="color: #7a378b;">assoc</span> default-streams-impl
+    <span style="color: #7a378b;">:input-stream</span> identity
+    <span style="color: #7a378b;">:reader</span> inputstream-&gt;reader))
+
+(<span style="color: #7a378b;">extend</span> Writer
+  Streams
+  (<span style="color: #7a378b;">assoc</span> default-streams-impl <span style="color: #7a378b;">:writer</span> #(<span style="color: #a020f0;">do</span> (assert-not-appending)
+                                           (BufferedWriter. %))))
+(<span style="color: #7a378b;">extend</span> BufferedWriter
+  Streams
+  (<span style="color: #7a378b;">assoc</span> default-streams-impl <span style="color: #7a378b;">:writer</span> #(<span style="color: #a020f0;">do</span> (assert-not-appending) %)))
+(<span style="color: #a020f0;">defn-</span> <span style="color: #0000ff;">outputstream-&gt;writer</span>
+  [<span style="color: #228b22;">#^OutputStream</span> os]
+  (assert-not-appending)
+  (writer (OutputStreamWriter. os *default-encoding*)))
+(<span style="color: #7a378b;">extend</span> OutputStream
+  Streams
+  (<span style="color: #7a378b;">assoc</span> default-streams-impl
+    <span style="color: #7a378b;">:output-stream</span> #(<span style="color: #a020f0;">do</span> (assert-not-appending)
+                        (BufferedOutputStream. %))
+    <span style="color: #7a378b;">:writer</span> outputstream-&gt;writer))
+(<span style="color: #7a378b;">extend</span> BufferedOutputStream
+  Streams
+  (<span style="color: #7a378b;">assoc</span> default-streams-impl
+    <span style="color: #7a378b;">:output-stream</span> #(<span style="color: #a020f0;">do</span> (assert-not-appending) %)
+      <span style="color: #7a378b;">:writer</span> outputstream-&gt;writer))
+
+(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">append-output-stream</span>
+  <span style="color: #8b2252;">"Like output-stream but opens file for appending.  Does not work on streams
+  that are already open."</span>
+  [x]
+  (<span style="color: #a020f0;">binding</span> [*append* true]
+    (output-stream x)))
+
+(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">append-writer</span>
+  <span style="color: #8b2252;">"Like writer but opens file for appending.  Does not work on streams
+  that are already open."</span>
+  [x]
+  (<span style="color: #a020f0;">binding</span> [*append* true]
+    (writer x)))
+
+(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">write-lines</span>
+  <span style="color: #8b2252;">"Writes lines (a seq) to f, separated by newlines.  f is opened with
+  writer, and automatically closed at the end of the sequence."</span>
+  [f lines]
+  (<span style="color: #a020f0;">with-open</span> [<span style="color: #228b22;">#^BufferedWriter</span> writer (writer f)]
+    (<span style="color: #a020f0;">loop</span> [lines lines]
+      (<span style="color: #a020f0;">when-let</span> [line (<span style="color: #7a378b;">first</span> lines)]
+        (.write writer (<span style="color: #7a378b;">str</span> line))
+        (.newLine writer)
+        (<span style="color: #a020f0;">recur</span> (<span style="color: #7a378b;">rest</span> lines))))))
+
+(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">read-lines</span>
+  <span style="color: #8b2252;">"Like clojure.core/line-seq but opens f with reader.  Automatically
+  closes the reader AFTER YOU CONSUME THE ENTIRE SEQUENCE."</span>
+  [f]
+  (<span style="color: #a020f0;">let</span> [read-line (<span style="color: #7a378b;">fn</span> <span style="color: #0000ff;">this</span> [<span style="color: #228b22;">#^BufferedReader</span> rdr]
+                    (<span style="color: #7a378b;">lazy-seq</span>
+                     (<span style="color: #a020f0;">if-let</span> [line (.readLine rdr)]
+                       (<span style="color: #7a378b;">cons</span> line (this rdr))
+                       (.close rdr))))]
+    (<span style="color: #7a378b;">read-line</span> (reader f))))
+
+(<span style="color: #a020f0;">defn</span> <span style="color: #228b22;">#^String</span> <span style="color: #0000ff;">slurp*</span>
+  <span style="color: #8b2252;">"Like clojure.core/slurp but opens f with reader."</span>
+  [f]
+  (<span style="color: #a020f0;">with-open</span> [<span style="color: #228b22;">#^BufferedReader</span> r (reader f)]
+      (<span style="color: #a020f0;">let</span> [sb (StringBuilder.)]
+        (<span style="color: #a020f0;">loop</span> [c (.read r)]
+          (<span style="color: #a020f0;">if</span> (<span style="color: #7a378b;">neg?</span> c)
+            (<span style="color: #7a378b;">str</span> sb)
+            (<span style="color: #a020f0;">do</span> (.append sb (<span style="color: #7a378b;">char</span> c))
+                (<span style="color: #a020f0;">recur</span> (.read r))))))))
+
+(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">spit</span>
+  <span style="color: #8b2252;">"Opposite of slurp.  Opens f with writer, writes content, then
+  closes f."</span>
+  [f content]
+  (<span style="color: #a020f0;">with-open</span> [<span style="color: #228b22;">#^Writer</span> w (writer f)]
+    (.write w content)))
+
+(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">append-spit</span>
+  <span style="color: #8b2252;">"Like spit but appends to file."</span>
+  [f content]
+  (<span style="color: #a020f0;">with-open</span> [<span style="color: #228b22;">#^Writer</span> w (append-writer f)]
+    (.write w content)))
+
+(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">pwd</span>
+  <span style="color: #8b2252;">"Returns current working directory as a String.  (Like UNIX 'pwd'.)
+  Note: In Java, you cannot change the current working directory."</span>
+  []
+  (System/getProperty <span style="color: #8b2252;">"user.dir"</span>))
+
+
+
+(<span style="color: #a020f0;">defmacro</span> <span style="color: #0000ff;">with-out-writer</span>
+  <span style="color: #8b2252;">"Opens a writer on f, binds it to *out*, and evalutes body.
+  Anything printed within body will be written to f."</span>
+  [f &amp; body]
+  `(<span style="color: #a020f0;">with-open</span> [stream# (writer ~f)]
+     (<span style="color: #a020f0;">binding</span> [*out* stream#]
+       ~@body)))
+
+(<span style="color: #a020f0;">defmacro</span> <span style="color: #0000ff;">with-out-append-writer</span>
+  <span style="color: #8b2252;">"Like with-out-writer but appends to file."</span>
+  [f &amp; body]
+  `(<span style="color: #a020f0;">with-open</span> [stream# (append-writer ~f)]
+     (<span style="color: #a020f0;">binding</span> [*out* stream#]
+       ~@body)))
+
+(<span style="color: #a020f0;">defmacro</span> <span style="color: #0000ff;">with-in-reader</span>
+  <span style="color: #8b2252;">"Opens a PushbackReader on f, binds it to *in*, and evaluates body."</span>
+  [f &amp; body]
+  `(<span style="color: #a020f0;">with-open</span> [stream# (PushbackReader. (reader ~f))]
+     (<span style="color: #a020f0;">binding</span> [*in* stream#]
+       ~@body)))
+
+(<span style="color: #a020f0;">defmulti</span>
+  #^{<span style="color: #7a378b;">:doc</span> <span style="color: #8b2252;">"Copies input to output.  Returns nil.
+  Input may be an InputStream, Reader, File, byte[], or String.
+  Output may be an OutputStream, Writer, or File.
+
+  Does not close any streams except those it opens itself 
+  (on a File).
+
+  Writing a File fails if the parent directory does not exist."</span>
+     <span style="color: #7a378b;">:arglists</span> '([input output])}
+  <span style="color: #0000ff;">copy</span>
+  (<span style="color: #7a378b;">fn</span> [input output]
+    [(<span style="color: #a020f0;">if</span> (<span style="color: #7a378b;">string?</span> input) File (<span style="color: #7a378b;">type</span> input))
+     (<span style="color: #a020f0;">if</span> (<span style="color: #7a378b;">string?</span> output) File (<span style="color: #7a378b;">type</span> output))]))
+
+(<span style="color: #a020f0;">defmethod</span> <span style="color: #0000ff;">copy</span> [InputStream OutputStream] [<span style="color: #228b22;">#^InputStream</span> input <span style="color: #228b22;">#^OutputStream</span> output]
+  (<span style="color: #a020f0;">let</span> [buffer (<span style="color: #7a378b;">make-array</span> Byte/TYPE *buffer-size*)]
+    (<span style="color: #a020f0;">loop</span> []
+      (<span style="color: #a020f0;">let</span> [size (.read input buffer)]
+        (<span style="color: #a020f0;">when</span> (<span style="color: #7a378b;">pos?</span> size)
+          (<span style="color: #a020f0;">do</span> (.write output buffer 0 size)
+              (<span style="color: #a020f0;">recur</span>)))))))
+
+(<span style="color: #a020f0;">defmethod</span> <span style="color: #0000ff;">copy</span> [InputStream Writer] [<span style="color: #228b22;">#^InputStream</span> input <span style="color: #228b22;">#^Writer</span> output]
+  (<span style="color: #a020f0;">let</span> [#^<span style="color: #8b2252;">"[B"</span> buffer (<span style="color: #7a378b;">make-array</span> Byte/TYPE *buffer-size*)]
+    (<span style="color: #a020f0;">loop</span> []
+      (<span style="color: #a020f0;">let</span> [size (.read input buffer)]
+        (<span style="color: #a020f0;">when</span> (<span style="color: #7a378b;">pos?</span> size)
+          (<span style="color: #a020f0;">let</span> [chars (.toCharArray (String. buffer 0 size *default-encoding*))]
+            (<span style="color: #a020f0;">do</span> (.write output chars)
+                (<span style="color: #a020f0;">recur</span>))))))))
+
+
+(<span style="color: #a020f0;">defmethod</span> <span style="color: #0000ff;">copy</span> [InputStream File] [<span style="color: #228b22;">#^InputStream</span> input <span style="color: #228b22;">#^File</span> output]
+  (<span style="color: #a020f0;">with-open</span> [out (FileOutputStream. output)]
+    (copy input out)))
+
+(<span style="color: #a020f0;">defmethod</span> <span style="color: #0000ff;">copy</span> [Reader OutputStream] [<span style="color: #228b22;">#^Reader</span> input <span style="color: #228b22;">#^OutputStream</span> output]
+  (<span style="color: #a020f0;">let</span> [#^<span style="color: #8b2252;">"[C"</span> buffer (<span style="color: #7a378b;">make-array</span> Character/TYPE *buffer-size*)]
+    (<span style="color: #a020f0;">loop</span> []
+      (<span style="color: #a020f0;">let</span> [size (.read input buffer)]
+        (<span style="color: #a020f0;">when</span> (<span style="color: #7a378b;">pos?</span> size)
+          (<span style="color: #a020f0;">let</span> [bytes (.getBytes (String. buffer 0 size) *default-encoding*)]
+            (<span style="color: #a020f0;">do</span> (.write output bytes)
+                (<span style="color: #a020f0;">recur</span>))))))))
+
+(<span style="color: #a020f0;">defmethod</span> <span style="color: #0000ff;">copy</span> [Reader Writer] [<span style="color: #228b22;">#^Reader</span> input <span style="color: #228b22;">#^Writer</span> output]
+  (<span style="color: #a020f0;">let</span> [#^<span style="color: #8b2252;">"[C"</span> buffer (<span style="color: #7a378b;">make-array</span> Character/TYPE *buffer-size*)]
+    (<span style="color: #a020f0;">loop</span> []
+      (<span style="color: #a020f0;">let</span> [size (.read input buffer)]
+        (<span style="color: #a020f0;">when</span> (<span style="color: #7a378b;">pos?</span> size)
+          (<span style="color: #a020f0;">do</span> (.write output buffer 0 size)
+              (<span style="color: #a020f0;">recur</span>)))))))
+
+(<span style="color: #a020f0;">defmethod</span> <span style="color: #0000ff;">copy</span> [Reader File] [<span style="color: #228b22;">#^Reader</span> input <span style="color: #228b22;">#^File</span> output]
+  (<span style="color: #a020f0;">with-open</span> [out (FileOutputStream. output)]
+    (copy input out)))
+
+(<span style="color: #a020f0;">defmethod</span> <span style="color: #0000ff;">copy</span> [File OutputStream] [<span style="color: #228b22;">#^File</span> input <span style="color: #228b22;">#^OutputStream</span> output]
+  (<span style="color: #a020f0;">with-open</span> [in (FileInputStream. input)]
+    (copy in output)))
+
+(<span style="color: #a020f0;">defmethod</span> <span style="color: #0000ff;">copy</span> [File Writer] [<span style="color: #228b22;">#^File</span> input <span style="color: #228b22;">#^Writer</span> output]
+  (<span style="color: #a020f0;">with-open</span> [in (FileInputStream. input)]
+    (copy in output)))
+
+(<span style="color: #a020f0;">defmethod</span> <span style="color: #0000ff;">copy</span> [File File] [input output]
+  (<span style="color: #a020f0;">with-open</span> [in (FileInputStream. (as-file input))
+              out (FileOutputStream. (as-file output))]
+    (copy in out)))
+
+(<span style="color: #a020f0;">defmethod</span> <span style="color: #0000ff;">copy</span> [String OutputStream] [<span style="color: #228b22;">#^String</span> input <span style="color: #228b22;">#^OutputStream</span> output]
+  (copy (StringReader. input) output))
+
+(<span style="color: #a020f0;">defmethod</span> <span style="color: #0000ff;">copy</span> [String Writer] [<span style="color: #228b22;">#^String</span> input <span style="color: #228b22;">#^Writer</span> output]
+  (copy (StringReader. input) output))
+
+(<span style="color: #a020f0;">defmethod</span> <span style="color: #0000ff;">copy</span> [String File] [<span style="color: #228b22;">#^String</span> input <span style="color: #228b22;">#^File</span> output]
+  (copy (StringReader. input) output))
+
+(<span style="color: #a020f0;">defmethod</span> <span style="color: #0000ff;">copy</span> [*char-array-type* OutputStream] [input <span style="color: #228b22;">#^OutputStream</span> output]
+  (copy (CharArrayReader. input) output))
+
+(<span style="color: #a020f0;">defmethod</span> <span style="color: #0000ff;">copy</span> [*char-array-type* Writer] [input <span style="color: #228b22;">#^Writer</span> output]
+  (copy (CharArrayReader. input) output))
+
+(<span style="color: #a020f0;">defmethod</span> <span style="color: #0000ff;">copy</span> [*char-array-type* File] [input <span style="color: #228b22;">#^File</span> output]
+  (copy (CharArrayReader. input) output))
+
+(<span style="color: #a020f0;">defmethod</span> <span style="color: #0000ff;">copy</span> [*byte-array-type* OutputStream] [#^<span style="color: #8b2252;">"[B"</span> input <span style="color: #228b22;">#^OutputStream</span> output]
+  (copy (ByteArrayInputStream. input) output))
+
+(<span style="color: #a020f0;">defmethod</span> <span style="color: #0000ff;">copy</span> [*byte-array-type* Writer] [#^<span style="color: #8b2252;">"[B"</span> input <span style="color: #228b22;">#^Writer</span> output]
+  (copy (ByteArrayInputStream. input) output))
+
+(<span style="color: #a020f0;">defmethod</span> <span style="color: #0000ff;">copy</span> [*byte-array-type* File] [#^<span style="color: #8b2252;">"[B"</span> input <span style="color: #228b22;">#^Writer</span> output]
+  (copy (ByteArrayInputStream. input) output))
+
+
+(<span style="color: #a020f0;">defmulti</span>
+  #^{<span style="color: #7a378b;">:doc</span> <span style="color: #8b2252;">"Converts argument into a Java byte array.  Argument may be
+  a String, File, InputStream, or Reader.  If the argument is already
+  a byte array, returns it."</span>
+    <span style="color: #7a378b;">:arglists</span> '([arg])}
+  <span style="color: #0000ff;">to-byte-array</span> type)
+
+(<span style="color: #a020f0;">defmethod</span> <span style="color: #0000ff;">to-byte-array</span> *byte-array-type* [x] x)
+
+(<span style="color: #a020f0;">defmethod</span> <span style="color: #0000ff;">to-byte-array</span> String [<span style="color: #228b22;">#^String</span> x]
+  (.getBytes x *default-encoding*))
+
+(<span style="color: #a020f0;">defmethod</span> <span style="color: #0000ff;">to-byte-array</span> File [<span style="color: #228b22;">#^File</span> x]
+  (<span style="color: #a020f0;">with-open</span> [input (FileInputStream. x)
+              buffer (ByteArrayOutputStream.)]
+    (copy input buffer)
+    (.toByteArray buffer)))
+
+(<span style="color: #a020f0;">defmethod</span> <span style="color: #0000ff;">to-byte-array</span> InputStream [<span style="color: #228b22;">#^InputStream</span> x]
+  (<span style="color: #a020f0;">let</span> [buffer (ByteArrayOutputStream.)]
+    (copy x buffer)
+    (.toByteArray buffer)))
+
+(<span style="color: #a020f0;">defmethod</span> <span style="color: #0000ff;">to-byte-array</span> Reader [<span style="color: #228b22;">#^Reader</span> x]
+  (.getBytes (slurp* x) *default-encoding*))
+
+(<span style="color: #a020f0;">defmulti</span> <span style="color: #0000ff;">relative-path-string</span> 
+  <span style="color: #8b2252;">"Interpret a String or java.io.File as a relative path string. 
+   Building block for clojure.contrib.java/file."</span>
+  class)
+
+(<span style="color: #a020f0;">defmethod</span> <span style="color: #0000ff;">relative-path-string</span> String [<span style="color: #228b22;">#^String</span> s]
+  (relative-path-string (File. s)))
+
+(<span style="color: #a020f0;">defmethod</span> <span style="color: #0000ff;">relative-path-string</span> File [<span style="color: #228b22;">#^File</span> f]
+  (<span style="color: #a020f0;">if</span> (.isAbsolute f)
+    (<span style="color: #a020f0;">throw</span> (IllegalArgumentException. (<span style="color: #7a378b;">str</span> f <span style="color: #8b2252;">" is not a relative path"</span>)))
+    (.getPath f)))
+
+
+(<span style="color: #a020f0;">defn</span> <span style="color: #228b22;">#^File</span> <span style="color: #0000ff;">file</span>
+  <span style="color: #8b2252;">"Returns a java.io.File from string or file args."</span>
+  ([arg]                      
+     (as-file arg))
+  ([parent child]             
+     (File. <span style="color: #228b22;">#^File</span> (as-file parent) <span style="color: #228b22;">#^String</span> (relative-path-string child)))
+  ([parent child &amp; more]
+     (<span style="color: #7a378b;">reduce</span> file (file parent child) more)))
+
+(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">delete-file</span>
+  <span style="color: #8b2252;">"Delete file f. Raise an exception if it fails unless silently is true."</span>
+  [f &amp; [silently]]
+  (<span style="color: #a020f0;">or</span> (.delete (file f))
+      silently
+      (<span style="color: #a020f0;">throw</span> (java.io.IOException. (<span style="color: #7a378b;">str</span> <span style="color: #8b2252;">"Couldn't delete "</span> f)))))
+
+(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">delete-file-recursively</span>
+  <span style="color: #8b2252;">"Delete file f. If it's a directory, recursively delete all its contents.
+Raise an exception if any deletion fails unless silently is true."</span>
+  [f &amp; [silently]]
+  (<span style="color: #a020f0;">let</span> [f (file f)]
+    (<span style="color: #a020f0;">if</span> (.isDirectory f)
+      (<span style="color: #a020f0;">doseq</span> [child (.listFiles f)]
+        (delete-file-recursively child silently)))
+    (delete-file f silently)))
+
+(<span style="color: #a020f0;">defmulti</span>
+  #^{<span style="color: #7a378b;">:doc</span> <span style="color: #8b2252;">"Coerces argument (URL, URI, or String) to a java.net.URL."</span>
+     <span style="color: #7a378b;">:arglists</span> '([arg])}
+  <span style="color: #0000ff;">as-url</span> type)
+
+(<span style="color: #a020f0;">defmethod</span> <span style="color: #0000ff;">as-url</span> URL [x] x)
+
+(<span style="color: #a020f0;">defmethod</span> <span style="color: #0000ff;">as-url</span> URI [<span style="color: #228b22;">#^URI</span> x] (.toURL x))
+
+(<span style="color: #a020f0;">defmethod</span> <span style="color: #0000ff;">as-url</span> String [<span style="color: #228b22;">#^String</span> x] (URL. x))
+
+(<span style="color: #a020f0;">defmethod</span> <span style="color: #0000ff;">as-url</span> File [<span style="color: #228b22;">#^File</span> x] (.toURL x))
+
+
+
+(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">make-parents</span>
+  <span style="color: #8b2252;">"Creates all parent directories of file."</span>
+  [file]
+  (.mkdirs (.getParentFile (as-file file))))
+
+
+(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">copy-dir</span> [source target]
+  (<span style="color: #a020f0;">let</span> [source (as-file source) target (as-file target)]
+    (make-parents target)
+    (<span style="color: #a020f0;">loop</span> [source source target target]
+      (<span style="color: #a020f0;">if</span> (.isDirectory source)
+        (<span style="color: #a020f0;">do</span> (<span style="color: #a020f0;">if</span> (<span style="color: #7a378b;">not</span> (.exists target)) (.mkdir target))
+            (<span style="color: #a020f0;">doseq</span> [child (.list source)]             
+              (copy-dir (file source child) (file target child))))
+        (<span style="color: #a020f0;">if</span> (.exists source) (copy source target))))))
+
+(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">file-type</span> [f]
+  (<span style="color: #a020f0;">if</span> (.isFile f)
+    (<span style="color: #a020f0;">let</span> [a (.split (.getName f) <span style="color: #8b2252;">"\\."</span>)]
+      (<span style="color: #a020f0;">if</span> (<span style="color: #7a378b;">&gt;</span> (<span style="color: #7a378b;">count</span> a) 1)
+        (<span style="color: #7a378b;">last</span> a)
+        <span style="color: #8b2252;">""</span>))
+    <span style="color: #8b2252;">""</span>))
+
+(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">list-files</span> [source]
+  (<span style="color: #a020f0;">let</span> [source (as-file source)
+        files (.listFiles source)]
+    (<span style="color: #7a378b;">lazy-seq</span>
+     (<span style="color: #a020f0;">if</span> (<span style="color: #7a378b;">empty?</span> files)
+       nil
+       (<span style="color: #7a378b;">apply</span> concat (<span style="color: #7a378b;">vec</span> files) (<span style="color: #7a378b;">map</span> list-files (<span style="color: #7a378b;">filter</span> #(.isDirectory %) files)))))))
+
+<span style="color: #b22222;">;;</span><span style="color: #b22222;">(count (filter #(= (file-type %) "clj") (list-files "/home/seth/Dropbox/.rep/clj-forex/")))
+</span></pre></div>
 
 
 
@@ -740,8 +1337,9 @@ Yes, currently it is not very development start friendly. That will change!
 (<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">atom-hash</span>
   ([] (atom-hash {}))
   ([val]
-     (<span style="color: #228b22;">is</span> (<span style="color: #7a378b;">map?</span> val))
-     (AtomHash. (<span style="color: #7a378b;">atom</span> val))))
+     (<span style="color: #a020f0;">let</span> [val (<span style="color: #a020f0;">if</span> (<span style="color: #7a378b;">nil?</span> val) {} val)]
+      (<span style="color: #228b22;">is</span> (<span style="color: #7a378b;">map?</span> val))
+      (AtomHash. (<span style="color: #7a378b;">atom</span> val)))))
 
 (<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">symbolicate</span>
   <span style="color: #8b2252;">"symbolicate symbols together. ignores things like whitespaces, just drops them!"</span>
@@ -837,6 +1435,15 @@ Yes, currently it is not very development start friendly. That will change!
             [clojure.contrib.def <span style="color: #7a378b;">:as</span> d])
   (<span style="color: #7a378b;">:use</span> clojure.contrib.macro-utils))
 
+(<span style="color: #a020f0;">defmacro</span> <span style="color: #0000ff;">with-out-str+</span>
+  <span style="color: #8b2252;">"Evaluates exprs in a context in which *out* is bound to a fresh
+  StringWriter.  Returns the string created by any nested printing
+  calls."</span>  {<span style="color: #7a378b;">:added</span> <span style="color: #8b2252;">"1.0"</span>} [arg &amp; body]
+  `(<span style="color: #a020f0;">let</span> [~arg (new java.io.StringWriter)]
+     (<span style="color: #a020f0;">binding</span> [*out* ~arg]
+       ~@body)))
+
+
 (<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">dump-threads</span> []
   (<span style="color: #a020f0;">let</span> [info (.dumpAllThreads (ManagementFactory/getThreadMXBean) false false)]
    (<span style="color: #a020f0;">doall</span>
@@ -893,7 +1500,7 @@ Yes, currently it is not very development start friendly. That will change!
 (<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">var-root-set</span> [var val]
   (<span style="color: #7a378b;">alter-var-root</span> var (<span style="color: #7a378b;">constantly</span> val)))
 
-<span style="color: #b22222;">;;</span><span style="color: #b22222;">copied from 
+<span style="color: #b22222;">;;</span><span style="color: #b22222;">copied from  
 </span>(<span style="color: #a020f0;">defprotocol</span> <span style="color: #0000ff;">PCachingStrategy</span>
   <span style="color: #8b2252;">"A caching strategy implements the backend for memoize. It handles the
   underlying cache and might define different strategies to remove old
@@ -986,13 +1593,13 @@ Yes, currently it is not very development start friendly. That will change!
          ([&amp; {<span style="color: #7a378b;">:keys</span> ~fields <span style="color: #7a378b;">:or</span> ~default-map}] 
             (new ~record-name ~@fields))))))
 
-
 (<span style="color: #a020f0;">binding</span> [*out* *out*] (<span style="color: #a020f0;">defn-</span> <span style="color: #0000ff;">log</span> [e] (.println *out* (<span style="color: #7a378b;">str</span> <span style="color: #8b2252;">"ERROR!: "</span> e))))
 
 <span style="color: #b22222;">;;</span><span style="color: #b22222;">TODO: get rid of!
 </span>(<span style="color: #a020f0;">defmacro</span> <span style="color: #0000ff;">mapc</span> [&amp; args] `(<span style="color: #a020f0;">dorun</span> (<span style="color: #7a378b;">map</span> ~@args)))
 (<span style="color: #a020f0;">defmacro</span> <span style="color: #0000ff;">thread</span> [&amp; body]
-  `(<span style="color: #a020f0;">let</span> [thread# (Thread. (<span style="color: #7a378b;">bound-fn</span> [] (<span style="color: #a020f0;">try</span> (<span style="color: #a020f0;">do</span> ~@body) (<span style="color: #a020f0;">catch</span> Exception e# (log e#)))))]
+  `(<span style="color: #a020f0;">let</span> [thread# (Thread.
+                  (<span style="color: #7a378b;">bound-fn</span> [] (<span style="color: #a020f0;">try</span> (<span style="color: #a020f0;">do</span> ~@body) (<span style="color: #a020f0;">catch</span> Exception e# (<span style="color: #7a378b;">println</span> <span style="color: #8b2252;">"error in thread "</span> e#)))))]
      (.start thread#)
      thread#))
 
@@ -1072,8 +1679,9 @@ Yes, currently it is not very development start friendly. That will change!
 
 <span style="color: #b22222;">;;</span><span style="color: #b22222;">TODO: minor mode
 </span>(<span style="color: #a020f0;">defvar</span> <span style="color: #0000ff;">log-dir</span> <span style="color: #8b2252;">"%h/.forex"</span>)
+(<span style="color: #a020f0;">defvar</span> <span style="color: #0000ff;">log-file</span>)
 
-(<span style="color: #a020f0;">defn-</span> <span style="color: #0000ff;">formatter</span> []
+(<span style="color: #a020f0;">defn-</span> <span style="color: #0000ff;">formatter</span> [] 
   (<span style="color: #a020f0;">let</span> [d (java.util.Date.)]
     (<span style="color: #7a378b;">proxy</span> [java.util.logging.Formatter] []
       (<span style="color: #7a378b;">format</span> [r] 
@@ -1083,36 +1691,34 @@ Yes, currently it is not very development start friendly. That will change!
                                    (.getMessage r))))))
 
 <span style="color: #b22222;">;;</span><span style="color: #b22222;">wrap the PrintWriter *out* in an OutputStream to be used in ConsoleHandler
-</span>(<span style="color: #a020f0;">defn-</span> <span style="color: #0000ff;">new-out-stream</span> [out]
-  (<span style="color: #7a378b;">proxy</span> [java.io.OutputStream] []
-    (close [] (.close out))
-    (<span style="color: #7a378b;">flush</span> [] (.flush out))
-    (write ([b] (.print out (String. b)))
-           ([b off len] (.print out (String. b off len))))))
+</span>(<span style="color: #7a378b;">comment</span>
+  (<span style="color: #a020f0;">defn-</span> <span style="color: #0000ff;">new-out-stream</span> [out]
+    (<span style="color: #7a378b;">proxy</span> [java.io.OutputStream] []
+      (close [] (.close out))
+      (<span style="color: #7a378b;">flush</span> [] (.flush out))
+      (write ([b] (.print out (String. b)))
+             ([b off len] (.print out (String. b off len)))))))
 
-<span style="color: #b22222;">;;</span><span style="color: #b22222;">TODO: if user deletes log file, it will not be recreated
-</span><span style="color: #b22222;">;;</span><span style="color: #b22222;">this will create a logger which logs to /home/dir/.forex/log.log and will output to System/out (in emacs+slime, this is in the *inferior-lisp* buffer
-</span><span style="color: #b22222;">;;</span><span style="color: #b22222;">or in the *shell* if you do lein swank
-</span>
-(<span style="color: #a020f0;">defn-</span> <span style="color: #0000ff;">new-logger</span> [file]
-  (f/make-parents
-   (java.io.File. (<span style="color: #7a378b;">format</span> <span style="color: #8b2252;">"%s/.forex/%s"</span> (System/getProperty <span style="color: #8b2252;">"user.home"</span>) file)))
-  (<span style="color: #a020f0;">let</span> [l (java.util.logging.Logger/getLogger (<span style="color: #7a378b;">str</span> *ns*))]
-    (mapc #(.removeHandler l %) (.getHandlers l))
-    (.addHandler l (<span style="color: #a020f0;">doto</span> (ConsoleHandler.) (.setFormatter (formatter))) <span style="color: #b22222;">;;</span><span style="color: #b22222;">(new-out-stream *out*) = to *out*, but sort of clutters everything
-</span>                 )
-    (.addHandler l (<span style="color: #a020f0;">doto</span> (FileHandler. (<span style="color: #7a378b;">str</span> log-dir <span style="color: #8b2252;">"/"</span> file))
-                     (.setFormatter (formatter))))
-    (.setUseParentHandlers l false)
-    l))
+(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">new-logger</span>
+  ([file] (new-logger file true))
+  ([file make-file]
+     (<span style="color: #a020f0;">when</span> make-file
+       (<span style="color: #a020f0;">let</span> [file (<span style="color: #7a378b;">format</span> <span style="color: #8b2252;">"%s/.forex/%s"</span> (System/getProperty <span style="color: #8b2252;">"user.home"</span>)
+                          file)]
+         (f/make-parents
+          (java.io.File. file))
+         (var-root-set #'log-file file)))
+     (<span style="color: #a020f0;">let</span> [l (java.util.logging.Logger/getLogger (<span style="color: #7a378b;">str</span> *ns*))]
+       (mapc #(.removeHandler l %) (.getHandlers l))
+       (.addHandler l (<span style="color: #a020f0;">doto</span> (ConsoleHandler.) (.setFormatter (formatter))))
+       (<span style="color: #a020f0;">when</span> make-file
+         (.addHandler l (<span style="color: #a020f0;">doto</span> (FileHandler. (<span style="color: #7a378b;">str</span> log-dir <span style="color: #8b2252;">"/"</span> file))
+                          (.setFormatter (formatter)))))
+       (.setUseParentHandlers l false)
+       l)))
 
-(<span style="color: #a020f0;">defonce-</span> <span style="color: #0000ff;">log</span> (java.util.logging.Logger/getLogger (<span style="color: #7a378b;">str</span> *ns*)))
+(<span style="color: #a020f0;">defvar</span> <span style="color: #0000ff;">log</span> (new-logger <span style="color: #8b2252;">"forex-log"</span> false))
 
-<span style="color: #b22222;">;;</span><span style="color: #b22222;">TODO: only use one log file!!! eh?
-</span>(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">init-logger</span> []
-  (<span style="color: #a020f0;">if-not</span> log
-   (<span style="color: #a020f0;">def-</span> <span style="color: #0000ff;">log</span> (new-logger <span style="color: #8b2252;">"log"</span>))))
-(init-logger)
 <span style="color: #b22222;">;;</span><span style="color: #b22222;">TODO: set filtering levels
 </span><span style="color: #b22222;">;;</span><span style="color: #b22222;">fine,finer,finest wont log
 </span>
@@ -1126,12 +1732,12 @@ Yes, currently it is not very development start friendly. That will change!
   (<span style="color: #7a378b;">apply</span> info msg args)
   nil)
 
- (<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">fine</span> [msg &amp; args]
+(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">fine</span> [msg &amp; args]
    (.fine log (<span style="color: #7a378b;">apply</span> format  (<span style="color: #7a378b;">str</span> *debug-info* <span style="color: #8b2252;">" "</span> msg) args)))
- (<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">finer</span> [msg &amp; args]
+(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">finer</span> [msg &amp; args]
    (.finer log (<span style="color: #7a378b;">apply</span> format (<span style="color: #7a378b;">str</span> *debug-info* <span style="color: #8b2252;">" "</span> msg) args)))
- (<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">finest</span> [msg &amp; args]
-   (.finest log (<span style="color: #7a378b;">apply</span> format (<span style="color: #7a378b;">str</span> *debug-info* <span style="color: #8b2252;">" "</span> msg) args)))
+(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">finest</span> [msg &amp; args]
+  (.finest log (<span style="color: #7a378b;">apply</span> format (<span style="color: #7a378b;">str</span> *debug-info* <span style="color: #8b2252;">" "</span> msg) args)))
 (<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">severe</span> [msg &amp; args]
   (<span style="color: #a020f0;">let</span> [s (<span style="color: #7a378b;">apply</span> format (<span style="color: #7a378b;">str</span> *debug-info* <span style="color: #8b2252;">" "</span> msg) args)]
     (.severe log s)
@@ -1180,7 +1786,7 @@ Yes, currently it is not very development start friendly. That will change!
   (<span style="color: #7a378b;">get</span> @*mailboxes* tag))
 (<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">pid?</span> [pid]
   <span style="color: #8b2252;">"test for valid pid"</span>
-  (<span style="color: #a020f0;">and</span> (get-mailbox pid) true))
+  (<span style="color: #a020f0;">if</span> (get-mailbox pid) true false))
 
 (<span style="color: #a020f0;">defonce-</span> <span style="color: #0000ff;">*mb*</span> (ThreadLocal.))
 (<span style="color: #a020f0;">defonce-</span> <span style="color: #0000ff;">*self*</span> (ThreadLocal.)) 
@@ -1358,11 +1964,34 @@ Yes, currently it is not very development start friendly. That will change!
 
 <div class="org-src-container"><label class="org-src-name">forex-util-emacs()</label><pre class="src src-clojure">
 (<span style="color: #a020f0;">ns</span> forex.util.emacs (<span style="color: #7a378b;">:use</span> forex.util.general))
+(<span style="color: #a020f0;">defn-</span> <span style="color: #0000ff;">val-of</span> [a] (<span style="color: #a020f0;">if</span> (<span style="color: #7a378b;">var?</span> a) (<span style="color: #7a378b;">var-get</span> a) a))
+<span style="color: #b22222;">;;</span><span style="color: #b22222;">TODO: add log to this
+</span>(<span style="color: #a020f0;">defn-</span> <span style="color: #0000ff;">apply-fn</span> [a args]
+  (<span style="color: #a020f0;">try</span> (<span style="color: #7a378b;">apply</span> (val-of a) args)
+       (<span style="color: #a020f0;">catch</span> Exception e
+         (<span style="color: #7a378b;">println</span> (<span style="color: #7a378b;">format</span> <span style="color: #8b2252;">"error in hook %s %s: %s"</span> a (val-of a) e)))))
+(<span style="color: #a020f0;">defmacro-</span> <span style="color: #0000ff;">run-fn</span> [a &amp; args]
+  `(<span style="color: #a020f0;">let</span> [a# ~a]
+     (<span style="color: #a020f0;">try</span> ((val-of a#) ~@args)
+          (<span style="color: #a020f0;">catch</span> Exception e# (<span style="color: #7a378b;">println</span> 
+                               (<span style="color: #7a378b;">format</span> <span style="color: #8b2252;">"error in hook %s %s: %s"</span> a# (val-of a#) e#))))))
 
+(<span style="color: #a020f0;">defn-</span> <span style="color: #0000ff;">as-ns</span> [a] (<span style="color: #a020f0;">condp</span> = (<span style="color: #7a378b;">class</span> a)
+                     String (<span style="color: #7a378b;">find-ns</span> (<span style="color: #7a378b;">symbol</span> a))
+                     clojure.lang.Symbol (<span style="color: #7a378b;">find-ns</span> a)
+                     a))
+(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">ns-metas</span>
+  ([fn] (ns-metas *ns* fn))
+  ([ns fn]
+     (<span style="color: #228b22;">is</span> (as-ns ns) <span style="color: #8b2252;">"%s is not a ns, or cant find it"</span> ns)
+     (<span style="color: #a020f0;">let</span> [vars (<span style="color: #7a378b;">filter</span> fn (<span style="color: #7a378b;">vals</span> (<span style="color: #7a378b;">ns-interns</span> (as-ns ns))))]
+       (<span style="color: #7a378b;">apply</span> hash-map (<span style="color: #7a378b;">interleave</span> vars (<span style="color: #7a378b;">map</span> var-get vars))))))
 (<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">ns-vars</span>
   ([] (ns-vars *ns*))
-  ([ns] (<span style="color: #a020f0;">let</span> [vars (<span style="color: #7a378b;">filter</span> #(<span style="color: #7a378b;">:var</span> (<span style="color: #7a378b;">meta</span>  %)) (<span style="color: #7a378b;">vals</span> (<span style="color: #7a378b;">ns-interns</span> ns)))]
-          (<span style="color: #7a378b;">apply</span> hash-map (<span style="color: #7a378b;">interleave</span> vars (<span style="color: #7a378b;">map</span> var-get vars))))))
+  ([ns]
+     (<span style="color: #228b22;">is</span> (as-ns ns) <span style="color: #8b2252;">"%s is not an ns, or cant find it"</span> ns)
+     (<span style="color: #a020f0;">let</span> [vars (<span style="color: #7a378b;">filter</span> #(<span style="color: #7a378b;">:var</span> (<span style="color: #7a378b;">meta</span>  %)) (<span style="color: #7a378b;">vals</span> (<span style="color: #7a378b;">ns-interns</span> (as-ns ns))))]
+       (<span style="color: #7a378b;">apply</span> hash-map (<span style="color: #7a378b;">interleave</span> vars (<span style="color: #7a378b;">map</span> var-get vars))))))
 
 (<span style="color: #a020f0;">defmacro</span> <span style="color: #0000ff;">defvar</span>
   ([name]
@@ -1371,7 +2000,7 @@ Yes, currently it is not very development start friendly. That will change!
   ([name init]
      (<span style="color: #a020f0;">let</span> [new-name (<span style="color: #7a378b;">with-meta</span> name (<span style="color: #7a378b;">assoc</span> (<span style="color: #7a378b;">meta</span> name) <span style="color: #7a378b;">:var</span> true))]
        `(<span style="color: #a020f0;">defonce</span> <span style="color: #0000ff;">~new-name</span> ~init))))
-
+(<span style="color: #a020f0;">defmacro</span> <span style="color: #0000ff;">defhook</span> [&amp; args] `(<span style="color: #a020f0;">defvar</span> <span style="color: #0000ff;">~@args</span>)) 
 (<span style="color: #a020f0;">defmacro</span> <span style="color: #0000ff;">setq</span> [&amp; args]
   `(<span style="color: #a020f0;">do</span> ~@(<span style="color: #7a378b;">map</span>
           (<span style="color: #7a378b;">fn</span> [[var val]]
@@ -1384,6 +2013,10 @@ Yes, currently it is not very development start friendly. That will change!
   ([value list test]
      (<span style="color: #7a378b;">some</span> #(<span style="color: #7a378b;">test</span> % value) list)))
 
+(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">pushnew</span> [var arg]
+  (<span style="color: #a020f0;">when-not</span> (member arg (<span style="color: #7a378b;">var-get</span> var))
+    (<span style="color: #7a378b;">alter-var-root</span> var (<span style="color: #7a378b;">fn</span> [it] (<span style="color: #7a378b;">concat</span> (<span style="color: #7a378b;">list</span> arg) it)))))
+
 (<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">add-to-list</span> [var arg]
   (<span style="color: #a020f0;">when-not</span> (member arg (<span style="color: #7a378b;">var-get</span> var))
     (<span style="color: #7a378b;">alter-var-root</span> var (<span style="color: #7a378b;">fn</span> [it] (<span style="color: #7a378b;">concat</span> (<span style="color: #7a378b;">list</span> arg) it)))))
@@ -1391,20 +2024,22 @@ Yes, currently it is not very development start friendly. That will change!
 (<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">push</span> [var val]
   (<span style="color: #7a378b;">alter-var-root</span> var (<span style="color: #7a378b;">fn</span> [it] (<span style="color: #7a378b;">concat</span> (<span style="color: #7a378b;">list</span> val) it))))
 
-(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">add-hook</span> [hook function] (push hook function))
+(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">add-hook</span> [hook function] (pushnew hook function))
+(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">add-hooks</span> [hook functions] (<span style="color: #a020f0;">doall</span> (<span style="color: #7a378b;">map</span> #(push hook %) functions)))
 
-(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">run-hooks</span> [&amp; hooks]
-  (mapc (<span style="color: #7a378b;">fn</span> [hook] (mapc #(%) hook)) hooks))
+<span style="color: #b22222;">;;</span><span style="color: #b22222;">RUNNING hooks
+</span>(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">run-hooks</span> [&amp; hooks]
+  (mapc (<span style="color: #7a378b;">fn</span> [hook] (mapc #(run-fn %) hook)) hooks))
 
 (<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">run-hook-with-args</span> [hook &amp; args]
-  (mapc #(<span style="color: #7a378b;">apply</span> % args) hook))
+  (mapc #(apply-fn % args) hook))
 
 (<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">run-hook-with-args-until-success</span> [hook &amp; args]
   (<span style="color: #228b22;">is</span> (sequence? hook) <span style="color: #8b2252;">"hook %s isnt a list"</span> hook)
   (<span style="color: #a020f0;">loop</span> [funcs hook]
     (<span style="color: #a020f0;">cond</span>
       (<span style="color: #7a378b;">empty?</span> funcs) nil
-      true (<span style="color: #a020f0;">if-let</span> [it (<span style="color: #7a378b;">apply</span> (<span style="color: #7a378b;">first</span> funcs) args)]
+      true (<span style="color: #a020f0;">if-let</span> [it (apply-fn (<span style="color: #7a378b;">first</span> funcs) args)]
              it
              (<span style="color: #a020f0;">recur</span> (<span style="color: #7a378b;">rest</span> funcs))))))
 
@@ -1413,7 +2048,7 @@ Yes, currently it is not very development start friendly. That will change!
   (<span style="color: #a020f0;">loop</span> [funcs hook]
     (<span style="color: #a020f0;">cond</span>
       (<span style="color: #7a378b;">empty?</span> funcs) true
-      true (<span style="color: #a020f0;">when</span> (<span style="color: #7a378b;">apply</span> (<span style="color: #7a378b;">first</span> funcs) args)
+      true (<span style="color: #a020f0;">when</span> (apply-fn (<span style="color: #7a378b;">first</span> funcs) args)
              (<span style="color: #a020f0;">recur</span> (<span style="color: #7a378b;">rest</span> funcs))))))
 
 
@@ -1435,9 +2070,10 @@ Yes, currently it is not very development start friendly. That will change!
 <div class="org-src-container"><label class="org-src-name">forex-util-spawn()</label><pre class="src src-clojure">
 (clojure.core/<span style="color: #7a378b;">use</span> 'nstools.ns)
 (ns+ forex.util.spawn
-  (<span style="color: #7a378b;">:clone</span> clj.core) 
-  (<span style="color: #7a378b;">:use</span> forex.util.general forex.util.zmq)
-  (<span style="color: #7a378b;">:require</span> [forex.util.fiber.spawn <span style="color: #7a378b;">:as</span> s]))
+     (<span style="color: #7a378b;">:clone</span> clj.core)   
+     (<span style="color: #7a378b;">:use</span> forex.util.general forex.util.zmq)
+     (<span style="color: #7a378b;">:import</span> forex.util.zmq.Poller)
+     (<span style="color: #7a378b;">:require</span> [forex.util.fiber.spawn <span style="color: #7a378b;">:as</span> s]))
 
 (<span style="color: #a020f0;">def-</span> <span style="color: #0000ff;">*pid*</span> (<span style="color: #7a378b;">atom</span> []))
 
@@ -1465,18 +2101,11 @@ Yes, currently it is not very development start friendly. That will change!
   PSocket
   (raw [this] (.raw socket)) 
   (recv [this flags] 
-        (<span style="color: #a020f0;">let</span> [r (.recv socket flags)]
-          (s/?)))
+        (<span style="color: #a020f0;">when</span> (.recv socket flags)      
+          (s/?)))  
   (recv [this] (recv this 0))
   (close [this] (.close socket))
   (hasMore [this] false))
-
-
-(<span style="color: #7a378b;">comment</span>
-  (<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">te</span> []
-   (<span style="color: #a020f0;">def</span> <span style="color: #0000ff;">pid</span> (spawn #(<span style="color: #a020f0;">do</span> (<span style="color: #7a378b;">pr</span> <span style="color: #8b2252;">"BEFORE"</span>) (<span style="color: #7a378b;">pr</span> local)
-                        (pformat <span style="color: #8b2252;">"local %s%n"</span> (<span style="color: #7a378b;">first</span> (event-seq [local])))
-                        (<span style="color: #7a378b;">pr</span> <span style="color: #8b2252;">"AFTER"</span>))))))
 
 
 (<span style="color: #a020f0;">defonce-</span> <span style="color: #0000ff;">*local*</span> (ThreadLocal.))
@@ -1506,23 +2135,55 @@ Yes, currently it is not very development start friendly. That will change!
        (<span style="color: #7a378b;">swap!</span> *pid* concat [pid])
        pid)))
 
+(<span style="color: #7a378b;">comment</span>
+  (<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">te</span> []
+    (<span style="color: #a020f0;">def</span> <span style="color: #0000ff;">pid</span> (spawn #(<span style="color: #a020f0;">let</span> [seq (event-seq [local])]
+                       (<span style="color: #7a378b;">pr</span> (<span style="color: #7a378b;">format</span> <span style="color: #8b2252;">"local %s %s%n"</span>
+                                   (<span style="color: #7a378b;">first</span> seq)
+                                   (<span style="color: #7a378b;">second</span> seq))))))))
+
+
+
+
+(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">recv-multi</span>
+  ([sock] (recv-multi sock 0))
+  ([sock flags] 
+     (<span style="color: #a020f0;">let</span> [first-msg (.recv sock flags)]
+       (<span style="color: #a020f0;">when</span> first-msg 
+         (<span style="color: #a020f0;">if</span> (.hasMore sock)
+           (<span style="color: #a020f0;">loop</span> [msg [(String. (.recv sock)) first-msg]]
+             (<span style="color: #a020f0;">if</span> (.hasMore sock)
+               (<span style="color: #a020f0;">recur</span> (<span style="color: #7a378b;">cons</span> (String. (.recv sock)) msg))
+               msg))
+           first-msg)))))
+
+(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">recv-all</span>
+  ([sock] (recv-all sock 0))
+  ([sock flags]
+     (<span style="color: #a020f0;">let</span> [first-msg (recv-multi sock flags)]
+       (<span style="color: #a020f0;">when</span> first-msg
+         (<span style="color: #a020f0;">loop</span> [messages [[sock first-msg]]]
+           (<span style="color: #a020f0;">if-let</span> [new-msg (recv-multi sock +noblock+)]
+             (<span style="color: #a020f0;">recur</span> (<span style="color: #7a378b;">conj</span> messages [sock new-msg]))
+             messages))))))
+
+<span style="color: #b22222;">;;</span><span style="color: #b22222;">TODO: fair queue? prevent too much messages hogging sequence? who knows! ...
+</span>
+(<span style="color: #a020f0;">defn-</span> <span style="color: #0000ff;">event-seq*</span> [p]
+  (<span style="color: #7a378b;">lazy-seq</span>
+   (<span style="color: #a020f0;">let</span> [amount (.poll p)]
+     (<span style="color: #7a378b;">concat</span>
+      <span style="color: #b22222;">;;</span><span style="color: #b22222;">TODO: memory overflow with getting all messsages? probably not ....
+</span>      (<span style="color: #a020f0;">doall</span>
+       (<span style="color: #7a378b;">mapcat</span> #(<span style="color: #a020f0;">when</span> (<span style="color: #a020f0;">or</span> (.pollin p %) (.pollout p %)) (recv-all (.getSocket p %)))
+               (<span style="color: #7a378b;">range</span> 0 (.getSize p))))
+      (event-seq* p))))) 
+
+
 (<span style="color: #a020f0;">defmulti</span> <span style="color: #0000ff;">event-seq</span> class)
 (<span style="color: #a020f0;">defmethod</span> <span style="color: #0000ff;">event-seq</span> clojure.lang.IPersistentVector [v]
   (event-seq (new-poller v)))
-(<span style="color: #a020f0;">defmethod</span> <span style="color: #0000ff;">event-seq</span> forex.util.zmq.Poller [p]
-  ((<span style="color: #7a378b;">fn</span> <span style="color: #0000ff;">the-seq</span> [p] 
-     (<span style="color: #7a378b;">lazy-seq</span>
-      (<span style="color: #a020f0;">let</span> [amount (.poll p)] 
-        (<span style="color: #7a378b;">concat</span> (<span style="color: #a020f0;">for</span> [i (<span style="color: #7a378b;">range</span> 0 (.getSize p)) <span style="color: #7a378b;">:when</span> (.pollin p i)]
-                  (<span style="color: #a020f0;">let</span> [sock (.getSocket p i)
-                        msg 
-                        (<span style="color: #a020f0;">loop</span> [msg [(.recv sock 0)]]                    
-                          (<span style="color: #a020f0;">if</span> (.hasMore sock)
-                            (<span style="color: #a020f0;">recur</span> (<span style="color: #7a378b;">cons</span> (String. (.recv sock 0)) msg))
-                            msg))]
-                    [sock (<span style="color: #a020f0;">if</span> (<span style="color: #7a378b;">=</span> (<span style="color: #7a378b;">count</span> msg) 1) (<span style="color: #7a378b;">first</span> msg) (<span style="color: #7a378b;">vec</span> msg))]))
-                (the-seq p)))))
-   p)) 
+(<span style="color: #a020f0;">defmethod</span> <span style="color: #0000ff;">event-seq</span> Poller [p] (event-seq* p)) 
 
 <span style="color: #b22222;">;;</span><span style="color: #b22222;">? with multiple sources or change to poll
 </span><span style="color: #b22222;">;;</span><span style="color: #b22222;">!? (timeout)
@@ -1596,20 +2257,23 @@ Yes, currently it is not very development start friendly. That will change!
   (register [this socket])
   (getSocket [this i])
   (getSize [this])
-  (pollin [this i])) 
+  (pollin [this i])
+  (pollout [this i])) 
 (<span style="color: #a020f0;">defrecord</span> <span style="color: #0000ff;">Poller</span> [poll sockets] 
   PPoller 
-  (getSize [this] (.getSize (<span style="color: #7a378b;">:poll</span> this)))
-  (pollin [this i] (.pollin (<span style="color: #7a378b;">:poll</span> this) i))
-  (setTimeout [this timeout] (.setTimeout (<span style="color: #7a378b;">:poll</span> this) timeout))
-  (poll [this] (.poll (<span style="color: #7a378b;">:poll</span> this)))
-  (register [this socket]
-            (.register (<span style="color: #7a378b;">:poll</span> this)
-                       (<span style="color: #a020f0;">if</span> (<span style="color: #7a378b;">extends?</span> PSocket (<span style="color: #7a378b;">class</span> socket))
+  (getSize [_] (.getSize poll))
+  (pollin [_ i] (.pollin poll i))
+  (pollout [_ i] (.pollout poll i))
+  (setTimeout [_ timeout] (.setTimeout poll timeout))
+  (poll [_] (.poll poll))
+  (register [_ socket]
+            (.register poll
+                       <span style="color: #b22222;">;;</span><span style="color: #b22222;">TODO: what if we reload? wont work?
+</span>                       (<span style="color: #a020f0;">if</span> (<span style="color: #7a378b;">extends?</span> PSocket (<span style="color: #7a378b;">class</span> socket))
                          (.raw socket)
                          socket))
-            (<span style="color: #7a378b;">swap!</span> (<span style="color: #7a378b;">:sockets</span> this) conj socket))
-  (getSocket [this i] (<span style="color: #7a378b;">nth</span> @(<span style="color: #7a378b;">:sockets</span> this) i)))
+            (<span style="color: #7a378b;">swap!</span> sockets conj socket))
+  (getSocket [_ i] (<span style="color: #7a378b;">nth</span> @sockets i)))
 
 (<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">new-poller</span>
   ([sockets] (new-poller *context* sockets))
@@ -1663,17 +2327,120 @@ Yes, currently it is not very development start friendly. That will change!
 </div>
 
 <div id="outline-container-4_2_9" class="outline-4">
-<h4 id="sec-4_2_9"><span class="section-number-4">4.2.9</span> Devel </h4>
+<h4 id="sec-4_2_9"><span class="section-number-4">4.2.9</span> GUI </h4>
 <div class="outline-text-4" id="text-4_2_9">
+
+
+
+
+<div class="org-src-container"><label class="org-src-name">forex-util-gui()</label><pre class="src src-clojure">
+(<span style="color: #a020f0;">ns</span> forex.util.gui
+  (<span style="color: #7a378b;">:require</span> swank.swank)
+  (<span style="color: #7a378b;">:use</span> forex.util.general clojure.contrib.miglayout forex.util.emacs forex.util.log)
+  (<span style="color: #7a378b;">:import</span> 
+   (java.awt Dimension Font event.MouseListener
+             event.MouseAdapter Toolkit event.ActionListener event.KeyListener)
+   (javax.swing JComboBox JPopupMenu JMenuItem
+                ImageIcon
+                table.AbstractTableModel
+                JScrollPane JTable
+                JFrame JPanel JTextField JLabel JButton
+                SwingUtilities)))
+
+(<span style="color: #a020f0;">import</span> javax.swing.JOptionPane)
+(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">inform</span> [msg &amp; args]
+  (JOptionPane/showMessageDialog
+   nil (<span style="color: #7a378b;">apply</span> format (<span style="color: #7a378b;">str</span> msg) args) <span style="color: #8b2252;">"!"</span> JOptionPane/INFORMATION_MESSAGE)) 
+(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">prompt</span>
+  ([msg &amp; args]     
+     (<span style="color: #a020f0;">let</span> [no-default true
+           p (<span style="color: #a020f0;">if</span> no-default 
+               (JOptionPane/showOptionDialog (JPanel.)
+                                             (<span style="color: #7a378b;">apply</span> format (<span style="color: #7a378b;">str</span> msg) args) <span style="color: #8b2252;">"???"</span>
+                                             JOptionPane/YES_NO_OPTION
+                                             JOptionPane/QUESTION_MESSAGE
+                                             nil
+                                             (<span style="color: #7a378b;">into-array</span>  [<span style="color: #8b2252;">"Yes"</span> <span style="color: #8b2252;">"No"</span>])
+                                             <span style="color: #8b2252;">"No"</span>)
+               (JOptionPane/showConfirmDialog
+                nil (<span style="color: #7a378b;">apply</span> format (<span style="color: #7a378b;">str</span> msg) args)
+                <span style="color: #8b2252;">"???"</span> JOptionPane/YES_NO_OPTION))]
+       (<span style="color: #a020f0;">if</span> (<span style="color: #7a378b;">=</span> JOptionPane/YES_OPTION p)
+         true
+         false))))
+
+
+(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">create-image</span> [path]
+  (.getImage (Toolkit/getDefaultToolkit) path))
+(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">create-icon</span> [path]
+  (<span style="color: #a020f0;">try</span>
+    (ImageIcon. (create-image path))
+    (<span style="color: #a020f0;">catch</span> Exception e
+      (warn <span style="color: #8b2252;">"couldnt create image %s"</span> path)
+      nil)))
+
+(<span style="color: #a020f0;">defn-</span> <span style="color: #0000ff;">get-fn</span> [a] (<span style="color: #a020f0;">if</span> (<span style="color: #7a378b;">var?</span> a) (<span style="color: #7a378b;">var-get</span> a) a))
+(<span style="color: #a020f0;">defn-</span> <span style="color: #0000ff;">call-fn</span> [a &amp; args]
+  (thread
+   (<span style="color: #a020f0;">let</span> [f (get-fn a)]
+     (<span style="color: #a020f0;">if</span> (<span style="color: #7a378b;">fn?</span> f) 
+       (<span style="color: #7a378b;">apply</span> f args)
+       (warn <span style="color: #8b2252;">"in listener, in var %s,val %s is not a function"</span> a f)))))
+
+(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">add-key-listener</span> [obj f]
+  (<span style="color: #a020f0;">when</span> (<span style="color: #7a378b;">fn?</span> (get-fn f))
+    (.addKeyListener obj (<span style="color: #7a378b;">proxy</span> [KeyListener] []
+                           (keyReleased [e] (call-fn f e))
+                           (keyPressed [e])
+                           (keyTyped [e])))))
+
+(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">add-action-listener</span> [item val]
+  (<span style="color: #a020f0;">when</span> (<span style="color: #a020f0;">or</span> (<span style="color: #a020f0;">and</span> (<span style="color: #7a378b;">var?</span> val) (<span style="color: #7a378b;">fn?</span> (<span style="color: #7a378b;">var-get</span> val))) (<span style="color: #7a378b;">fn?</span> val))
+    (<span style="color: #a020f0;">let</span> [f (<span style="color: #7a378b;">bound-fn</span> [e] (call-fn val e))]
+      (.addActionListener item
+                          (<span style="color: #7a378b;">proxy</span> [ActionListener] nil 
+                            (actionPerformed [e]
+                                             (<span style="color: #a020f0;">try</span>
+                                               (f e)
+                                               (<span style="color: #a020f0;">catch</span> Exception e
+                                                 (severe <span style="color: #8b2252;">"error in action listener %s"</span> e)))))))))
+(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">add-popup-listener</span> [obj f]
+  (<span style="color: #a020f0;">when</span>  (<span style="color: #7a378b;">fn?</span> (get-fn f))
+    (<span style="color: #a020f0;">let</span> [f (<span style="color: #7a378b;">bound-fn</span> [e] (call-fn f e))]
+     (.addMouseListener
+      obj
+      (<span style="color: #7a378b;">proxy</span> [MouseAdapter] nil
+        (mousePressed [e] (<span style="color: #a020f0;">when</span> (.isPopupTrigger e) (f e)))
+        (mouseReleased [e] (<span style="color: #a020f0;">when</span> (.isPopupTrigger e) (f e)))))))
+  obj)
+<span style="color: #b22222;">;;</span><span style="color: #b22222;">TODO; println stack trace
+</span>(<span style="color: #a020f0;">defmacro</span> <span style="color: #0000ff;">invoke-later</span> [&amp; args]
+  `(SwingUtilities/invokeLater (<span style="color: #7a378b;">bound-fn</span> []
+                                         (<span style="color: #a020f0;">try</span> (<span style="color: #a020f0;">do</span> ~@args)
+
+                                              (<span style="color: #a020f0;">catch</span> Exception e#
+                                                (.printStackTrace e#)
+                                                (<span style="color: #7a378b;">println</span> e#))))))
+</pre></div>
+
+
+
+</div>
+
+</div>
+
+<div id="outline-container-4_2_10" class="outline-4">
+<h4 id="sec-4_2_10"><span class="section-number-4">4.2.10</span> Devel </h4>
+<div class="outline-text-4" id="text-4_2_10">
 
 
 
 
 <div class="org-src-container"><label class="org-src-name">forex-util-mql-devel()</label><pre class="src src-clojure">
 (clojure.core/<span style="color: #7a378b;">use</span> 'nstools.ns)
-(<span style="color: #a020f0;">ns</span> forex.utils.mql-devel
-  (<span style="color: #7a378b;">:clone</span> clj.core)
-  (<span style="color: #7a378b;">:use</span> utils.general))
+(ns+ forex.util.mql-devel
+     (<span style="color: #7a378b;">:clone</span> clj.core)
+     (<span style="color: #7a378b;">:use</span> forex.util.general))
 
 
 (<span style="color: #a020f0;">defmacro</span> <span style="color: #0000ff;">cond-out</span> [&amp; args]
@@ -1712,7 +2479,7 @@ Yes, currently it is not very development start friendly. That will change!
 <div class="org-src-container"><label class="org-src-name">forex-util-indicator-devel()</label><pre class="src src-clojure">
 (clojure.core/<span style="color: #7a378b;">use</span> 'nstools.ns)
 <span style="color: #b22222;">;;</span><span style="color: #b22222;">this file allows one to automatically produce binding code for metatrader custom indicators
-</span>(ns+ forex.utils.mql-indicator-devel
+</span>(ns+ forex.util.mql-indicator-devel
   (<span style="color: #7a378b;">:clone</span> clj.core)
   (<span style="color: #7a378b;">:import</span> java.io.File))
 
@@ -1836,7 +2603,7 @@ return(val);
       forex.util.zmq forex.util.log
       forex.util.spawn))
 
-<span style="color: #b22222;">;;</span><span style="color: #b22222;">TODO: 3ms or so per request, a little slow...
+<span style="color: #b22222;">;;</span><span style="color: #b22222;">TODO: 10ms or so per request, a little slow...
 </span><span style="color: #b22222;">;;</span><span style="color: #b22222;">also, unfortunately, if we add more servers, speed doesn't increase linearly. so the bottleneck is in the clojure code ... a better designed socket service should really be made.
 </span><span style="color: #b22222;">;; </span><span style="color: #b22222;">in addition, if servers drop out, we will be waiting forever for them. this is bad.
 </span>
@@ -1855,11 +2622,11 @@ return(val);
 <span style="color: #b22222;">;;</span><span style="color: #b22222;">socket service
 </span><span style="color: #b22222;">;;</span><span style="color: #b22222;">TODO: send id then message
 </span>(<span style="color: #a020f0;">defn-</span> <span style="color: #0000ff;">mql-recv</span> [msg] 
-  (catch-unexpected   
+  (catch-unexpected  
    (<span style="color: #a020f0;">let</span> [key (<span style="color: #7a378b;">first</span> msg)
          msg-ask (<span style="color: #7a378b;">get</span> @*ids* key)] 
      (<span style="color: #a020f0;">if</span> msg-ask
-       (<span style="color: #a020f0;">do</span>
+       (<span style="color: #a020f0;">do</span> 
          (<span style="color: #7a378b;">deliver</span> msg-ask (<span style="color: #7a378b;">second</span> msg))
          (<span style="color: #7a378b;">swap!</span> *ids* dissoc key))
        (warn <span style="color: #8b2252;">"msg-ask corresponding to key %s is nil"</span> key)))))
@@ -1870,10 +2637,11 @@ return(val);
 
 (<span style="color: #7a378b;">comment</span> <span style="color: #b22222;">;;</span><span style="color: #b22222;">this causes problems ...deleted
 </span>  (<span style="color: #a020f0;">if-not</span> (<span style="color: #7a378b;">satisfies?</span>  PWait askin)
-     (warn <span style="color: #8b2252;">"Ignoring invalid REQUEST which does not contain a PWait argument %s %s"</span> 
-           msg askin)))
+    (warn
+     <span style="color: #8b2252;">"Ignoring invalid REQUEST which does not contain a PWait argument %s %s"</span> 
+     msg askin)))
 
-(<span style="color: #a020f0;">defn-</span> <span style="color: #0000ff;">socket-service-match</span> [events send receive]
+(<span style="color: #a020f0;">defn-</span> <span style="color: #0000ff;">socket-service-match</span> [events send receive] 
   (match  
    (<span style="color: #7a378b;">first</span> events)
    [local <span style="color: #8b2252;">"STOP"</span>] (<span style="color: #a020f0;">do</span> (info <span style="color: #8b2252;">"closing ..."</span>) <span style="color: #8b2252;">"STOP"</span>)  
@@ -1909,7 +2677,7 @@ return(val);
      <span style="color: #8b2252;">"MQL Socket Service"</span>)})) 
 
 <span style="color: #b22222;">;;</span><span style="color: #b22222;">global socket service
-</span>(<span style="color: #a020f0;">defonce-</span> <span style="color: #0000ff;">*s*</span> (<span style="color: #7a378b;">atom</span> nil))
+</span>(<span style="color: #a020f0;">defonce-</span> <span style="color: #0000ff;">*s*</span> (<span style="color: #7a378b;">atom</span> nil)) 
 (<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">alive?</span> []
   (pid? (<span style="color: #7a378b;">:pid</span> @*s*))) 
 (<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">start</span> []
@@ -1921,7 +2689,8 @@ return(val);
     (! (<span style="color: #7a378b;">:pid</span> @*s*) <span style="color: #8b2252;">"STOP"</span>)
     (warn <span style="color: #8b2252;">"mql socket service is already stopped"</span>)))
 
-<span style="color: #b22222;">;;</span><span style="color: #b22222;">interact with mql 
+<span style="color: #b22222;">;;</span><span style="color: #b22222;">interact with mql
+</span><span style="color: #b22222;">;;</span><span style="color: #b22222;">TODO: if mql isnt alive and we retry/????
 </span>(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">request</span> [askin msg]
   (<span style="color: #7a378b;">io!</span>
    (<span style="color: #a020f0;">if</span> (pid? (<span style="color: #7a378b;">:pid</span> @*s*)) 
@@ -2133,7 +2902,7 @@ return(val);
   ([num] (lot num (env <span style="color: #7a378b;">:symbol</span>)))
   ([num symbol]
      (<span style="color: #a020f0;">let</span> [a (to-big num)
-           b (to-big (mode-minlot symbol))]
+           b (to-big (<span style="color: #a020f0;">or</span> val (mode-minlot symbol)))]
        (<span style="color: #7a378b;">*</span> b (.intValue (<span style="color: #7a378b;">/</span> a b))))))
 
 
@@ -2423,22 +3192,36 @@ return(val);
 
 
 <div class="org-src-container"><label class="org-src-name">ea-common()</label><pre class="src src-clojure">
+<span style="color: #b22222;">;;</span><span style="color: #b22222;">TODO: it would be awesome if we could directly modify vars of an ea. but we cant, we can only stop , merge, start. TOOD: lookup how set! works!
+</span>
 (clojure.core/<span style="color: #7a378b;">use</span> 'nstools.ns)
 (ns+ forex.module.ea 
-     (<span style="color: #7a378b;">:clone</span> clj.core)
-     (<span style="color: #7a378b;">:import</span> forex.util.core.AtomHash)
-  (<span style="color: #7a378b;">:use</span> forex.util.core
-        forex.util.general
-        forex.util.spawn
-        clojure.contrib.core)
-  (<span style="color: #7a378b;">:import</span> clojure.lang.Atom)
-  (<span style="color: #7a378b;">:require</span> [clj-time.core <span style="color: #7a378b;">:as</span> t])
-  (<span style="color: #7a378b;">:use</span>  
-   forex.util.emacs
-   forex.util.log  
-   forex.module.error 
-   forex.module.indicator 
-   forex.module.account))   
+     (<span style="color: #7a378b;">:clone</span> clj.core) 
+     (<span style="color: #7a378b;">:use</span> forex.util.core
+           forex.util.general 
+           forex.util.spawn forex.util.emacs
+           clojure.contrib.core)
+     (<span style="color: #7a378b;">:import</span> clojure.lang.Atom)
+     (<span style="color: #7a378b;">:require</span> [clj-time.core <span style="color: #7a378b;">:as</span> t])
+     (<span style="color: #7a378b;">:use</span>  
+      forex.util.emacs
+      forex.util.log  
+      forex.module.error 
+      forex.module.indicator 
+      forex.module.account)
+     (<span style="color: #7a378b;">:import</span> forex.util.core.AtomHash  java.util.concurrent.TimeUnit))
+(<span style="color: #a020f0;">defvar</span> <span style="color: #0000ff;">save-file</span> nil)
+(<span style="color: #a020f0;">defvar</span> <span style="color: #0000ff;">ea-on-exit-hook</span>)
+(<span style="color: #a020f0;">defvar</span> <span style="color: #0000ff;">ea-on-start-hook</span>)
+(<span style="color: #a020f0;">defonce</span> <span style="color: #0000ff;">*ea-registry*</span> (<span style="color: #7a378b;">atom</span> []))
+(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">register-ea</span> []
+  (<span style="color: #7a378b;">swap!</span> *ea-registry*
+         (<span style="color: #7a378b;">fn</span> [old]
+           (<span style="color: #7a378b;">filter</span> #(<span style="color: #7a378b;">find-ns</span> (<span style="color: #7a378b;">symbol</span> %))
+                   (<span style="color: #a020f0;">if</span> (<span style="color: #7a378b;">some</span> #(<span style="color: #7a378b;">=</span> % (<span style="color: #7a378b;">str</span> *ns*)) old)
+                     old
+                     (<span style="color: #7a378b;">conj</span> old (<span style="color: #7a378b;">str</span> *ns*)))))))
+
 (<span style="color: #a020f0;">defn-</span> <span style="color: #0000ff;">get-fn</span> [a] (<span style="color: #a020f0;">if</span> (<span style="color: #7a378b;">var?</span> a) (<span style="color: #7a378b;">var-get</span> a) a)) 
 (<span style="color: #a020f0;">defonce</span> <span style="color: #0000ff;">*ea*</span> nil)
 (<span style="color: #a020f0;">defonce</span> <span style="color: #0000ff;">*args*</span> nil) 
@@ -2457,6 +3240,11 @@ return(val);
   `(<span style="color: #a020f0;">let</span> [l# (.writeLock ~lock)]
      (<span style="color: #a020f0;">try</span> (<span style="color: #a020f0;">do</span> (.lock l#) ~@body)
           (<span style="color: #a020f0;">finally</span> (.unlock l#)))))
+(<span style="color: #a020f0;">defmacro</span> <span style="color: #0000ff;">locking-write-timeout</span> [[ lock timeout] &amp; body]
+  `(<span style="color: #a020f0;">let</span> [l# (.writeLock ~lock)]
+     (<span style="color: #a020f0;">if</span> (.tryLock l# ~timeout TimeUnit/MILLISECONDS)
+       (<span style="color: #a020f0;">try</span> (<span style="color: #a020f0;">do</span>  ~@body)
+            (<span style="color: #a020f0;">finally</span> (.unlock l#))))))
 
 
 (deferror *ea-stop* [*clj-forex-error*] [message]
@@ -2470,13 +3258,14 @@ return(val);
                                    (<span style="color: #7a378b;">concat</span> [msg] args)))))
 
 
-(<span style="color: #a020f0;">defmulti</span> <span style="color: #0000ff;">copy-ea-obj</span> class)
+
 <span style="color: #b22222;">;;</span><span style="color: #b22222;">TODO: do we really want to copy these objects? yes, in most cases perhaps
 </span><span style="color: #b22222;">;;</span><span style="color: #b22222;">but we should add an option to the ea definition (we will do that later, before first release)
-</span>(<span style="color: #a020f0;">defmethod</span> <span style="color: #0000ff;">copy-ea-obj</span> <span style="color: #7a378b;">:default</span> [o] o)
-(<span style="color: #a020f0;">defmethod</span> <span style="color: #0000ff;">copy-ea-obj</span> clojure.lang.Atom [o] (<span style="color: #7a378b;">atom</span> @o))
-(<span style="color: #a020f0;">defmethod</span> <span style="color: #0000ff;">copy-ea-obj</span> clojure.lang.Ref [o] (<span style="color: #7a378b;">ref</span> @o))
-(<span style="color: #a020f0;">defmethod</span> <span style="color: #0000ff;">copy-ea-obj</span> forex.util.core.AtomHash [o] (atom-hash @o))
+</span>(<span style="color: #a020f0;">defmulti</span> <span style="color: #0000ff;">copy-ea-obj</span> class)
+(<span style="color: #a020f0;">defmethod</span> <span style="color: #0000ff;">copy-ea-obj</span> <span style="color: #7a378b;">:default</span> [o] o)
+(<span style="color: #a020f0;">defmethod</span> <span style="color: #0000ff;">copy-ea-obj</span> clojure.lang.Atom [o] (<span style="color: #7a378b;">atom</span> (copy-ea-obj @o)))
+(<span style="color: #a020f0;">defmethod</span> <span style="color: #0000ff;">copy-ea-obj</span> clojure.lang.Ref [o] (<span style="color: #7a378b;">ref</span> (copy-ea-obj @o)))
+(<span style="color: #a020f0;">defmethod</span> <span style="color: #0000ff;">copy-ea-obj</span> forex.util.core.AtomHash [o] (atom-hash (copy-ea-obj @o)))
 
 (<span style="color: #a020f0;">defn-</span> <span style="color: #0000ff;">copy-ea-objs</span> [map]
   (<span style="color: #7a378b;">apply</span> hash-map
@@ -2488,7 +3277,7 @@ return(val);
 </span>(<span style="color: #a020f0;">defonce</span> <span style="color: #0000ff;">*eas*</span> (<span style="color: #7a378b;">atom</span> []))
 (<span style="color: #a020f0;">import</span> java.util.concurrent.locks.ReentrantReadWriteLock)
 <span style="color: #b22222;">;;</span><span style="color: #b22222;">TODO: lock orphaning
-</span>(<span style="color: #a020f0;">defonce-</span> <span style="color: #0000ff;">*ea-pre-lock*</span>
+</span>(<span style="color: #a020f0;">defonce</span> <span style="color: #0000ff;">*ea-pre-lock*</span>
   (java.util.concurrent.locks.ReentrantReadWriteLock. true))
 
 (<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">every</span> [pred coll]
@@ -2517,22 +3306,6 @@ return(val);
         (<span style="color: #a020f0;">catch</span> Exception e#
           (severe <span style="color: #8b2252;">"%s - caught unexpected error %s"</span> ~prefix e#))))
 
-<span style="color: #b22222;">;;</span><span style="color: #b22222;">TODO: place in forex-user
-</span>(<span style="color: #a020f0;">defvar</span> <span style="color: #0000ff;">save-file</span> <span style="color: #8b2252;">"/home/seth/Desktop/eas"</span>)
-
-(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">save-eas</span> []
-  (<span style="color: #7a378b;">println</span> <span style="color: #8b2252;">"Attempting to acquire writeLock of *ea-pre-lock* ..."</span>)
-  (locking-write *ea-pre-lock*
-                 (<span style="color: #7a378b;">println</span> <span style="color: #8b2252;">"saving ..."</span>)
-                 (frm-save save-file @*eas*)
-                 (<span style="color: #7a378b;">count</span> @*eas*)))
-
-(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">load-eas</span>
-  ([] (load-eas false))
-  ([append]
-     (<span style="color: #a020f0;">let</span> [eas (frm-load save-file)]
-       (<span style="color: #a020f0;">if</span> append (<span style="color: #7a378b;">swap!</span> *eas* concat eas) (<span style="color: #7a378b;">vec</span> eas)))))
-
 
 (<span style="color: #7a378b;">require</span> 'clojure.contrib.error-kit)
 <span style="color: #b22222;">;;</span><span style="color: #b22222;">TODO; how to create unbound var for error-kit???
@@ -2541,16 +3314,17 @@ return(val);
 <span style="color: #b22222;">;;</span><span style="color: #b22222;">TODO: we need a monitor which pings and then sets something.... like in erlang
 </span>
 (<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">run-by-tick</span> [{<span style="color: #7a378b;">:keys</span> [deinit init start] <span style="color: #7a378b;">:as</span> ea}]
-  (with-ea [ea]
+  (with-ea [ea]   
     (<span style="color: #a020f0;">try</span>
+      (run-hooks ea-on-start-hook)
       (clojure.contrib.error-kit/with-handler
         (<span style="color: #a020f0;">loop</span> [prev-close nil]
           (sleep 1) 
           (<span style="color: #a020f0;">when-not</span>
               (match (? 0) 
-                     <span style="color: #8b2252;">"STOPGRR"</span> (<span style="color: #a020f0;">do</span> (out <span style="color: #8b2252;">"GOT STOP!!!!"</span>) true)
+                     <span style="color: #8b2252;">"STOP"</span> true
                      <span style="color: #8b2252;">"PING"</span> (<span style="color: #a020f0;">do</span> (out <span style="color: #8b2252;">"ping"</span>) nil)) 
-            (<span style="color: #a020f0;">let</span> [new-close (close)] 
+            (<span style="color: #a020f0;">let</span> [new-close (close)]  
               (<span style="color: #a020f0;">when-not</span> (<span style="color: #7a378b;">=</span> new-close prev-close)
                 (<span style="color: #a020f0;">let</span> [func (get-fn start)]
                   (<span style="color: #a020f0;">if</span> (<span style="color: #7a378b;">fn?</span> func)
@@ -2561,19 +3335,22 @@ return(val);
         (clojure.contrib.error-kit/handle *ea-stop* [message] (out <span style="color: #8b2252;">"stopping ea ... %s"</span> message)))  
       (<span style="color: #a020f0;">catch</span> Exception e 
         (severe <span style="color: #8b2252;">"stopping ea... caught exception %s"</span> e)
+        (<span style="color: #7a378b;">reset!</span> (<span style="color: #7a378b;">:exit</span> ea) e)
         (.printStackTrace e))
       (<span style="color: #a020f0;">finally</span>
+       (<span style="color: #a020f0;">when-not</span> @(<span style="color: #7a378b;">:exit</span> ea) (<span style="color: #7a378b;">reset!</span> (<span style="color: #7a378b;">:exit</span> ea) true))
        (info <span style="color: #8b2252;">"running deinit ..."</span>)
        (catch-unexpected
         <span style="color: #8b2252;">"deinit"</span> 
         (<span style="color: #a020f0;">let</span> [de (get-fn deinit)]
           (<span style="color: #a020f0;">if</span> (<span style="color: #7a378b;">fn?</span> de)
             (de)
-            (warn <span style="color: #8b2252;">"deinit %s is not a function. ignoring ...."</span> de))))))))
+            (warn <span style="color: #8b2252;">"deinit %s is not a function. ignoring ...."</span> de))))))
+    (run-hooks ea-on-exit-hook)))
 
 (<span style="color: #a020f0;">defn-</span> <span style="color: #0000ff;">timeframe?</span> [a] (<span style="color: #7a378b;">number?</span> a))
 (<span style="color: #a020f0;">defrecord</span> <span style="color: #0000ff;">EA</span> [name type ns init deinit start symbol period args
-               pid run vars])
+               pid run vars exit]) 
 
 (<span style="color: #a020f0;">defn-</span> <span style="color: #0000ff;">constant-map</span> [&amp; args] {})
 (<span style="color: #a020f0;">defn-</span> <span style="color: #0000ff;">constant-true</span> [&amp; args] {})
@@ -2582,7 +3359,7 @@ return(val);
   ([{<span style="color: #7a378b;">:keys</span> [ns symbol period run args vars] <span style="color: #7a378b;">:or</span> {symbol (env <span style="color: #7a378b;">:symbol</span>)
                                                  run run-by-tick
                                                  vars {}
-                                               period (env <span style="color: #7a378b;">:period</span>)}}]
+                                                 period (env <span style="color: #7a378b;">:period</span>)}}]
      (<span style="color: #a020f0;">let</span> [ns (<span style="color: #a020f0;">cond</span>
                (<span style="color: #7a378b;">nil?</span> ns) *ns*
                (<span style="color: #7a378b;">symbol?</span> ns) (<span style="color: #7a378b;">find-ns</span> ns)
@@ -2597,53 +3374,76 @@ return(val);
                       constant-map)
              deinit (<span style="color: #a020f0;">or</span> (<span style="color: #a020f0;">let</span> [fn (ns-symbol 'deinit ns)]
                           (<span style="color: #a020f0;">if</span> (get-fn fn) fn))
-                         constant-true)]
+                        constant-true)] 
          (is? [(<span style="color: #7a378b;">fn?</span> (get-fn init)) (<span style="color: #7a378b;">fn?</span> (get-fn deinit)) (<span style="color: #7a378b;">string?</span> name)
                (<span style="color: #7a378b;">string?</span> symbol) (<span style="color: #7a378b;">fn?</span> run) (timeframe? period)])
-         (EA. (<span style="color: #7a378b;">format</span> <span style="color: #8b2252;">"%s %s, %s"</span> name symbol period) name ns
+         (EA. (<span style="color: #7a378b;">format</span> <span style="color: #8b2252;">"%s %s, %s"</span> name symbol period) (<span style="color: #7a378b;">last</span> (.split name <span style="color: #8b2252;">"\\."</span>))
+              ns
               init deinit start symbol period (<span style="color: #a020f0;">or</span> args {})
               nil run
-              (<span style="color: #7a378b;">merge</span> (copy-ea-objs (ns-vars ns)) vars)))))) 
+              (<span style="color: #7a378b;">merge</span> (copy-ea-objs (ns-vars ns)) vars)
+              (<span style="color: #7a378b;">atom</span> 0)))))) 
 
 <span style="color: #b22222;">;;</span><span style="color: #b22222;">how to get it to access actual var? as long as we dont use set!
 </span>(<span style="color: #a020f0;">defmethod</span> <span style="color: #0000ff;">clojure.core/print-method</span> EA [o w]
   (.write w  (<span style="color: #7a378b;">format</span> <span style="color: #8b2252;">"&lt;EA \"%s\" %s %s |%s|&gt;"</span>
-                     (<span style="color: #7a378b;">:name</span> o)
-                     (<span style="color: #a020f0;">if</span> (pid? (<span style="color: #7a378b;">:pid</span> o)) true false)                 
+                     (<span style="color: #7a378b;">:name</span> o) (pid? (<span style="color: #7a378b;">:pid</span> o))
                      (<span style="color: #7a378b;">:args</span> o) (<span style="color: #7a378b;">:vars</span> o))))
 
 <span style="color: #b22222;">;;</span><span style="color: #b22222;">TODO: pid without spawn!!
 </span>
 (<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">run-start</span> [ea]
-  (with-ea [ea <span style="color: #8b2252;">"START"</span>] 
-    (<span style="color: #7a378b;">with-bindings</span> (<span style="color: #7a378b;">:vars</span> ea)
-      (<span style="color: #a020f0;">let</span> [new-ea (<span style="color: #7a378b;">merge</span> ea {<span style="color: #7a378b;">:pid</span> (spawn
-                                    #((<span style="color: #7a378b;">:run</span> ea) ea)
-                                    (<span style="color: #7a378b;">:name</span> ea))})]
-        (<span style="color: #7a378b;">swap!</span> *eas* conj new-ea)
-        new-ea))))
+  (<span style="color: #a020f0;">let</span> [ea (<span style="color: #7a378b;">merge</span> ea {<span style="color: #7a378b;">:exit</span> (<span style="color: #7a378b;">atom</span> false)})]
+   (with-ea [ea <span style="color: #8b2252;">"START"</span>] 
+     (<span style="color: #7a378b;">with-bindings</span> (<span style="color: #7a378b;">:vars</span> ea)
+       (<span style="color: #a020f0;">let</span> [new-ea (<span style="color: #7a378b;">merge</span> ea {<span style="color: #7a378b;">:pid</span> (spawn
+                                   #((<span style="color: #7a378b;">:run</span> ea) ea)
+                                   (<span style="color: #7a378b;">:name</span> ea))})]
+         (<span style="color: #7a378b;">swap!</span> *eas* conj new-ea) 
+         new-ea)))))
 
-<span style="color: #b22222;">;;</span><span style="color: #b22222;">TODO: check return type
+
+(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">restart</span> [ea]  
+  (<span style="color: #a020f0;">when</span> (<span style="color: #7a378b;">not</span> (alive? ea))
+    <span style="color: #b22222;">;;</span><span style="color: #b22222;">TODO: for some reason, if we change it to (hash old), it screws up! what!
+</span>    (<span style="color: #a020f0;">let</span> [old (<span style="color: #7a378b;">swap!</span> *eas*
+                     (<span style="color: #7a378b;">fn</span> [old] (<span style="color: #a020f0;">doall</span> (<span style="color: #7a378b;">filter</span> #(<span style="color: #7a378b;">not</span> (<span style="color: #7a378b;">=</span> (<span style="color: #7a378b;">hash</span> ea) (<span style="color: #7a378b;">hash</span> %))) old))))]
+      (<span style="color: #a020f0;">try</span>
+        (run-start ea)
+        (<span style="color: #a020f0;">catch</span> Exception e (<span style="color: #7a378b;">swap!</span> *eas* conj ea)
+               (.printStackTrace e)
+               (out <span style="color: #8b2252;">"caught exception when running start %s"</span> e))))))
+
+ <span style="color: #b22222;">;;</span><span style="color: #b22222;">TODO: check return type
 </span>(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">run-init</span> [ea]
   (with-ea [ea <span style="color: #8b2252;">"INIT"</span>]
     (<span style="color: #a020f0;">let</span> [result ((get-fn (<span style="color: #7a378b;">:init</span> ea)) (<span style="color: #7a378b;">:args</span> ea))]
-      (<span style="color: #a020f0;">if</span> result
+      (<span style="color: #a020f0;">if</span> (<span style="color: #7a378b;">map?</span> result)
         (<span style="color: #7a378b;">merge</span> ea {<span style="color: #7a378b;">:vars</span> (<span style="color: #7a378b;">merge</span> (<span style="color: #7a378b;">:vars</span> ea) result)})))))
 
 (<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">run-all</span> [ea]
-  (with-ea [ea <span style="color: #8b2252;">"ALL"</span>]
-    (<span style="color: #a020f0;">let</span> [new-ea (run-init ea)]
-      (<span style="color: #a020f0;">if</span> (<span style="color: #7a378b;">instance?</span> EA new-ea)
-        (run-start new-ea) 
-        (warn <span style="color: #8b2252;">"failed to start - returned nil from init"</span> (<span style="color: #7a378b;">:name</span> ea))))))
+  (<span style="color: #a020f0;">try</span>
+    (with-ea [ea <span style="color: #8b2252;">"ALL"</span>]
+      (<span style="color: #a020f0;">let</span> [new-ea (run-init ea)]
+        (<span style="color: #a020f0;">if</span> (<span style="color: #7a378b;">instance?</span> EA new-ea)
+          (run-start new-ea)))
+      (<span style="color: #a020f0;">catch</span> Exception e
+        (out <span style="color: #8b2252;">"caught exception %s"</span> e)))))
+
+(<span style="color: #a020f0;">defn-</span> <span style="color: #0000ff;">filter-map</span> [f map]
+  (<span style="color: #a020f0;">let</span> [vals (<span style="color: #7a378b;">mapcat</span> identity (<span style="color: #7a378b;">filter</span> (<span style="color: #7a378b;">fn</span> [[key val]]
+                                        (f key)) map))]
+    (<span style="color: #a020f0;">if</span> (<span style="color: #7a378b;">empty?</span> vals) {} (<span style="color: #7a378b;">apply</span> hash-map vals))))
 
 (<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">run</span>
   ([] (run *ns* {}))
-  ([args] (run *ns* args {}))
-  ([args vars] (run *ns* args vars))
-  ([ns args vars]
+  ([args] (run *ns* args))
+  ([ns args] 
      <span style="color: #b22222;">;;</span><span style="color: #b22222;">todo: not default, no nil
-</span>     (run-all (new-ea {<span style="color: #7a378b;">:ns</span> ns <span style="color: #7a378b;">:args</span> args <span style="color: #7a378b;">:vars</span> vars
+</span>     (run-all (new-ea {<span style="color: #7a378b;">:ns</span> ns 
+                       <span style="color: #7a378b;">:args</span> (filter-map #(<span style="color: #a020f0;">and</span> (<span style="color: #7a378b;">not</span> (<span style="color: #7a378b;">var?</span> %))
+                                               (<span style="color: #7a378b;">not</span> (#{<span style="color: #7a378b;">:symbol</span> <span style="color: #7a378b;">:period</span>} %))) args)
+                       <span style="color: #7a378b;">:vars</span> (filter-map var? args)
                        <span style="color: #7a378b;">:symbol</span> (<span style="color: #a020f0;">or</span> (<span style="color: #7a378b;">:symbol</span> args) (env <span style="color: #7a378b;">:symbol</span>))
                        <span style="color: #7a378b;">:period</span> (<span style="color: #a020f0;">or</span> (<span style="color: #7a378b;">:period</span> args) (env <span style="color: #7a378b;">:period</span>))}))))
 
@@ -2653,13 +3453,39 @@ return(val);
 </span>(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">stop</span> [ea]
   (<span style="color: #a020f0;">let</span> [stop-it (<span style="color: #7a378b;">fn</span> [e]
                   (<span style="color: #a020f0;">if</span> (pid? (<span style="color: #7a378b;">:pid</span> e))
-                    (<span style="color: #a020f0;">do</span> (! (<span style="color: #7a378b;">:pid</span> e) <span style="color: #8b2252;">"STOPGRR"</span>) 
+                    (<span style="color: #a020f0;">do</span> (! (<span style="color: #7a378b;">:pid</span> e) <span style="color: #8b2252;">"STOP"</span>) 
                         true)))]
     (<span style="color: #a020f0;">if</span> (<span style="color: #7a378b;">map?</span> ea)
       (stop-it ea)
       (<span style="color: #7a378b;">map</span> stop-it ea))))
 
 (<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">clear-eas</span> [] (<span style="color: #7a378b;">count</span> (<span style="color: #7a378b;">reset!</span> *eas* (<span style="color: #7a378b;">filter</span> alive? @*eas*))))
+<span style="color: #b22222;">;;</span><span style="color: #b22222;">SAVE/LOAD
+</span>(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">save-eas</span>
+  ([] (save-eas save-file))
+  ([save-file]
+     (debugging <span style="color: #8b2252;">"Save EA:"</span>
+      (<span style="color: #a020f0;">try</span>
+        (info <span style="color: #8b2252;">"Attempting to acquire writeLock of *ea-pre-lock* ..."</span>)
+        (locking-write-timeout [*ea-pre-lock* 1000] 
+                               (info <span style="color: #8b2252;">"saving ..."</span>)
+                               (frm-save save-file @*eas*)
+                               (<span style="color: #7a378b;">count</span> @*eas*))
+        (<span style="color: #a020f0;">catch</span> Exception e
+          (warn <span style="color: #8b2252;">"failed to save eas %s"</span> e))))))
+
+(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">load-eas</span> 
+  ([] (load-eas save-file false))
+  ([append] (load-eas save-file append))
+  ([file append]
+     (debugging <span style="color: #8b2252;">"Load EA:"</span>
+      (<span style="color: #a020f0;">try</span>
+        (<span style="color: #a020f0;">let</span> [eas (frm-load file)]
+          (is? [(<span style="color: #a020f0;">or</span> (<span style="color: #7a378b;">empty?</span> eas) (every #(<span style="color: #7a378b;">instance?</span> EA %) eas))])
+          (<span style="color: #a020f0;">if</span> append (<span style="color: #7a378b;">swap!</span> *eas* concat eas) (<span style="color: #7a378b;">vec</span> eas))
+          (<span style="color: #7a378b;">count</span> eas))
+        (<span style="color: #a020f0;">catch</span> Exception e
+          (warn <span style="color: #8b2252;">"failed to load eas %s %s: %s"</span> file append e))))))
 </pre></div>
 
 
@@ -2992,20 +3818,489 @@ return(val);
 </div>
 
 <div id="outline-container-4_5" class="outline-3">
-<h3 id="sec-4_5"><span class="section-number-3">4.5</span> User </h3>
+<h3 id="sec-4_5"><span class="section-number-3">4.5</span> Interface </h3>
 <div class="outline-text-3" id="text-4_5">
 
 
 
 
-<div class="org-src-container"><label class="org-src-name">forex_user()</label><pre class="src src-clojure">
-(clojure.core/<span style="color: #7a378b;">use</span> 'nstools.ns)
-(ns+ forex-user
-     (<span style="color: #7a378b;">:like</span> forex.default)
-     (<span style="color: #7a378b;">:use</span> utils.general))
-<span style="color: #b22222;">;;</span><span style="color: #b22222;">TODO: mql error 146
+<div class="org-src-container"><label class="org-src-name">interface-ea-new()</label><pre class="src src-clojure">
+<span style="color: #b22222;">;;</span><span style="color: #b22222;">TODO: still a work in progress. for now, lets just execute a function in user
+</span><span style="color: #b22222;">;;</span><span style="color: #b22222;">ea ns, and that function will prompt user and run ea!
 </span>
-<span style="color: #b22222;">;;</span><span style="color: #b22222;">forex_user is the ns in which customization will occur
+(<span style="color: #a020f0;">ns</span> forex.interface.ea-new
+  (<span style="color: #7a378b;">:use</span> forex.util.log clojure.contrib.with-ns
+        forex.module.ea
+        clojure.contrib.miglayout forex.util.emacs 
+        forex.util.gui)
+  (<span style="color: #7a378b;">:use</span> forex.interface.gui) 
+  (<span style="color: #7a378b;">:import</span> 
+   (java.awt Dimension Font event.MouseListener
+             event.MouseAdapter Toolkit event.ActionListener event.KeyListener)
+   (javax.swing JComboBox JPopupMenu JMenuItem
+                ImageIcon
+                table.AbstractTableModel 
+                JScrollPane JTable
+                JFrame JPanel JTextField JLabel JButton
+                SwingUtilities)))
+
+(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">ns-args</span> [ns]
+  (ns-metas ns (<span style="color: #7a378b;">fn</span> [s] (<span style="color: #7a378b;">:arg</span> (<span style="color: #7a378b;">meta</span> s)))))
+
+(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">ea-new-gui</span> []
+  (<span style="color: #a020f0;">when-let</span> [it (<span style="color: #a020f0;">and</span> (<span style="color: #7a378b;">:selector</span> gui)
+                     (.getSelectedItem (<span style="color: #7a378b;">:selector</span> gui)))]
+    (<span style="color: #a020f0;">when-let</span> [ns (<span style="color: #7a378b;">find-ns</span> (<span style="color: #7a378b;">symbol</span> it))]
+      (<span style="color: #7a378b;">println</span> <span style="color: #8b2252;">"selection is "</span> ns))))
+(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">var-name</span> [a]
+  (<span style="color: #7a378b;">last</span> (.split (<span style="color: #7a378b;">str</span> a) <span style="color: #8b2252;">"/"</span>)))
+<span style="color: #b22222;">;;</span><span style="color: #b22222;">TODO: throw slot value not working!s + add metadata to jlabel,etc
+</span>(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">read-eval</span> [a]
+  (<span style="color: #a020f0;">let</span> [a (<span style="color: #a020f0;">try</span> (<span style="color: #7a378b;">read-string</span> (.getText a))
+               (<span style="color: #a020f0;">catch</span> Exception e (.getText a)))]
+    (<span style="color: #a020f0;">if</span> (<span style="color: #a020f0;">or</span> (<span style="color: #7a378b;">string?</span> a) (<span style="color: #7a378b;">symbol?</span> a)) (<span style="color: #7a378b;">str</span> a) (<span style="color: #7a378b;">eval</span> a))))
+
+(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">on-start</span> [frame panel]
+  (<span style="color: #7a378b;">println</span> <span style="color: #8b2252;">"result is "</span> (<span style="color: #7a378b;">keys</span> (components panel))))
+
+(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">generate-ea-gui</span> [ns] 
+  (<span style="color: #a020f0;">let</span> [args (ns-args ns)
+        panel (JPanel.) frame (jframe (<span style="color: #7a378b;">str</span> (<span style="color: #7a378b;">ns-name</span> ns)))]
+    (<span style="color: #a020f0;">doto</span> frame
+      (.add (<span style="color: #7a378b;">apply</span> miglayout panel
+                   (<span style="color: #7a378b;">concat</span>
+                    (<span style="color: #7a378b;">mapcat</span> (<span style="color: #7a378b;">fn</span> [[key val]]
+                              (<span style="color: #a020f0;">let</span> [label (JLabel. (var-name key))]
+                                [label (JTextField. 30)         
+                                 <span style="color: #7a378b;">:wrap</span>]))
+                            args)
+                    [(<span style="color: #a020f0;">doto</span> (JButton. <span style="color: #8b2252;">"start"</span>)
+                       (add-action-listener (<span style="color: #7a378b;">fn</span> [e] (on-start frame panel))))
+                     <span style="color: #8b2252;">"push,growx,span,center"</span>])))
+      (.pack)
+      (.setVisible true)))) 
+
+(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">run-init-gui</span> []
+  (<span style="color: #a020f0;">let</span> [ns (<span style="color: #7a378b;">symbol</span> (.getSelectedItem (<span style="color: #7a378b;">:selector</span> gui)))]
+   (<span style="color: #a020f0;">if-let</span> [it (<span style="color: #7a378b;">get</span> (<span style="color: #7a378b;">ns-map</span> ns) 'init-gui)]
+     (<span style="color: #a020f0;">if</span> (<span style="color: #7a378b;">fn?</span> (<span style="color: #7a378b;">var-get</span> it))
+       (<span style="color: #a020f0;">binding</span> [*ns* (<span style="color: #7a378b;">the-ns</span> ns)]
+         ((<span style="color: #7a378b;">var-get</span> it))) 
+       (inform <span style="color: #8b2252;">"symbol init-gui in namespace %s is not a function"</span> ns ))
+     (inform <span style="color: #8b2252;">"%s does not have an init-gui function"</span> ns)))) 
+
+(<span style="color: #7a378b;">alter-var-root</span>
+ #'forex.interface.gui/gui-key-map
+ merge {\n #'run-init-gui})
+</pre></div>
+
+
+
+
+
+
+<div class="org-src-container"><label class="org-src-name">interface-ea-table()</label><pre class="src src-clojure">
+(<span style="color: #a020f0;">ns</span> forex.interface.ea-table
+  (<span style="color: #7a378b;">:require</span> swank.swank) 
+  (<span style="color: #7a378b;">:use</span> forex.util.log 
+        clojure.contrib.miglayout forex.util.emacs 
+        forex.util.gui forex.interface.tray)
+  (<span style="color: #7a378b;">:use</span> forex.module.ea forex.interface.gui)
+  (<span style="color: #7a378b;">:import</span>
+   (java.awt
+    Dimension Font event.MouseListener
+    event.MouseAdapter Toolkit event.ActionListener event.KeyListener)
+   (javax.swing JComboBox JPopupMenu JMenuItem
+                ImageIcon
+                table.AbstractTableModel 
+                JScrollPane JTable
+                JFrame JPanel JTextField JLabel JButton
+                SwingUtilities))) 
+
+(<span style="color: #a020f0;">defonce</span> <span style="color: #0000ff;">ea-table-gui</span>  nil)
+(<span style="color: #a020f0;">defn-</span> <span style="color: #0000ff;">italic</span> [a] (<span style="color: #7a378b;">format</span> <span style="color: #8b2252;">"&lt;html&gt;&lt;i&gt;%s&lt;/i&gt;&lt;html&gt;"</span> a))
+(<span style="color: #a020f0;">defn-</span> <span style="color: #0000ff;">color</span> [a color]
+  (<span style="color: #7a378b;">format</span> <span style="color: #8b2252;">"&lt;html&gt;&lt;color=%s&gt;&lt;b&gt;%s&lt;/b&gt;&lt;/color&gt;&lt;html&gt;"</span> color a))
+
+(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">add-watcher</span> [var key f]
+  (add-watch var key
+             (<span style="color: #7a378b;">bound-fn</span> [&amp; args]
+                       (<span style="color: #a020f0;">try</span> (<span style="color: #7a378b;">apply</span> f args)
+                            (<span style="color: #a020f0;">catch</span> Exception e
+
+                              (severe <span style="color: #8b2252;">"caught exception in watcher %s: %s"</span>
+                                      [var key] e)
+                              (.printStackTrace e))))))
+
+
+(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">table-model</span> [titles data]
+  (<span style="color: #7a378b;">proxy</span> [AbstractTableModel] []
+    (getRowCount [] (<span style="color: #7a378b;">count</span> data))
+    (getColumnCount [] (<span style="color: #7a378b;">count</span> titles))
+    (getValueAt [row column] (<span style="color: #7a378b;">nth</span> (<span style="color: #7a378b;">nth</span> data  row) column))
+    (getColumnClass [_] String)
+    (getColumnName [col] (<span style="color: #7a378b;">nth</span> titles col))))
+
+
+(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">ea-table-model</span> [eas] 
+  (table-model
+   [(italic <span style="color: #8b2252;">"Name"</span>) (italic <span style="color: #8b2252;">"Symbol"</span>) (italic <span style="color: #8b2252;">"Period"</span>) (italic <span style="color: #8b2252;">"Running?"</span>) (italic <span style="color: #8b2252;">"Args"</span>)]
+   (<span style="color: #7a378b;">map</span> (<span style="color: #7a378b;">fn</span> [ea] 
+          [(<span style="color: #7a378b;">:type</span> ea) (<span style="color: #7a378b;">:symbol</span> ea) (<span style="color: #7a378b;">:period</span> ea)
+           (<span style="color: #a020f0;">let</span> [exit @(<span style="color: #7a378b;">:exit</span> ea)]
+             (<span style="color: #a020f0;">cond</span>
+              (<span style="color: #a020f0;">and</span> (alive? ea) (<span style="color: #7a378b;">=</span> exit false)) (color true <span style="color: #8b2252;">"blue"</span>)
+              true  (<span style="color: #a020f0;">if-not</span> (<span style="color: #7a378b;">=</span> true  exit)
+                      (color false <span style="color: #8b2252;">"red"</span>)
+                      false)))
+           (<span style="color: #7a378b;">:args</span> ea)
+           ea])
+        eas)))
+
+(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">update-table</span> [table eas]
+  (<span style="color: #7a378b;">locking</span> table
+   (.setModel table (ea-table-model eas))))
+
+(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">update-ea-table</span>
+  ([] (update-ea-table false))
+  ([force]
+     (<span style="color: #a020f0;">let</span> [{<span style="color: #7a378b;">:keys</span> [table frame]} ea-table-gui]
+       (<span style="color: #a020f0;">when</span> (<span style="color: #a020f0;">and</span> table frame (<span style="color: #a020f0;">or</span> force (.isVisible frame))) 
+         (update-table table @*eas*)))))
+
+(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">add-ea-table-watch</span> []
+  (add-hook #'ea-on-start-hook #'update-ea-table)
+  <span style="color: #b22222;">;;</span><span style="color: #b22222;">TODOD: better add-to-list, not repeat, maybe per *ns*?
+</span>  (add-hook #'ea-on-exit-hook #'update-ea-table)
+  (<span style="color: #ff0000; font-weight: bold;">add-watcher</span> *eas* <span style="color: #8b2252;">"table update"</span> (<span style="color: #7a378b;">fn</span> [&amp; args]
+                                      (update-ea-table))))
+
+<span style="color: #b22222;">;;</span><span style="color: #b22222;">
+</span>(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">gui-new-table</span> [frame]
+  (<span style="color: #a020f0;">let</span> [eas @*eas*
+        table (JTable. (ea-table-model eas))
+        panel
+        (miglayout (JPanel.)
+                   (JScrollPane. table) 
+                   <span style="color: #8b2252;">"span,grow"</span> <span style="color: #7a378b;">:wrap</span> 
+                   (<span style="color: #a020f0;">doto</span>  (JButton. <span style="color: #8b2252;">"refresh"</span>)
+                     (add-action-listener
+                      (<span style="color: #7a378b;">fn</span> [e] (update-table table @*eas*))))
+                   <span style="color: #b22222;">;;</span><span style="color: #b22222;">TODO: technically, is thread safe, oh well, do we care?
+</span>                   (<span style="color: #a020f0;">doto</span> (JButton. <span style="color: #8b2252;">"stop"</span>)
+                     (add-action-listener
+                      (<span style="color: #7a378b;">fn</span> [e] 
+                        (<span style="color: #7a378b;">locking</span> table 
+                          (<span style="color: #a020f0;">let</span> [i (.getSelectedRow table)
+                                ea (<span style="color: #a020f0;">when</span> (<span style="color: #7a378b;">&gt;=</span> i 0) (.getValueAt (.getModel table)
+                                                               i (.getColumnCount table)))]
+                            (<span style="color: #a020f0;">when</span> (<span style="color: #a020f0;">and</span> (<span style="color: #7a378b;">&gt;=</span> i 0)
+                                       (prompt <span style="color: #8b2252;">"do you really want to stop ea %s"</span> i))
+                              (stop ea))))))) 
+                   (<span style="color: #a020f0;">doto</span> (JButton. <span style="color: #8b2252;">"clear"</span>)
+                     (add-action-listener
+                      (<span style="color: #7a378b;">fn</span> [e]
+                        (<span style="color: #a020f0;">when</span> (prompt <span style="color: #8b2252;">"Do you really want to clear stopped eas?"</span> true)
+                          (update-table
+                           table
+                           (<span style="color: #7a378b;">swap!</span> *eas* (<span style="color: #7a378b;">fn</span> [old]
+                                          (<span style="color: #7a378b;">filter</span> alive? old)))))))))]
+    (<span style="color: #7a378b;">alter-var-root</span>  #'ea-table-gui (<span style="color: #7a378b;">constantly</span> {<span style="color: #7a378b;">:table</span> table <span style="color: #7a378b;">:frame</span> frame}))
+    panel))
+
+(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">display-ea-table</span> []
+  (<span style="color: #a020f0;">if-not</span> (<span style="color: #7a378b;">:frame</span> ea-table-gui)
+    (<span style="color: #a020f0;">let</span> [frame (jframe <span style="color: #8b2252;">"expert advisors"</span>)]
+      (<span style="color: #a020f0;">doto</span> frame 
+        (.add (gui-new-table frame))
+        (.pack)
+        (.setVisible true))
+      (add-ea-table-watch))
+    (<span style="color: #a020f0;">do</span> (update-ea-table true) 
+        (.setVisible (<span style="color: #7a378b;">:frame</span> ea-table-gui) true))))
+
+(<span style="color: #7a378b;">alter-var-root</span>
+ #'forex.interface.gui/gui-key-map
+ merge {\v #'display-ea-table})
+</pre></div>
+
+
+
+
+<div class="org-src-container"><label class="org-src-name">interface-gui()</label><pre class="src src-clojure">
+<span style="color: #b22222;">;;</span><span style="color: #b22222;">(clojure.core/use 'nstools.ns)
+</span>(<span style="color: #a020f0;">ns</span> forex.interface.gui
+  (<span style="color: #7a378b;">:require</span> swank.swank)  
+  (<span style="color: #7a378b;">:use</span>
+   forex.util.general
+   forex.util.log
+   forex.module.ea forex.util.general
+   clojure.contrib.miglayout forex.util.emacs 
+   forex.util.gui forex.interface.tray)
+  (<span style="color: #7a378b;">:import</span> 
+   (java.awt Dimension Font event.MouseListener
+             event.MouseAdapter Toolkit event.ActionListener event.KeyListener)
+   (javax.swing JComboBox JPopupMenu JMenuItem
+                ImageIcon SwingConstants
+                table.AbstractTableModel 
+                JScrollPane JTable
+                JFrame JPanel JTextField JLabel JButton JFileChooser
+                SwingUtilities)))
+<span style="color: #b22222;">;;</span><span style="color: #b22222;">TODO: all action listeners should be vars for maximum flexibility - because sometimes it all goes away!
+</span>
+<span style="color: #b22222;">;;</span><span style="color: #b22222;">Useful User Vars
+</span>(<span style="color: #a020f0;">defonce</span> <span style="color: #0000ff;">gui</span> nil) 
+(<span style="color: #a020f0;">defonce</span> <span style="color: #0000ff;">toplevel</span> nil)
+(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">message</span> [msg &amp; args]
+  (<span style="color: #a020f0;">when-let</span> [it (<span style="color: #7a378b;">:status</span> gui)]
+    (.setText it (<span style="color: #7a378b;">apply</span> format msg args))))
+
+<span style="color: #b22222;">;;</span><span style="color: #b22222;">LOADING EAS
+</span>(<span style="color: #a020f0;">defonce</span> <span style="color: #0000ff;">prev-load-file</span> (<span style="color: #7a378b;">atom</span> nil))
+(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">on-load-eas</span> []
+  (<span style="color: #a020f0;">let</span> [fileopen (<span style="color: #a020f0;">if</span> @prev-load-file (JFileChooser. @prev-load-file) (JFileChooser.))
+        ret (.showDialog fileopen nil <span style="color: #8b2252;">"Load"</span>)] 
+    (<span style="color: #a020f0;">if</span> (<span style="color: #7a378b;">=</span> ret JFileChooser/APPROVE_OPTION)
+      (<span style="color: #a020f0;">let</span> [file (.getSelectedFile fileopen)]
+        (with-out-str+ out (<span style="color: #a020f0;">if-let</span> [it (load-eas file true)] (message <span style="color: #8b2252;">"loaded %s eas"</span> it) (inform (<span style="color: #7a378b;">str</span> out))))
+        (<span style="color: #7a378b;">reset!</span> prev-load-file (.getParentFile file))))))
+
+<span style="color: #b22222;">;;</span><span style="color: #b22222;">SAVING EAS
+</span>(<span style="color: #a020f0;">defonce</span> <span style="color: #0000ff;">prev-save-file</span> (<span style="color: #7a378b;">atom</span> nil))
+(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">on-save-eas</span> []
+  (message <span style="color: #8b2252;">"saving ..."</span>)
+  (<span style="color: #a020f0;">let</span> [fileopen
+        (<span style="color: #a020f0;">if</span> @prev-save-file (JFileChooser. @prev-save-file) (JFileChooser.))
+        ret (.showDialog fileopen nil <span style="color: #8b2252;">"Save"</span>)]
+    (<span style="color: #a020f0;">if</span> (<span style="color: #7a378b;">=</span> ret JFileChooser/APPROVE_OPTION)
+      (<span style="color: #a020f0;">let</span> [file (.getSelectedFile fileopen)]
+        (<span style="color: #7a378b;">reset!</span> prev-save-file (.getParentFile file))
+        (<span style="color: #a020f0;">if-let</span> [it (save-eas file)]
+          (message <span style="color: #8b2252;">"saved %s eas"</span> it)
+          (inform <span style="color: #8b2252;">"unable to acquire ea write lock in order to save all eas"</span>)))))) 
+(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">on-log</span> []
+  (message <span style="color: #8b2252;">"open log file @ %s/.forex/"</span> (System/getProperty <span style="color: #8b2252;">"user.home"</span>))) 
+<span style="color: #b22222;">;;</span><span style="color: #b22222;">User Customization
+</span>(defhook gui-on-exit-hooks) 
+(defhook gui-create-pre-hook)
+(defhook gui-create-post-hook)
+(<span style="color: #a020f0;">defvar</span> <span style="color: #0000ff;">swank-port</span> 4005) 
+(<span style="color: #a020f0;">defvar</span> <span style="color: #0000ff;">gui-image</span> <span style="color: #8b2252;">"pictures/clojure.gif"</span>)
+(<span style="color: #a020f0;">defvar</span> <span style="color: #0000ff;">gui-icon-image</span> <span style="color: #8b2252;">"pictures/clojure.gif"</span>)
+(<span style="color: #a020f0;">defvar</span> <span style="color: #0000ff;">gui-window-image</span> <span style="color: #8b2252;">"pictures/clojure.gif"</span>)
+
+(<span style="color: #a020f0;">defvar</span> <span style="color: #0000ff;">gui-key-map</span> 
+  {\l #'on-log  
+   \s 
+   #(<span style="color: #a020f0;">do</span>
+      (swank.swank/start-repl swank-port)
+      (message <span style="color: #8b2252;">"started swank on port %s"</span> swank-port))})
+(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">on-restart-eas</span> []
+  (<span style="color: #a020f0;">dorun</span> (<span style="color: #7a378b;">map</span> restart @*eas*))
+  (message <span style="color: #8b2252;">"restarted %s eas"</span> (<span style="color: #7a378b;">count</span> @*eas*))) 
+(<span style="color: #a020f0;">defvar</span>
+  <span style="color: #0000ff;">gui-menu-items</span>
+  [{<span style="color: #7a378b;">:name</span> <span style="color: #8b2252;">"new ea"</span> <span style="color: #7a378b;">:key</span> \n}
+   {<span style="color: #7a378b;">:name</span> <span style="color: #8b2252;">"save eas"</span> <span style="color: #7a378b;">:action</span> #'on-save-eas}
+   {<span style="color: #7a378b;">:name</span> <span style="color: #8b2252;">"load eas"</span> <span style="color: #7a378b;">:action</span> #'on-load-eas}
+   {<span style="color: #7a378b;">:name</span> <span style="color: #8b2252;">"view eas"</span> <span style="color: #7a378b;">:key</span> \v} 
+   {<span style="color: #7a378b;">:name</span> <span style="color: #8b2252;">"log"</span> <span style="color: #7a378b;">:key</span> \l <span style="color: #7a378b;">:action</span> #'on-log}
+   {<span style="color: #7a378b;">:name</span> <span style="color: #8b2252;">"start swank"</span> <span style="color: #7a378b;">:key</span> \s}
+   {<span style="color: #7a378b;">:name</span> <span style="color: #8b2252;">"restart eas"</span> <span style="color: #7a378b;">:key</span> \r <span style="color: #7a378b;">:action</span> #'on-restart-eas} 
+   {<span style="color: #7a378b;">:name</span> <span style="color: #8b2252;">"load forex-user"</span> 
+    <span style="color: #7a378b;">:action</span> #(<span style="color: #a020f0;">try</span>       
+               (message <span style="color: #8b2252;">"loading ..."</span>)
+               (<span style="color: #7a378b;">require</span> <span style="color: #7a378b;">:reload</span> 'forex-user)
+               (message <span style="color: #8b2252;">"loaded forex-user"</span>)
+               (<span style="color: #a020f0;">catch</span> Exception e
+                 (message <span style="color: #8b2252;">"failed to load forex-user"</span>)
+                 (inform <span style="color: #8b2252;">"failed to load forex-user %s"</span> e)))}
+   {<span style="color: #7a378b;">:name</span> <span style="color: #8b2252;">"preferences"</span> <span style="color: #7a378b;">:key</span> \p}])
+(<span style="color: #a020f0;">defvar</span> <span style="color: #0000ff;">gui-frame-title</span> <span style="color: #8b2252;">"clj-forex"</span>)
+(<span style="color: #a020f0;">defvar</span> <span style="color: #0000ff;">gui-reminder-visible</span> true) 
+<span style="color: #b22222;">;;;;</span><span style="color: #b22222;">
+</span><span style="color: #b22222;">;;;</span><span style="color: #b22222;">
+</span>(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">jframe</span> [title]
+  (<span style="color: #a020f0;">doto</span>
+      (JFrame. title)
+    (.setIconImage (create-image gui-window-image))))
+
+(<span style="color: #a020f0;">defn-</span> <span style="color: #0000ff;">get-fn</span> [a] (<span style="color: #a020f0;">if</span> (<span style="color: #7a378b;">var?</span> a) (<span style="color: #7a378b;">var-get</span> a) a))
+(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">on-key</span> [e] 
+  (<span style="color: #a020f0;">when-let</span> [it (get-fn (<span style="color: #7a378b;">get</span> gui-key-map (.getKeyChar e)))]
+    (<span style="color: #a020f0;">try</span> (<span style="color: #a020f0;">when</span> (<span style="color: #7a378b;">fn?</span> it) (it))
+         (<span style="color: #a020f0;">catch</span> Exception e
+           (.printStackTrace e)
+           (severe e))))) 
+(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">add-menu-item</span> [parent {<span style="color: #7a378b;">:keys</span> [name key action]}]
+  (<span style="color: #a020f0;">let</span> [item (JMenuItem. (<span style="color: #7a378b;">str</span> name <span style="color: #8b2252;">" ("</span> key <span style="color: #8b2252;">")"</span>))]
+    (add-action-listener 
+     item (<span style="color: #a020f0;">or</span> (<span style="color: #a020f0;">and</span> (<span style="color: #7a378b;">not</span> action) (<span style="color: #7a378b;">bound-fn</span>
+                                 [e]
+                                 (<span style="color: #a020f0;">let</span> [key-map-fn (get-fn (<span style="color: #7a378b;">get</span> gui-key-map key))]
+                                   (<span style="color: #a020f0;">when</span> (<span style="color: #7a378b;">fn?</span> key-map-fn) (key-map-fn)))))
+              (<span style="color: #7a378b;">bound-fn</span> [e] (thread (action))))) <span style="color: #b22222;">;;</span><span style="color: #b22222;">no e
+</span>    (.add parent item)
+    item)) 
+(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">on-popup</span> [e] 
+  (<span style="color: #a020f0;">try</span>
+    (<span style="color: #a020f0;">let</span> [menu (JPopupMenu.)]
+      (<span style="color: #a020f0;">dorun</span> (<span style="color: #7a378b;">map</span> #(add-menu-item menu %) gui-menu-items))
+      (.show menu
+             (.getComponent e)
+             (.getX e) (.getY e)))
+    (<span style="color: #a020f0;">catch</span> Exception e (<span style="color: #7a378b;">println</span> e))))
+(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">on-exit</span> [icon] 
+  (<span style="color: #a020f0;">if</span> (<span style="color: #7a378b;">empty?</span> gui-on-exit-hooks)
+    (remove-system-icon icon)
+    (run-hook-with-args gui-on-exit-hooks icon)))
+(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">on-click</span> [icon]
+  (.setVisible (<span style="color: #7a378b;">:frame</span> toplevel) true))
+(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">gui-make-icon</span> []
+  (system-icon
+   {<span style="color: #7a378b;">:image</span> gui-icon-image
+    <span style="color: #7a378b;">:on-click</span>  on-click 
+    <span style="color: #7a378b;">:on-exit</span> on-exit}))
+
+(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">new-gui</span> []
+  (<span style="color: #7a378b;">alter-var-root</span> #'gui (<span style="color: #7a378b;">constantly</span> nil))
+  (<span style="color: #7a378b;">alter-var-root</span> #'toplevel (<span style="color: #7a378b;">constantly</span> nil))
+  (run-hooks gui-create-pre-hook)
+  (<span style="color: #a020f0;">let</span> [icon (gui-make-icon)
+        image (<span style="color: #a020f0;">if</span> (<span style="color: #7a378b;">string?</span> gui-image) (create-icon gui-image))
+        panel
+        (<span style="color: #a020f0;">doto</span> (miglayout  
+               (JPanel.)  <span style="color: #7a378b;">:column</span> <span style="color: #8b2252;">"center"</span> 
+               (JLabel. (<span style="color: #a020f0;">if</span> image image <span style="color: #8b2252;">""</span>))  <span style="color: #8b2252;">"width 245!"</span> <span style="color: #8b2252;">"span,growx,pushx"</span> <span style="color: #7a378b;">:wrap</span> 
+               (JComboBox. (<span style="color: #7a378b;">into-array</span> String @*ea-registry*))
+               {<span style="color: #7a378b;">:id</span> <span style="color: #7a378b;">:selector</span>} <span style="color: #8b2252;">"span,growx,pushx"</span>  <span style="color: #7a378b;">:wrap</span>
+               (<span style="color: #a020f0;">doto</span> (JLabel. <span style="color: #8b2252;">"&lt;html&gt;n = new ea&lt;br&gt;v = view eas&lt;br&gt;l = log&lt;br&gt;s = start swank&lt;html&gt;"</span>) (.setHorizontalAlignment SwingConstants/CENTER))
+
+               {<span style="color: #7a378b;">:id</span> <span style="color: #7a378b;">:reminder</span>} <span style="color: #7a378b;">:wrap</span>
+               (<span style="color: #a020f0;">doto</span> (JLabel. <span style="color: #8b2252;">""</span>)
+                 (.setFont (Font. <span style="color: #8b2252;">"SansSerif"</span> Font/ITALIC 12)))
+               {<span style="color: #7a378b;">:id</span> <span style="color: #7a378b;">:status</span>} <span style="color: #8b2252;">"h 20!"</span> <span style="color: #8b2252;">"growx,align left,span"</span>))  
+        frame (<span style="color: #a020f0;">doto</span> (jframe gui-frame-title)
+                (.setDefaultCloseOperation JFrame/HIDE_ON_CLOSE) 
+                (.add panel)
+                (.pack)) 
+        {<span style="color: #7a378b;">:keys</span> [selector reminder view]} (components panel)] 
+    (<span style="color: #a020f0;">when-not</span> gui-reminder-visible (.setVisible reminder false))
+    <span style="color: #b22222;">;; </span><span style="color: #b22222;">(add-action-listener selector (bound-fn* on-selector))
+</span>    (<span style="color: #a020f0;">dorun</span> (<span style="color: #7a378b;">map</span> (<span style="color: #7a378b;">fn</span> [obj]
+                  (add-key-listener obj #'on-key)
+                  (add-popup-listener obj #'on-popup))
+                (<span style="color: #7a378b;">conj</span> (<span style="color: #7a378b;">vals</span> (components panel)) panel)))
+    (<span style="color: #7a378b;">alter-var-root</span>  #'gui (<span style="color: #7a378b;">constantly</span> (components panel)))
+    (<span style="color: #7a378b;">alter-var-root</span> #'toplevel (<span style="color: #7a378b;">constantly</span> {<span style="color: #7a378b;">:frame</span> frame <span style="color: #7a378b;">:panel</span> panel
+                                            <span style="color: #7a378b;">:icon</span> icon}))
+    (run-hooks gui-create-post-hook)
+    frame))
+
+
+(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">add-ea-registry-watch</span> []
+  (add-watch
+   *ea-registry* <span style="color: #8b2252;">"registry-add"</span>
+   (<span style="color: #7a378b;">bound-fn</span> [key ref old new] 
+     (<span style="color: #a020f0;">when-let</span> [it (<span style="color: #7a378b;">:selector</span> gui)]
+       (.removeAllItems it)
+       (<span style="color: #a020f0;">dorun</span> (<span style="color: #7a378b;">map</span> #(.addItem it %) new))))))
+
+(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">invoke-new-gui</span>
+  ([] (invoke-new-gui <span style="color: #8b2252;">""</span>))
+  ([msg] 
+     (invoke-later
+      (<span style="color: #a020f0;">when</span> (<span style="color: #7a378b;">:icon</span> toplevel)
+        (remove-system-icon (<span style="color: #7a378b;">:icon</span> toplevel)))
+      (<span style="color: #a020f0;">when</span> (<span style="color: #7a378b;">:frame</span> toplevel)
+        (.setVisible (<span style="color: #7a378b;">:frame</span> toplevel) false))
+      (new-gui)
+      (.setVisible (<span style="color: #7a378b;">:frame</span> toplevel) true) 
+      (add-system-icon (<span style="color: #7a378b;">:icon</span> toplevel)) 
+      (<span style="color: #a020f0;">when</span> msg (message msg))
+      (add-ea-registry-watch))))
+</pre></div>
+
+
+
+
+
+
+<div class="org-src-container"><label class="org-src-name">interface-main()</label><pre class="src src-clojure">
+(<span style="color: #a020f0;">ns</span> forex.interface.main
+  (<span style="color: #7a378b;">:require</span> swank.swank)
+  (<span style="color: #7a378b;">:use</span> forex.interface.gui forex.interface.ea-table forex.interface.ea-new)
+  (<span style="color: #7a378b;">:use</span> forex.util.emacs forex.util.gui forex.interface.tray))
+
+(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">on-system-exit</span> [icon]
+  (<span style="color: #a020f0;">when</span> (prompt (<span style="color: #7a378b;">format</span> <span style="color: #8b2252;">"Do you really want to exit %s?
+This will stop all running expert advisors."</span> gui-frame-title))
+    (System/exit 0)))
+
+(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">-main</span> [&amp; args]
+  (<span style="color: #a020f0;">let</span> [user-exception 
+        (<span style="color: #a020f0;">try</span>
+          (<span style="color: #7a378b;">require</span> 'forex-user) 
+          nil
+          (<span style="color: #a020f0;">catch</span> Exception e 
+            (.printStackTrace e)
+            e))] 
+    (add-to-list  
+     #'gui-on-exit-hooks on-system-exit)
+    (invoke-new-gui (<span style="color: #a020f0;">when</span> user-exception 
+                      <span style="color: #8b2252;">"error when loading forex-user: check log"</span>))))
+</pre></div>
+
+
+
+
+<div class="org-src-container"><label class="org-src-name">interface-tray()</label><pre class="src src-clojure">
+(<span style="color: #a020f0;">ns</span> forex.interface.tray
+  (<span style="color: #7a378b;">:use</span> forex.util.gui)
+  (<span style="color: #7a378b;">:import</span>                        
+   (javax.swing JFrame)
+   (java.awt Toolkit SystemTray  EventQueue TrayIcon TrayIcon$MessageType PopupMenu MenuItem)
+   (java.awt.event ActionListener)))
+
+(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">remove-system-icon</span> [icon] (.remove (SystemTray/getSystemTray) icon))
+(<span style="color: #a020f0;">defn-</span> <span style="color: #0000ff;">setup-popup-menu</span>
+  ([menu icon] (setup-popup-menu menu icon (<span style="color: #7a378b;">constantly</span> true)))
+  ([menu icon on-exit]
+     (<span style="color: #a020f0;">let</span> [exit (MenuItem. <span style="color: #8b2252;">"Exit"</span>)]
+       (add-action-listener
+        exit (<span style="color: #a020f0;">if</span> on-exit
+               (<span style="color: #7a378b;">bound-fn</span> [e] (<span style="color: #a020f0;">try</span>
+                               (on-exit icon)
+                               (<span style="color: #a020f0;">catch</span> Exception e
+                                 (.printStackTrace e)
+                                 (<span style="color: #7a378b;">println</span> <span style="color: #8b2252;">"ERROR IN ON-EXIT %s"</span> e))))
+               (<span style="color: #7a378b;">fn</span> [e] (remove-system-icon icon))))
+       (.add menu exit)
+       menu)))
+
+(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">system-icon</span> [{<span style="color: #7a378b;">:keys</span> [image on-exit on-click on-exit]}]
+  {<span style="color: #7a378b;">:pre</span> [(<span style="color: #7a378b;">string?</span> image)]}
+  (<span style="color: #a020f0;">let</span> [menu (PopupMenu.)
+        tray-icon
+        (<span style="color: #a020f0;">doto</span> (TrayIcon. (.getImage (Toolkit/getDefaultToolkit) image)
+                         nil menu)
+          (.setImageAutoSize true))]
+    (setup-popup-menu menu tray-icon on-exit) 
+    (<span style="color: #a020f0;">when</span> on-click (add-action-listener tray-icon (<span style="color: #7a378b;">bound-fn</span> [e] (<span style="color: #a020f0;">try</span> (on-click tray-icon) (<span style="color: #a020f0;">catch</span> Exception e (<span style="color: #7a378b;">println</span> <span style="color: #8b2252;">"ERROR IN ON-CLICK %s"</span> e))))))  
+    tray-icon)) 
+(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">add-system-icon</span> [icon] (.add (SystemTray/getSystemTray) icon) icon)
+
+(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">icon-info</span>
+  ([icon txt] (icon-info icon <span style="color: #8b2252;">"info"</span> txt))
+  ([icon caption txt] (.displayMessage icon caption txt TrayIcon$MessageType/INFO)))
+(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">icon-warning</span>
+  ([icon txt] (icon-warning icon <span style="color: #8b2252;">"warning"</span> txt))
+  ([icon caption txt] (.displayMessage icon caption txt TrayIcon$MessageType/WARNING)))
+(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">icon-error</span>
+  ([icon txt] (icon-error icon <span style="color: #8b2252;">"error"</span> txt))
+  ([icon caption txt] (.displayMessage icon caption txt TrayIcon$MessageType/ERROR)))
+
+<span style="color: #b22222;">;;</span><span style="color: #b22222;">(def icon (add-system-icon (system-icon {:image  "/home/seth/Desktop/clojure.gif" :on-click (fn [_] (println "HI"))})))
 </span></pre></div>
 
 
@@ -3015,8 +4310,56 @@ return(val);
 </div>
 
 <div id="outline-container-4_6" class="outline-3">
-<h3 id="sec-4_6"><span class="section-number-3">4.6</span> Templates </h3>
+<h3 id="sec-4_6"><span class="section-number-3">4.6</span> User </h3>
 <div class="outline-text-3" id="text-4_6">
+
+
+
+
+<div class="org-src-container"><label class="org-src-name">forex_user()</label><pre class="src src-clojure">
+<span style="color: #b22222;">;;</span><span style="color: #b22222;">forex_user is the ns in which customization will occur
+</span>
+(clojure.core/<span style="color: #7a378b;">use</span> 'nstools.ns)
+(ns+ forex-user 
+     (<span style="color: #7a378b;">:clone</span> forex.default)
+     (<span style="color: #7a378b;">:use</span> forex.interface.gui forex.util.log clj.io))
+(<span style="color: #7a378b;">require</span> <span style="color: #7a378b;">:reload</span> 'forex.examples.timeout-ea.timeout-ea)
+<span style="color: #b22222;">;;</span><span style="color: #b22222;">(require :reload-all 'forex.interface.main)
+</span>(<span style="color: #a020f0;">when-not</span> (backend/alive?)
+  (backend/start))
+
+(<span style="color: #a020f0;">when-not</span> log-file
+  (setq forex.util.log/log
+        (new-logger (.replaceAll
+                     (<span style="color: #7a378b;">format</span> <span style="color: #8b2252;">"log_%s.txt"</span> (now)) <span style="color: #8b2252;">":"</span> <span style="color: #8b2252;">"_"</span>))))
+
+(<span style="color: #a020f0;">defvar</span> <span style="color: #0000ff;">ea-auto-save-minutes</span>  5)
+(<span style="color: #a020f0;">defvar</span> <span style="color: #0000ff;">ea-auto-save-file</span>
+  (<span style="color: #a020f0;">let</span> [file (<span style="color: #7a378b;">format</span> <span style="color: #8b2252;">"%s/.forex/auto/ea-auto-save"</span>
+                     (System/getProperty <span style="color: #8b2252;">"user.home"</span>))]
+    (make-parents file)
+    file))  
+(<span style="color: #a020f0;">defonce</span> <span style="color: #0000ff;">ea-auto-save-thread</span> (<span style="color: #a020f0;">doto</span> (thread
+                                    (<span style="color: #a020f0;">loop</span> []
+                                      (save-eas ea-auto-save-file)
+                                      (sleep (<span style="color: #7a378b;">*</span> 60 ea-auto-save-minutes))
+                                      (<span style="color: #a020f0;">recur</span>)))
+                               (.setName <span style="color: #8b2252;">"ea auto save"</span>)))
+
+(<span style="color: #7a378b;">comment</span> 
+  (setq gui-frame-title <span style="color: #8b2252;">"MINE!"</span>
+        gui-reminder-visible true))
+</pre></div>
+
+
+
+</div>
+
+</div>
+
+<div id="outline-container-4_7" class="outline-3">
+<h3 id="sec-4_7"><span class="section-number-3">4.7</span> Templates </h3>
+<div class="outline-text-3" id="text-4_7">
 
 
 
@@ -3025,9 +4368,32 @@ return(val);
 (clojure.core/<span style="color: #7a378b;">use</span> 'nstools.ns)
 (ns+ forex.default
      (<span style="color: #7a378b;">:clone</span> clj.core)
+     (<span style="color: #7a378b;">:use</span> forex.util.general)
      (<span style="color: #7a378b;">:use</span> forex.util.core
            forex.util.emacs
            forex.util.log) 
+     (<span style="color: #7a378b;">:use</span> forex.module.error
+           forex.module.ea
+           forex.module.indicator
+           forex.module.account forex.module.account.utils
+           [clj-time.core <span style="color: #7a378b;">:exclude</span> [extend start]])
+     (<span style="color: #7a378b;">:require</span>
+      [forex.backend.mql.socket-service <span style="color: #7a378b;">:as</span> backend]))
+</pre></div>
+
+
+
+
+<div class="org-src-container"><label class="org-src-name">gui-template()</label><pre class="src src-clojure">
+(clojure.core/<span style="color: #7a378b;">use</span> 'nstools.ns)
+(ns+ forex.gui 
+     (<span style="color: #7a378b;">:clone</span> clj.core)
+     (<span style="color: #7a378b;">:import</span> (javax.swing JScrollPane JFrame JPanel JTextArea
+                           JLabel JButton SwingUtilities))
+     (<span style="color: #7a378b;">:use</span> forex.util.general forex.util.gui clojure.contrib.miglayout)
+     (<span style="color: #7a378b;">:use</span> forex.util.core
+           forex.util.emacs
+           forex.util.log)  
      (<span style="color: #7a378b;">:use</span> forex.module.error
            forex.module.ea
            forex.module.indicator
@@ -3043,9 +4409,9 @@ return(val);
 
 </div>
 
-<div id="outline-container-4_7" class="outline-3">
-<h3 id="sec-4_7"><span class="section-number-3">4.7</span> Examples </h3>
-<div class="outline-text-3" id="text-4_7">
+<div id="outline-container-4_8" class="outline-3">
+<h3 id="sec-4_8"><span class="section-number-3">4.8</span> Examples </h3>
+<div class="outline-text-3" id="text-4_8">
 
 <p>Notice that examples are right now just examples, they arent particularly
 profitable, they are examples of using clj-forex. I decided to release
@@ -3059,28 +4425,31 @@ use clj-forex&hellip;.
 <span style="color: #b22222;">;;</span><span style="color: #b22222;">forex.examples.timeout-ea : ea which manages the orders of a trade
 </span>(clojure.core/<span style="color: #7a378b;">use</span> 'nstools.ns)
 (ns+ forex.examples.timeout-ea.timeout-ea
-     (<span style="color: #7a378b;">:like</span> forex.default)
-     (<span style="color: #7a378b;">:use</span> utils.general
-           forex.examples.timeout-ea.utils))
+     (<span style="color: #7a378b;">:clone</span> forex.gui) 
+     (<span style="color: #7a378b;">:use</span> forex.examples.timeout-ea.utils
+           forex.interface.gui)
+     (<span style="color: #7a378b;">:import</span> (javax.swing JScrollPane)))
+(register-ea)
  <span style="color: #b22222;">;;</span><span style="color: #b22222;">ea vars   
 </span>(<span style="color: #a020f0;">defvar</span> <span style="color: #0000ff;">state</span> (<span style="color: #7a378b;">atom</span> <span style="color: #7a378b;">:timeout</span>))
 (<span style="color: #a020f0;">defvar</span> <span style="color: #0000ff;">end-time</span>)
 (<span style="color: #a020f0;">defvar</span> <span style="color: #0000ff;">order</span>) 
-<span style="color: #b22222;">;;  </span><span style="color: #b22222;">
-</span><span style="color: #b22222;">;;</span><span style="color: #b22222;">TODO: when we order, and modify fails, how do we get the error? later :)...
-</span>(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">init</span> [{<span style="color: #7a378b;">:keys</span> [type sl price]}]
-  (aif (order! (atom-hash {<span style="color: #7a378b;">:type</span> type <span style="color: #7a378b;">:sl</span> sl <span style="color: #7a378b;">:price</span> price
-                           <span style="color: #7a378b;">:lots</span> (<span style="color: #7a378b;">*</span> (mode-minlot) 2)}))
-       {#'end-time (plus (now) (hours 12))
-        #'order it} 
-       (out <span style="color: #8b2252;">"MQL error %s"</span> (<span style="color: #7a378b;">:e</span> it))))
-(<span style="color: #7a378b;">declare</span> timeout break-even trail)
+<span style="color: #b22222;">;; </span><span style="color: #b22222;">
+</span>(<span style="color: #7a378b;">declare</span> timeout break-even trail)
+
+<span style="color: #b22222;">;;</span><span style="color: #b22222;">TODO: when we order, and modify fails, how do we get the error? later :)...
+</span>(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">init</span> [{<span style="color: #7a378b;">:keys</span> [type sl price hour]}]
+  (aif (order! {<span style="color: #7a378b;">:type</span> type <span style="color: #7a378b;">:sl</span> sl <span style="color: #7a378b;">:price</span> price
+                <span style="color: #7a378b;">:lots</span> (<span style="color: #7a378b;">*</span> (mode-minlot) 2)})
+       {#'end-time (plus (now) (hours hour))
+        #'order (atom-hash it)} 
+       (<span style="color: #7a378b;">:e</span> it))) 
+
 (<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">start</span> [args]
   (<span style="color: #a020f0;">cond</span>
    (close? order) (exit <span style="color: #8b2252;">"order is now closed"</span>)
    (<span style="color: #7a378b;">=</span> @state <span style="color: #7a378b;">:timeout</span>) (timeout args)
    (<span style="color: #7a378b;">=</span> @state <span style="color: #7a378b;">:break-even</span>) (break-even args))) 
-
 
 (<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">timeout</span> [_]
   (<span style="color: #a020f0;">cond</span>
@@ -3095,22 +4464,46 @@ use clj-forex&hellip;.
 </span>   (after? (now) end-time)
    (awhen (delete! order) (exit <span style="color: #8b2252;">"order timed out"</span>))))
 
-(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">break-even</span> [{<span style="color: #7a378b;">:keys</span> [tp2 tp1]}]
-  (<span style="color: #a020f0;">when</span> (hit? order tp1)
-    (out <span style="color: #8b2252;">"closing to half ..."</span>)
-    (awhen (<span style="color: #a020f0;">-&gt;</span> (modify! order {<span style="color: #7a378b;">:sl</span> (<span style="color: #7a378b;">:price</span> order) <span style="color: #7a378b;">:tp</span> tp2})
-               (close! (lot (<span style="color: #7a378b;">/</span> (<span style="color: #7a378b;">:lots</span> order) 2))))
-           (exit <span style="color: #8b2252;">"finished break even"</span>))))
+(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">break-even</span> [{<span style="color: #7a378b;">:keys</span> [sl tp2 tp1]}]
+  (<span style="color: #a020f0;">if</span> (hit? order tp1)
+    (<span style="color: #a020f0;">do</span> (out <span style="color: #8b2252;">"closing to half ..."</span>)
+        (awhen (<span style="color: #a020f0;">-&gt;</span> (modify! order {<span style="color: #7a378b;">:sl</span> (<span style="color: #7a378b;">:price</span> order) <span style="color: #7a378b;">:tp</span> tp2})
+                   (close! (lot (<span style="color: #7a378b;">/</span> (<span style="color: #7a378b;">:lots</span> order) 2))))
+               (exit <span style="color: #8b2252;">"finished break even"</span>)))
+    (modify! order {<span style="color: #7a378b;">:sl</span> sl})))
 
 (<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">hh</span> [a]
   (<span style="color: #7a378b;">apply</span> max (<span style="color: #7a378b;">map</span> high (<span style="color: #7a378b;">range</span> 1 (<span style="color: #7a378b;">inc</span> a)))))
 (<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">ll</span> [a]
   (<span style="color: #7a378b;">apply</span> min (<span style="color: #7a378b;">map</span> low (<span style="color: #7a378b;">range</span> 1 (<span style="color: #7a378b;">inc</span> a)))))
 (<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">trail</span> [_]
-  (modify! order 
-           {<span style="color: #7a378b;">:sl</span> (<span style="color: #a020f0;">if</span> (sell? order)
-                  (<span style="color: #7a378b;">min</span> (<span style="color: #7a378b;">:sl</span> order) (hh 3))
-                  (<span style="color: #7a378b;">max</span> (<span style="color: #7a378b;">:sl</span> order) (ll 3)))}))
+  (modify! order {<span style="color: #7a378b;">:sl</span> (omax (<span style="color: #7a378b;">:sl</span> order) (<span style="color: #a020f0;">if</span> (sell? order) (hh 3) (ll 3)))})) 
+<span style="color: #b22222;">;;;</span><span style="color: #b22222;">GUI
+</span>(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">init-gui</span> []
+  (<span style="color: #a020f0;">let</span> [panel (JPanel.) text (JTextArea. 20 30)
+        frame (jframe <span style="color: #8b2252;">"timeout ea"</span>)]
+    (<span style="color: #a020f0;">doto</span> frame
+      (.add (miglayout
+             panel <span style="color: #7a378b;">:layout</span> <span style="color: #8b2252;">"center"</span> <span style="color: #7a378b;">:column</span> <span style="color: #8b2252;">"center"</span> <span style="color: #7a378b;">:row</span> <span style="color: #8b2252;">"center"</span>
+             (JLabel. <span style="color: #8b2252;">"paste email text"</span>) <span style="color: #7a378b;">:wrap</span>
+             (JScrollPane. text) <span style="color: #8b2252;">"span,grow"</span> <span style="color: #7a378b;">:wrap</span>
+             (<span style="color: #a020f0;">doto</span> (JButton. <span style="color: #8b2252;">"ok"</span>)
+               (add-action-listener
+                (<span style="color: #7a378b;">fn</span> [e] 
+                  (<span style="color: #a020f0;">let</span> [parsed (match-method (.getText text))]
+                    (<span style="color: #a020f0;">if</span> parsed
+                      (<span style="color: #a020f0;">when</span> (prompt <span style="color: #8b2252;">"is order %s ok?"</span> parsed)
+                        (with-out-str+ out
+                          (<span style="color: #a020f0;">if-not</span> (run parsed) 
+                            (inform <span style="color: #8b2252;">"failed to run ea %s"</span> (<span style="color: #7a378b;">str</span> out))
+                            (.setVisible frame false)))) 
+                      (inform <span style="color: #8b2252;">"failed to match input text"</span>))))))
+             <span style="color: #8b2252;">"w 50%"</span>
+             (<span style="color: #a020f0;">doto</span> (JButton. <span style="color: #8b2252;">"cancel"</span>)
+               (add-action-listener (<span style="color: #7a378b;">fn</span> [_] (.setVisible frame false))))
+             <span style="color: #8b2252;">"w 50%"</span>))
+      (.pack)
+      (.setVisible true))))
 </pre></div>
 
 
@@ -3121,25 +4514,13 @@ use clj-forex&hellip;.
 <div class="org-src-container"><label class="org-src-name">timeout-ea-utils()</label><pre class="src src-clojure">
 (clojure.core/<span style="color: #7a378b;">use</span> 'nstools.ns)
 (ns+ forex.examples.timeout-ea.utils
-     (<span style="color: #7a378b;">:like</span> forex.default)
-     (<span style="color: #7a378b;">:use</span> utils.general))
-(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">pip-price</span>
-  ([] (pip-price (env <span style="color: #7a378b;">:symbol</span>)))
-  ([symbol] (mode-tickvalue symbol)))
-<span style="color: #b22222;">;;</span><span style="color: #b22222;">TODO: mql err on point? no way! we should throw an error
-</span>
-(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">point</span> 
-  ([] (point (env <span style="color: #7a378b;">:symbol</span>)))
-  ([symbol]
-     (<span style="color: #7a378b;">*</span> 10 (mode-point symbol))))
-(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">pips</span>   
-  ([price] (pips price (env <span style="color: #7a378b;">:symbol</span>)))
-  ([price symbol] 
-     (<span style="color: #7a378b;">/</span> price (point symbol)))) 
-(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">price-of</span> 
-  ([val] (price-of val (env <span style="color: #7a378b;">:symbol</span>)))
-  ([val symbol]
-     (<span style="color: #7a378b;">*</span> (pip-price symbol) (pips val)))) 
+     (<span style="color: #7a378b;">:clone</span> forex.default)
+     (<span style="color: #7a378b;">:use</span> forex.util.general)) 
+
+(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">price</span>
+  ([val] (price val (env <span style="color: #7a378b;">:symbol</span>)))
+  ([val symbol] 
+     (<span style="color: #7a378b;">*</span> (mode-tickvalue symbol) (point val)))) 
 <span style="color: #b22222;">;;;;;;;;;;;;;;;;;;;;;;;;;;;;;</span><span style="color: #b22222;">
 </span>(<span style="color: #a020f0;">def</span> <span style="color: #0000ff;">method-regex</span>
   (<span style="color: #7a378b;">re-pattern</span> (.replaceAll
@@ -3159,8 +4540,10 @@ use clj-forex&hellip;.
     (debugging <span style="color: #8b2252;">"Matching Profit Multiplier Trade: "</span>
                (catch-un 
                 (<span style="color: #a020f0;">when-let</span> [it (<span style="color: #7a378b;">first</span> (<span style="color: #7a378b;">re-seq</span> method-regex (.replaceAll s <span style="color: #8b2252;">"[\\r\\n]+"</span> <span style="color: #8b2252;">" "</span>)))]
-                  (<span style="color: #a020f0;">let</span> [[method-type symbol type price stop tp1 tp2] (<span style="color: #7a378b;">rest</span> it)]
-                    {<span style="color: #7a378b;">:method</span> (.toLowerCase method-type)
+                  (<span style="color: #a020f0;">let</span> [[method-type symbol type price stop tp1 tp2] (<span style="color: #7a378b;">rest</span> it)
+                        method (.toLowerCase method-type)]
+                    {<span style="color: #7a378b;">:method</span> method
+                     <span style="color: #7a378b;">:hour</span> (<span style="color: #a020f0;">if</span> (<span style="color: #7a378b;">=</span> method <span style="color: #8b2252;">"spring"</span>) 4 12)
                      <span style="color: #7a378b;">:symbol</span> (.replaceAll symbol <span style="color: #8b2252;">"/"</span> <span style="color: #8b2252;">""</span>)
                      <span style="color: #7a378b;">:type</span> (<span style="color: #a020f0;">condp</span> = (.toLowerCase type)
                                <span style="color: #8b2252;">"buy"</span> <span style="color: #7a378b;">:buy-stop</span>
@@ -3181,15 +4564,15 @@ use clj-forex&hellip;.
 (ns+ forex.examples.renko.renko
      (<span style="color: #7a378b;">:clone</span> forex.default) 
      (<span style="color: #7a378b;">:use</span> forex.util.general)) 
+(register-ea) 
 <span style="color: #b22222;">;;</span><span style="color: #b22222;">TODO: *ea-stop* already refers to: #'forex.module.ea/*ea-stop* in namespace: forex.default 
-</span><span style="color: #b22222;">;;</span><span style="color: #b22222;">TODO: on GBP/JPY, why did it enter so late????
-</span>
-<span style="color: #b22222;">;;</span><span style="color: #b22222;">TODO!!!: speed up ns+ by alot! and dont have it automatically reload it, please!!!
+</span><span style="color: #b22222;">;;</span><span style="color: #b22222;">TODO: on GBP/JPY, why did it enter so late???? 
+</span><span style="color: #b22222;">;;</span><span style="color: #b22222;">TODO!!!: speed up ns+ by alot! and dont have it automatically reload it, please!!!
 </span>
 <span style="color: #b22222;">;;</span><span style="color: #b22222;">TODO: test reusing of account.utils
 </span><span style="color: #b22222;">;;</span><span style="color: #b22222;">TODO: defaults per currency
 </span>(<span style="color: #a020f0;">def</span> ^{<span style="color: #7a378b;">:var</span> true} <span style="color: #0000ff;">state</span> (<span style="color: #7a378b;">atom</span> <span style="color: #7a378b;">:monitor</span>)) 
-(<span style="color: #a020f0;">def</span> ^{<span style="color: #7a378b;">:var</span> true} <span style="color: #0000ff;">order</span> (atom-hash)) 
+(<span style="color: #a020f0;">def</span> ^{<span style="color: #7a378b;">:var</span> true} <span style="color: #0000ff;">order</span> (atom-hash))
 (<span style="color: #a020f0;">def</span> ^{<span style="color: #7a378b;">:var</span> true} <span style="color: #0000ff;">trail-time-period</span> 5)
 
 (<span style="color: #a020f0;">def</span> <span style="color: #0000ff;">main</span> (<span style="color: #7a378b;">partial</span> vma [2 2 100 1]))
@@ -3246,29 +4629,25 @@ use clj-forex&hellip;.
 </span>(<span style="color: #a020f0;">defmulti</span> <span style="color: #0000ff;">close-condition</span> (<span style="color: #7a378b;">fn</span> [o &amp; args] (<span style="color: #7a378b;">:category</span> o)))
 (<span style="color: #a020f0;">defmulti</span> <span style="color: #0000ff;">check</span> (<span style="color: #7a378b;">fn</span> [o &amp; args] (<span style="color: #7a378b;">:category</span> o)))
 <span style="color: #b22222;">;;;</span><span style="color: #b22222;">SCALP ORDER MANAGEMENT
-</span>(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">enough-profit?</span> [o] 
-  <span style="color: #b22222;">;;</span><span style="color: #b22222;">20 pips + spread
-</span>  (<span style="color: #7a378b;">&gt;=</span> (profit o) 10))
-(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">should-close?</span> [{<span style="color: #7a378b;">:keys</span> [type] <span style="color: #7a378b;">:as</span> o}] 
+</span>(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">should-close?</span> [{<span style="color: #7a378b;">:keys</span> [type] <span style="color: #7a378b;">:as</span> o}] 
   (<span style="color: #a020f0;">cond</span>
    (<span style="color: #7a378b;">=</span> type <span style="color: #7a378b;">:buy</span>)
-   (<span style="color: #a020f0;">or</span> (<span style="color: #a020f0;">or</span> (<span style="color: #7a378b;">&lt;</span> (signal 1) (<span style="color: #228b22;">main</span> 1)) (<span style="color: #7a378b;">&lt;</span> (signal 1) (middle 1)))
-       (<span style="color: #a020f0;">and</span> (enough-profit? o)
-            (<span style="color: #a020f0;">or</span> (<span style="color: #7a378b;">&lt;</span> (signal) (<span style="color: #228b22;">main</span>)) (<span style="color: #7a378b;">&lt;</span> (signal) (middle)))))
+   (<span style="color: #a020f0;">or</span> (<span style="color: #7a378b;">&lt;</span> (signal 1) (<span style="color: #228b22;">main</span> 1)) (<span style="color: #7a378b;">&lt;</span> (signal 1) (middle 1)))
    (<span style="color: #7a378b;">=</span> type <span style="color: #7a378b;">:sell</span>)
-   (<span style="color: #a020f0;">or</span> (<span style="color: #a020f0;">or</span> (<span style="color: #7a378b;">&gt;</span> (signal 1) (<span style="color: #228b22;">main</span> 1)) (<span style="color: #7a378b;">&gt;</span> (signal 1) (middle 1)))
-       (<span style="color: #a020f0;">and</span> (enough-profit? o)
-            (<span style="color: #a020f0;">or</span> (<span style="color: #7a378b;">&gt;</span> (signal) (<span style="color: #228b22;">main</span>)) (<span style="color: #7a378b;">&gt;</span> (signal) (middle)))))))
+   (<span style="color: #a020f0;">or</span> (<span style="color: #7a378b;">&gt;</span> (signal 1) (<span style="color: #228b22;">main</span> 1)) (<span style="color: #7a378b;">&gt;</span> (signal 1) (middle 1)))))
 
 <span style="color: #b22222;">;;;</span><span style="color: #b22222;">LONG ORDER MANAGEMENT
-</span><span style="color: #b22222;">;;</span><span style="color: #b22222;">TODO: take profit via price action; if GBPJPY is owning, why not trail on 1 minute level?
-</span>(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">five-min-close?</span>
+</span><span style="color: #b22222;">;;</span><span style="color: #b22222;">TODO: take profit via price action !!!!; if GBPJPY is owning, why not trail on 1 minute level? basically, alot of this take profit stuff and entering
+</span><span style="color: #b22222;">;;</span><span style="color: #b22222;">and exiting is based on a variety of conditions! Im sensing some AI like programming taking place! doesn't need to be ai, but how about using
+</span><span style="color: #b22222;">;;</span><span style="color: #b22222;">programming which takes into account the context? see http://web.media.mit.edu/~push/ and the phd thesis EM-ONE: An Architecture for Reflective Commonsense Thinking
+</span>
+(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">cci-close?</span>
   <span style="color: #8b2252;">"This is a tight virtual stop on the five minute level. 
    For buy, if cci&gt;100, set cross-sl to previous middle value.
    If signal(1) is less than cross-sl, then exit. Opposite for sell"</span>
-  [{<span style="color: #7a378b;">:keys</span> [type state] <span style="color: #7a378b;">:as</span> o}] 
+  [{<span style="color: #7a378b;">:keys</span> [type state] <span style="color: #7a378b;">:as</span> o} period] 
   (<span style="color: #a020f0;">when</span> (<span style="color: #7a378b;">=</span> state <span style="color: #7a378b;">:trail</span>) 
-    (wenv {<span style="color: #7a378b;">:period</span> trail-time-period}    
+    (wenv {<span style="color: #7a378b;">:period</span> period}    
           <span style="color: #b22222;">;;</span><span style="color: #b22222;">modify cross-sl 
 </span>          (<span style="color: #a020f0;">when</span> (<span style="color: #a020f0;">or</span> (<span style="color: #7a378b;">&gt;</span> (cci 30 1) 100) (<span style="color: #7a378b;">&lt;</span> (cci 30 1) -100))
             <span style="color: #b22222;">;;</span><span style="color: #b22222;">we will not update the cross-sl so that it will generate  a close signal, this would be bad!
@@ -3282,21 +4661,23 @@ use clj-forex&hellip;.
 
 (<span style="color: #a020f0;">defmethod</span> <span style="color: #0000ff;">close-condition</span> <span style="color: #7a378b;">:long</span> [{<span style="color: #7a378b;">:keys</span> [type state] <span style="color: #7a378b;">:as</span> o}] 
   (<span style="color: #a020f0;">if</span> (<span style="color: #7a378b;">=</span> state <span style="color: #7a378b;">:init</span>)
-    (should-close? o)
-    (<span style="color: #a020f0;">or</span> (<span style="color: #a020f0;">cond</span>
-         (<span style="color: #7a378b;">=</span> type <span style="color: #7a378b;">:buy</span>)
-         (<span style="color: #7a378b;">&lt;</span> (signal 1) (<span style="color: #228b22;">main</span> 1))
-         (<span style="color: #7a378b;">=</span> type <span style="color: #7a378b;">:sell</span>)
-         (<span style="color: #7a378b;">&gt;</span> (signal 1) (<span style="color: #228b22;">main</span> 1)))
-        (five-min-close? o)))) 
+    (<span style="color: #a020f0;">and</span> (should-close? o)
+         (<span style="color: #a020f0;">do</span> (out <span style="color: #8b2252;">"init close"</span>) true)) <span style="color: #b22222;">;;</span><span style="color: #b22222;">TODO: GBPUSD screwed up for -30 pips how to effectively close this? how bout pick better entry poitns? or dont pick exhaustion
+</span>    (<span style="color: #a020f0;">or</span> (<span style="color: #a020f0;">and</span> (<span style="color: #a020f0;">cond</span>
+              (<span style="color: #7a378b;">=</span> type <span style="color: #7a378b;">:buy</span>)
+              (<span style="color: #7a378b;">&lt;</span> (signal 1) (<span style="color: #228b22;">main</span> 1))
+              (<span style="color: #7a378b;">=</span> type <span style="color: #7a378b;">:sell</span>)
+              (<span style="color: #7a378b;">&gt;</span> (signal 1) (<span style="color: #228b22;">main</span> 1)))
+             (<span style="color: #a020f0;">do</span> (out <span style="color: #8b2252;">"cross close"</span>) true))
+        (<span style="color: #a020f0;">and</span> (cci-close? o trail-time-period) (<span style="color: #a020f0;">do</span> (out <span style="color: #8b2252;">"cci close"</span>) true))))) 
 
 (<span style="color: #a020f0;">defmethod</span> <span style="color: #0000ff;">check</span> <span style="color: #7a378b;">:long</span> [o]
-  (<span style="color: #a020f0;">when</span> (<span style="color: #7a378b;">&gt;=</span> (profit o) 20) (modify! o {<span style="color: #7a378b;">:state</span> <span style="color: #7a378b;">:trail</span>}))
+  (<span style="color: #a020f0;">when</span> (<span style="color: #a020f0;">and</span> (<span style="color: #7a378b;">&gt;=</span> (profit o) 20) (<span style="color: #7a378b;">not</span> (<span style="color: #7a378b;">=</span> (<span style="color: #7a378b;">:state</span> o) <span style="color: #7a378b;">:trail</span>))) (modify! o {<span style="color: #7a378b;">:state</span> <span style="color: #7a378b;">:trail</span>}) (out <span style="color: #8b2252;">"changed to trail"</span>))
   <span style="color: #b22222;">;;</span><span style="color: #b22222;">actual sl the server sees. this is a safety stop, in case our ea gets screwed up, turns off, etc.
 </span>  (<span style="color: #a020f0;">when</span> (<span style="color: #a020f0;">or</span> (<span style="color: #7a378b;">=</span> (<span style="color: #7a378b;">:sl</span> o) 0) (<span style="color: #7a378b;">=</span> (<span style="color: #7a378b;">:state</span> o) <span style="color: #7a378b;">:trail</span>))
     (modify! o {<span style="color: #7a378b;">:sl</span> (omax o (<span style="color: #7a378b;">:sl</span> o) (o- o (<span style="color: #228b22;">main</span> 1) (pip 20)))})))  
-
-<span style="color: #b22222;">;;</span><span style="color: #b22222;">MAIN  
+<span style="color: #b22222;">;;</span><span style="color: #b22222;">(run)
+</span><span style="color: #b22222;">;;</span><span style="color: #b22222;">MAIN  
 </span>(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">gobble</span> [o] 
   (<span style="color: #a020f0;">if</span> (close? o) 
     (reset)
@@ -3308,8 +4689,9 @@ use clj-forex&hellip;.
     (awhen (order! (<span style="color: #7a378b;">merge</span> o  {<span style="color: #7a378b;">:type</span> type <span style="color: #7a378b;">:lots</span> (calculate-lots)})) 
            (<span style="color: #7a378b;">reset!</span> order it)
            (<span style="color: #7a378b;">reset!</span> state <span style="color: #7a378b;">:gobble</span>)   
-           (out <span style="color: #8b2252;">"entered %s %s order"</span> type category)))) 
-(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">start</span> [args]  
+           (out <span style="color: #8b2252;">"entered %s %s order"</span> type category))))
+
+(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">start</span> [args] 
   (<span style="color: #a020f0;">cond</span>
    (<span style="color: #7a378b;">=</span> @state <span style="color: #7a378b;">:monitor</span>) (monitor)
    (<span style="color: #7a378b;">=</span> @state <span style="color: #7a378b;">:gobble</span>) (gobble order)))
@@ -3319,13 +4701,14 @@ use clj-forex&hellip;.
 </pre></div>
 
 
+
 </div>
 </div>
 </div>
 <div id="postamble">
 <p class="author"> Author: Seth Burleigh
 </p>
-<p class="date"> Date: 2011-02-04 12:05:07 CST</p>
+<p class="date"> Date: 2011-02-12 10:10:09 CST</p>
 <p class="creator">HTML generated by org-mode 7.4 in emacs 23</p>
 </div>
 </div>

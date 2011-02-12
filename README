@@ -1,0 +1,2 @@
+CLJ-forex is an effor to bring forex programming out of the dark ages. While
+many institutions (hedge funds,banks) have been using other programming languages, retail forex traders are stuck with the most popular choise, mql4 for metatrader. This is bad. So what clj-forex aims to provide is a socket bridge between metatrader and clojure, to allow expert advisors to be programmed clojure/java side and also allow more complex analysis of price stream data.
