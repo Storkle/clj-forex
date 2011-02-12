@@ -2298,7 +2298,7 @@ Yes, currently it is not very development start friendly. That will change!
 	    "failed to queue request %s: are any metatrader scripts alive?"
 	    msg)
 	   (catch-unexpected
-	    (deliver askin (Exception. "socket service down"))))
+	    (deliver askin (Exception. "metatrader side of socket service is down"))))
 	 (swap! *ids* assoc id askin)))  
      [receive ?msg] (mql-recv msg)  
      ?msg (warn "Ignoring invalid message %s" msg)))
@@ -2524,7 +2524,7 @@ Yes, currently it is not very development start friendly. That will change!
     ([num] (lot num (env :symbol)))
     ([num symbol]
        (let [a (to-big num)
-	     b (to-big (or val (mode-minlot symbol)))]
+	     b (to-big (mode-minlot symbol))]
 	 (* b (.intValue (/ a b))))))
 
 
