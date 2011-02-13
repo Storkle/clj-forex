@@ -1,0 +1,15 @@
+In order for this to work, you must have wine installed. If you were to build your own zmq_bind, you would also need wine-dev. However, a prebuilt dll for 32 bit wine is provided. It is assumed you already have wine, because you need wine to get metatrader to run. If you havent already, make sure you can run metatrader! Winetricks is required. See http://appdb.winehq.org/objectManager.php?sClass=version&iId=2893&iTestingId=22068
+
+
+You need to install zeromq 2.0.10- its a simple matter of getting the source, doing ./configure, make, and then make install. In order to get the required libs necessary to build it, you can do something like
+sudo apt-get build-dep a-random-package. This will get the libs required to build that package.
+
+http://www.zeromq.org/intro:get-the-software
+
+
+Now, place zmq_bind.dll under expert/lib and the include under expert/include of the metatrader installation directory. Place libzmq.dll under c:/window/system32/. 
+
+Once done, install the commando script includes and script. Run it - if everything works, the text 'commando' will stay on the chart. The expert output sections is also helpful.
+
+
+

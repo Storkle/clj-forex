@@ -1,0 +1,9 @@
+
+You need to install zeromq 2.0.10 - a binary for it is provided. It was built using visual studio c++ 2008 express. Thus, it requires the runtime for c++. Download and install from below
+
+http://www.microsoft.com/downloads/en/details.aspx?FamilyID=9b2da534-3e03-4391-8a4d-074b9f2bc1bf&displaylang=en
+
+Place zmq_bind.dll under expert/lib and the include under expert/include of the metatrader installation directory. Place libzmq.dll under c:/window/system32/. 
+
+Once done, install the commando script includes and script. Run it - if everything works, the text 'commando' will stay on the chart. The expert output sections is also helpful.
+
