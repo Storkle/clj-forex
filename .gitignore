@@ -1,3 +1,4 @@
+crashes
 native
 classes
 CMakeFiles
@@ -75,3 +76,4 @@ CMakeFiles
 /lib/miglayout-3.7.4.jar
 /y
 /y.pub
+/lib/commons-codec-1.4.jar
