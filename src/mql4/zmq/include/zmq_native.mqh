@@ -1,6 +1,9 @@
 
 #import "zmq_bind.dll"
 
+int _zmq_send_double_array(double &array[],int size,int socket,int flags);
+int _zmq_send_int_array(int &array[],int size,int socket,int flags);
+int _zmq_get_opt_more(int socket);
 
 int _zmq_poll(int socket,int nitems,int timeout);
 int _zmq_new_poll (int socket);
