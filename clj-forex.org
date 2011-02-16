@@ -101,13 +101,14 @@ Yes, currently it is not very development start friendly. That will change!
 		   [clj-time "0.2.0-SNAPSHOT"]
 		   [mmemail "1.0.1"] 
 		   [nstools "0.2.4"]
-		   [com.miglayout/miglayout "3.7.4"]]   
+		   [com.miglayout/miglayout "3.7.4"]
+		   [commons-codec "1.4"]]   
     :dev-dependencies [[native-deps "1.0.5"]
 		       [swank-clojure "1.3.0-SNAPSHOT"]]  
-    :native-dependencies [[org.clojars.starry/jzmq-native-deps "2.0.10.2"]]
+    :native-dependencies [[org.clojars.starry/jzmq-native-deps "2.0.10.3"]]
     :main forex.interface.main
     :repositories {"miglayout" "http://www.miglayout.com/mavensite/"} 
-    :run-aliases {:izpack forex.dev.install} 
+   ;; :run-aliases {:izpack forex.dev.install} 
     ;; :jvm-opts      ["-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=8030"]
     ;;:aot :all
     )
@@ -1843,7 +1844,7 @@ Yes, currently it is not very development start friendly. That will change!
   (defalias make-tag s/make-tag)
   (defn ! [pid msg]
     (with-open [local (doto (new-socket +push+)
-			(.connect (format "inproc://%s" pid)))]
+			(.connect (format "inproc://%s" pid)))] 
       (s/! pid msg)
       (.snd local "REQUEST" +noblock+)))
   (defn  stop-all []
@@ -2889,6 +2890,35 @@ Yes, currently it is not very development start friendly. That will change!
 		     (if (some #(= % (str *ns*)) old)
 		       old
 		       (conj old (str *ns*)))))))
+
+  ;;saving objects to strings and going back -slow, but it works
+  (import (java.io ByteArrayOutputStream ObjectOutputStream
+		   ByteArrayInputStream ObjectInputStream)
+	  org.apache.commons.codec.binary.Base64)
+  (defn bytes-to-obj
+    "convert bytes to object"
+    [obj]
+    (.readObject
+     (ObjectInputStream.
+      (ByteArrayInputStream. obj))))
+  (defn obj-to-bytes
+     "convert object to bytes"
+     [obj]
+     (with-open [bos (ByteArrayOutputStream.)
+		 stream (ObjectOutputStream. bos)]
+       (.writeObject stream obj)
+       (.flush stream) 
+       (.toByteArray bos))) 
+  (defn encode [o]
+    (Base64/encodeBase64String (obj-to-bytes o)))
+  (defn decode [o]
+    (bytes-to-obj (Base64/decodeBase64 o)))
+  (defmethod print-dup :default [o w]
+    (.write w (str "#=(forex.module.ea/decode \"" (encode o) "\")")))  
+  ;;;;;;;;;;;;;;;;;
+  ;;;;;;;;;;;;;;;;;;
+  ;;;;;;;;;;;;;;;;;;;; 
+
 
   (defn- get-fn [a] (if (var? a) (var-get a) a)) 
   (defonce *ea* nil)
@@ -3954,12 +3984,13 @@ Yes, currently it is not very development start friendly. That will change!
   (defonce ea-auto-save-thread (doto (thread
 				      (loop []
 					(sleep (* 60 ea-auto-save-minutes))
-					(save-eas ea-auto-save-file)
+					(when-not (empty? @*eas*)
+					  (save-eas ea-auto-save-file))
 					(recur)))
 				 (.setName "ea auto save")))
 
-  (add-to-list #'ea-on-exit-hook #(save-eas ea-auto-save-file))
-  (add-to-list #'ea-on-start-hook #(save-eas ea-auto-save-file))
+  (add-to-list #'ea-on-exit-hook #(when-not (empty? @*eas*) (save-eas ea-auto-save-file)))
+  (add-to-list #'ea-on-start-hook #(when-not (empty? @*eas*) (save-eas ea-auto-save-file)))
 
   (defonce ea-shutdown-hook (Thread. #(save-eas ea-auto-save-file 500)))
   (add-shutdown-hook ea-shutdown-hook)
@@ -4046,7 +4077,8 @@ use clj-forex....
     (cond
      (close? order) (exit "order is now closed")
      (= @state :timeout) (timeout args)
-     (= @state :break-even) (break-even args))) 
+     (= @state :break-even) (break-even args)
+     (= @state :trail) (trail))) 
 
   (defn timeout [_]
     (cond
@@ -4055,7 +4087,7 @@ use clj-forex....
      (do (reset! state :break-even) (out "changed to break even"))
      ;;entry order reach sl 
      (if (sell? order) (> (close) (:sl order)) (< (close) (:sl order)))
-					  ;TODO: reliable delete????
+     ;;TODO: reliable delete????
      (awhen (delete! order) (exit "entry order reached sl. deleting ..."))
      ;;timed out
      (after? (now) end-time)
@@ -4066,17 +4098,17 @@ use clj-forex....
       (do (out "closing to half ...")
 	  (awhen (-> (modify! order {:sl (:price order) :tp tp2})
 		     (close! (lot (/ (:lots order) 2))))
-		 (exit "finished break even")))
+		 (out "setting to trail") (reset! state :trail)))
       (modify! order {:sl sl})))
 
   (defn hh [a]
     (apply max (map high (range 1 (inc a)))))
   (defn ll [a]
     (apply min (map low (range 1 (inc a)))))
-  (defn trail [_]
-    (modify! order {:sl (omax (:sl order) (if (sell? order) (hh 3) (ll 3)))})) 
+  (defn trail []
+    (modify! order {:sl (omax order (:sl order) (if (sell? order) (hh 3) (ll 3)))})) 
   ;;;GUI
-  (defn init-gui []
+  (defn init-gui [] 
     (let [panel (JPanel.) text (JTextArea. 20 30)
 	  frame (jframe "timeout ea")]
       (doto frame

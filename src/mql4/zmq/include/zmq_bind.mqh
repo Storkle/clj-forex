@@ -100,6 +100,28 @@ int z_socket(int context,int type) {
    z_error();
  return(ret);
 }
+
+int z_identity(int socket) {
+
+  return(_zmq_get_opt_identity(socket)); 
+  /*Print("1 is "+size[0]+" 2 is "+size[1]);
+  if (ret!=0)  {
+    z_error();
+    return(0);
+  } 
+  return(size[0]);*/
+}
+
+int z_more(int socket) {
+  if (socket==0) {
+    return(0);
+  }
+  int ret = _zmq_get_opt_more(socket);
+  if (ret==-1)
+    z_error();
+  return(ret);
+}
+  
 int z_close(int socket) {
   z_trace("z_close");
   if (socket==0) {
@@ -126,6 +148,23 @@ int z_connect(int socket,string endpoint) { //for the clients
 }
  
 //TODO: z_send_raw
+int z_send_doubles(int socket,double array[],int flags=0) {
+ z_trace("z_send_double_array: "+flags); 
+ Print("FIRST IS "+array[0]);
+ int ret = _zmq_send_double_array(array,ArraySize(array),socket,flags); 
+ if (ret==-1)
+   z_error();  
+ return(ret);
+}
+int z_send_int_array(int socket,int array[],int flags=0) {
+ z_trace("z_send_int_array: "+flags); 
+ int ret = _zmq_send_int_array(array,ArraySize(array),socket,flags); 
+ if (ret==-1)
+   z_error();  
+ return(ret);
+}
+
+
 int z_send(int socket,string msg,int flags=0) {
  z_trace("z_send: "+msg+" "+flags); 
  int message = z_msg_new(msg);

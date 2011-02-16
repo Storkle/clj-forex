@@ -1,5 +1,3 @@
-
-
 SRCDIR                = .
 SUBDIRS               =
 DLLS                  = zmq_bind.dll
@@ -102,5 +100,6 @@ DEFLIB = $(LIBRARY_PATH) $(LIBRARIES) $(DLL_PATH) $(DLL_IMPORTS:%=-l%)
 
 $(cudart_dll_MODULE).so: $(cudart_dll_OBJS)
 	$(CC) $(cudart_dll_LDFLAGS) -o $@ $(cudart_dll_OBJS) $(cudart_dll_LIBRARY_PATH:%=-L%) $(DEFLIB) $(cudart_dll_DLLS:%=-l%) $(cudart_dll_LIBRARIES:%=-l%)
+
 
 
