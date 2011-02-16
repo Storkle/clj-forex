@@ -1,11 +1,49 @@
+#include <zmq_bind.mqh>
+
+int socket;
+string id; 
+void send_error(int err,int flags=0) { 
+  z_send(socket,StrToInteger(id),ZMQ_SNDMORE);
+  z_send(socket,"error",ZMQ_SNDMORE);
+  z_send(socket,err,flags);
+}
+void send_array(double array[],int flags=0) {
+  z_send(socket,StrToInteger(id),ZMQ_SNDMORE);
+  z_send(socket,"double[]",ZMQ_SNDMORE);
+  z_send_doubles(socket,array,flags);
+}
+void send_string(string item,int flags=0) {
+  z_send(socket,StrToInteger(id),ZMQ_SNDMORE); 
+  z_send(socket,"string",ZMQ_SNDMORE);
+  z_send(socket,item,flags);
+}
+void send_int(string item,int flags=0) {
+  z_send(socket,StrToInteger(id),ZMQ_SNDMORE); 
+  z_send(socket,"int",ZMQ_SNDMORE);
+  z_send(socket,item,flags);
+}
+void send_double(string item,int flags=0) {
+  z_send(socket,StrToInteger(id),ZMQ_SNDMORE); 
+  z_send(socket,"double",ZMQ_SNDMORE);
+  z_send(socket,item,flags);
+}
+void send_global(string item,int flags=0) {
+  z_send(socket,StrToInteger(id),ZMQ_SNDMORE); 
+  z_send(socket,"global",ZMQ_SNDMORE);
+  z_send(socket,item,flags);
+}
+void send_identity() {
+  send_global(Symbol()+" "+Period()); 
+}
+
+void send_unknown() {
+ send_error(-1);
+}
+
 int DEBUG_ON = 0;
 void trace(string s) {
  if (DEBUG_ON==1) 
    Print(s);
-}
-
-string error (int code) {
-  return("error "+code);
 }
 
 void split(string& arr[], string str) 

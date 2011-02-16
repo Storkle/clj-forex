@@ -1,106 +1,74 @@
-string process_iHigh (string command[]) {
-  string symbol = command[2];
-  int timeframe = StrToInteger(command[3]);
-  int shift = StrToInteger(command[4]);
-  double val = iHigh(symbol,timeframe,shift);
-  int err = GetLastError();
-  if (err!=0)  
-    return("error "+err);
-  return(val);
- }
- 
-string process_iOpen (string command[]) {
-  string symbol = command[2];
-  int timeframe = StrToInteger(command[3]);
-  int shift = StrToInteger(command[4]);
-  double val = iOpen(symbol,timeframe,shift);
-  int err = GetLastError();
-  if (err!=0) 
-    return("error "+err);
-  return(val);
- }
+#include <utils.mqh>
 
-string process_iClose (string command[]) {
-  Print("before");
-  string symbol = command[2];
-  int timeframe = StrToInteger(command[3]);
-  int shift = StrToInteger(command[4]);
-  int amount = StrToInteger(command[5]); Print("amount is "+amount);
-  string ret="";
-  double array[];// double[amount]; 
-  ArrayResize(array,amount);
-  /*int handle=FileOpen("iclose.txt", FILE_CSV|FILE_WRITE, ',');
-  for (int i=shift;i<shift+amount;i++)  {
-    //ret =ret+ " "+iClose(symbol,timeframe,i);
-    FileWrite(handle,DoubleToStr(iClose(symbol,timeframe,i),5)+"\n");  
+int process_ACCOUNT (string c,string command[]) {
+  if (c=="AccountBalance") {
+    process_AccountBalance(command);
+  } else if (c=="AccountCredit") {
+    process_AccountCredit(command);
+  } else if (c=="AccountCompany") {
+    process_AccountCompany(command);
+  } else if (c=="AccountCurrency") {
+    process_AccountCurrency(command);
+  } else if (c=="AccountEquity") {
+    process_AccountEquity(command);
+  } else if (c=="AccountFreeMargin") {
+    process_AccountFreeMargin(command);
+  } else if (c=="AccountLeverage") {
+    process_AccountLeverage(command);
+  } else if (c=="AccountMargin") {
+    process_AccountMargin(command);
+  } else if (c=="AccountName") {
+    process_AccountName(command);
+  } else if (c=="AccountNumber") {
+    process_AccountNumber(command);
+  } else if (c=="AccountProfit") {
+    process_AccountProfit(command);
+  } else if (c=="AccountServer") {
+    process_AccountServer(command);
+  } else {
+    return(-1);
   }
-  FileClose(handle);*/
-  int j=0;
-  Print("start");
-  for (int i=shift;i<shift+amount;i++) {
-    array[j] = iClose(symbol,timeframe,i);
-    j+=1;
-  }
-  
-  int err = GetLastError();
-  Print("after");
-  if (err!=0) 
-    return("error "+err);
-  return(array[3]);
- }
- 
-
-
-string process_iLow (string command[]) {
-  string symbol = command[2];
-  int timeframe = StrToInteger(command[3]);
-  int shift = StrToInteger(command[4]);
-  double val = iLow(symbol,timeframe,shift);
-  int err = GetLastError();
-  if (err!=0) 
-    return("error "+err);
-  return(val);
- }
- 
- 
-string process_AccountBalance(string command[]) {
-  return(AccountBalance());
-}
-string process_AccountCredit(string command[]) {
-  return(AccountCredit());
-}
-string process_AccountCompany(string command[]) {
-  return(AccountCompany());
-}
-string process_AccountCurrency(string command[]) {
-  return(AccountCurrency());
-}
-string process_AccountEquity(string command[]) {
-  return(AccountEquity());
-}
-string process_AccountFreeMargin(string command[]) {
-  return(AccountFreeMargin());
-}
-string process_AccountLeverage(string command[]) {
-  return(AccountLeverage());
-}
-string process_AccountMargin(string command[]) {
-  return(AccountMargin());
-}
-string process_AccountName(string command[]) {
-  return(AccountName());
-}
-string process_AccountNumber(string command[]) {
-  return(AccountNumber());
-}
-string process_AccountProfit(string command[]) {
-  return(AccountProfit());
-}
-string process_AccountServer(string command[]) {
-  return(AccountServer());
+  return(0);
 }
 
-
+void process_AccountBalance(string command[]) {
+  send_double(AccountBalance());
+}
+void process_AccountCredit(string command[]) {
+  send_double(AccountCredit());
+}
+void process_AccountCompany(string command[]) {
+  send_string(AccountCompany());
+}
+void process_AccountCurrency(string command[]) {
+  send_string(AccountCurrency());
+}
+void process_AccountEquity(string command[]) {
+  send_double(AccountEquity());
+}
+void process_AccountFreeMargin(string command[]) {
+  send_double(AccountFreeMargin());
+}
+void process_AccountLeverage(string command[]) {
+  send_int(AccountLeverage());
+}
+void process_AccountMargin(string command[]) {
+  send_double(AccountMargin());
+}
+void process_AccountName(string command[]) {
+  send_string(AccountName());
+}
+void process_AccountNumber(string command[]) {
+  send_string(AccountNumber());
+}
+void process_AccountProfit(string command[]) {
+  send_double(AccountProfit());
+}
+void process_AccountServer(string command[]) {
+  send_string(AccountServer());
+}
+///
+///
 
 string process_OrderModify(string command[]) {
   int ticket = StrToInteger(command[2]);
@@ -115,9 +83,6 @@ string process_OrderModify(string command[]) {
   }
   return("0");
 }
-
-
-
 string process_OrderClose(string command[]) {
   int ticket = StrToInteger(command[2]);
   double lots = StrToDouble(command[3]);
@@ -136,9 +101,6 @@ string process_OrderClose(string command[]) {
   return("0");
 }
 
-
-
-
 string process_MarketInfo(string command[]) {
   string symbol = command[2];
   int type = StrToInteger(command[3]);
@@ -152,8 +114,6 @@ string process_MarketInfo(string command[]) {
 double norm (string symbol,double d) {
   return(NormalizeDouble(d,MarketInfo(symbol,MODE_DIGITS)));
 }
-
-
 
 string process_OrderSend(string command[]) {
  string symbol = command[2];
@@ -174,14 +134,9 @@ string process_OrderSend(string command[]) {
  return(ticket);
 }
 
-
-
 string process_OrdersTotal (string command[]) {
   return(OrdersTotal());
 }
-
-
-
 
 string process_OrderCloseTime(string command[]) {
    int ticket= StrToInteger(command[2]);
@@ -221,7 +176,6 @@ string process_OrderDelete(string command[]) {
    return("0");
 }
 
-
 string process_OrderLots(string command[]) {
    int id = StrToInteger(command[2]);
    bool result = OrderSelect(id,SELECT_BY_TICKET);
@@ -231,5 +185,11 @@ string process_OrderLots(string command[]) {
    }
    return(OrderLots());
 }
+
+
+
+
+
+
 
 
