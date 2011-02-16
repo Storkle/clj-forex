@@ -21,16 +21,36 @@ string process_iOpen (string command[]) {
  }
 
 string process_iClose (string command[]) {
+  Print("before");
   string symbol = command[2];
   int timeframe = StrToInteger(command[3]);
   int shift = StrToInteger(command[4]);
-  double val = iClose(symbol,timeframe,shift);
+  int amount = StrToInteger(command[5]); Print("amount is "+amount);
+  string ret="";
+  double array[];// double[amount]; 
+  ArrayResize(array,amount);
+  /*int handle=FileOpen("iclose.txt", FILE_CSV|FILE_WRITE, ',');
+  for (int i=shift;i<shift+amount;i++)  {
+    //ret =ret+ " "+iClose(symbol,timeframe,i);
+    FileWrite(handle,DoubleToStr(iClose(symbol,timeframe,i),5)+"\n");  
+  }
+  FileClose(handle);*/
+  int j=0;
+  Print("start");
+  for (int i=shift;i<shift+amount;i++) {
+    array[j] = iClose(symbol,timeframe,i);
+    j+=1;
+  }
+  
   int err = GetLastError();
+  Print("after");
   if (err!=0) 
     return("error "+err);
-  return(val);
+  return(array[3]);
  }
  
+
+
 string process_iLow (string command[]) {
   string symbol = command[2];
   int timeframe = StrToInteger(command[3]);
