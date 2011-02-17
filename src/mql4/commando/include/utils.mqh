@@ -2,35 +2,45 @@
 
 int socket;
 string id; 
-void send_error(int err,int flags=0) { 
-  z_send(socket,StrToInteger(id),ZMQ_SNDMORE);
+void send_error(int err,int flags=ZMQ_NOBLOCK) { 
+  z_send(socket,err,ZMQ_SNDMORE);
   z_send(socket,"error",ZMQ_SNDMORE);
-  z_send(socket,err,flags);
+  z_send(socket,StrToInteger(id),flags); 
 }
-void send_array(double array[],int flags=0) {
-  z_send(socket,StrToInteger(id),ZMQ_SNDMORE);
+void send_array(double array[],int flags=ZMQ_NOBLOCK) {
+  z_send_doubles(socket,array,ZMQ_SNDMORE);
   z_send(socket,"double[]",ZMQ_SNDMORE);
-  z_send_doubles(socket,array,flags);
+  z_send(socket,StrToInteger(id),flags); 
 }
-void send_string(string item,int flags=0) {
-  z_send(socket,StrToInteger(id),ZMQ_SNDMORE); 
+void send_string(string item,int flags=ZMQ_NOBLOCK) {
+  z_send(socket,item,ZMQ_SNDMORE);
   z_send(socket,"string",ZMQ_SNDMORE);
-  z_send(socket,item,flags);
+  z_send(socket,StrToInteger(id),flags); 
 }
-void send_int(string item,int flags=0) {
-  z_send(socket,StrToInteger(id),ZMQ_SNDMORE); 
+void send_int(string item,int flags=ZMQ_NOBLOCK) {
+  z_send(socket,item,ZMQ_SNDMORE);
   z_send(socket,"int",ZMQ_SNDMORE);
-  z_send(socket,item,flags);
+  z_send(socket,StrToInteger(id),flags); 
 }
-void send_double(string item,int flags=0) {
-  z_send(socket,StrToInteger(id),ZMQ_SNDMORE); 
+void send_boolean(string item,int flags=ZMQ_NOBLOCK) {
+  z_send(socket,item,ZMQ_SNDMORE);
+  z_send(socket,"boolean",ZMQ_SNDMORE);
+  z_send(socket,StrToInteger(id),flags); 
+}
+void send_long(string item,int flags=ZMQ_NOBLOCK) {
+  z_send(socket,item,ZMQ_SNDMORE);
+  z_send(socket,"long",ZMQ_SNDMORE);
+  z_send(socket,StrToInteger(id),flags); 
+}
+void send_double(string item,int flags=ZMQ_NOBLOCK) {
+  z_send(socket,item,ZMQ_SNDMORE);
   z_send(socket,"double",ZMQ_SNDMORE);
-  z_send(socket,item,flags);
+  z_send(socket,StrToInteger(id),flags); 
 }
-void send_global(string item,int flags=0) {
-  z_send(socket,StrToInteger(id),ZMQ_SNDMORE); 
+void send_global(string item,int flags=ZMQ_NOBLOCK) {
+  z_send(socket,item,ZMQ_SNDMORE);
   z_send(socket,"global",ZMQ_SNDMORE);
-  z_send(socket,item,flags);
+  z_send(socket,StrToInteger(id),flags); 
 }
 void send_identity() {
   send_global(Symbol()+" "+Period()); 
