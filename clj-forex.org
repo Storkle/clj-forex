@@ -1884,7 +1884,7 @@ Yes, currently it is not very development start friendly. That will change!
 		    (with-open
 			[local-socket (LocalSocket. 
 				       (doto
-					   (new-socket +pull+)
+					   (new-string-socket +pull+)
 					 (.bind  (str "inproc://" (self)))))]        
 		      (binding [local local-socket]
 			(thunk))))
@@ -1932,7 +1932,7 @@ Yes, currently it is not very development start friendly. That will change!
        (concat
 	;;TODO: memory overflow with getting all messsages? probably not ....
 	(doall
-	 (mapcat #(when (or (.pollin p %) (.pollout p %)) (recv-all (.getSocket p %)))
+	 (mapcat #(when (or (.pollin p %) (.pollout p %)) (recv-all (.getSocket p %))) 
 		 (range 0 (.getSize p))))
 	(event-seq* p))))) 
 
@@ -2031,7 +2031,7 @@ Yes, currently it is not very development start friendly. That will change!
 	 p)))
 
   ;;TODO: now just a string socket!
-  (defrecord Socket [socket]
+  (defrecord StringSocket [socket]
     PSocket 
     (raw [this] socket)
     (snd [this msg] (.snd this msg 0))
@@ -2045,10 +2045,27 @@ Yes, currently it is not very development start friendly. That will change!
     (bind [this address] (.bind socket address))
     (connect [this address] (.connect socket address))
     (hasMore [this] (.hasReceiveMore socket))) 
+  (defrecord Socket [socket]
+    PSocket 
+    (raw [this] socket)
+    (snd [this msg] (.snd this msg 0))
+    (snd [this msg flags]
+	 (if (string? msg)
+	   (.send socket (.getBytes msg) flags)
+	   (.send socket msg flags))) 
+    (recv [this flags]  (.recv socket flags))
+    (recv [this] (recv this 0)) 
+    (close [this] (.close socket))
+    (bind [this address] (.bind socket address))
+    (connect [this address] (.connect socket address))
+    (hasMore [this] (.hasReceiveMore socket)))
 
   (defn new-socket
     ([type] (new-socket *context* type))
     ([context type] (Socket. (.socket context type))))
+  (defn new-string-socket
+    ([type] (new-socket *context* type))
+    ([context type] (StringSocket. (.socket context type))))
 
   (comment
     (defn new-poll
@@ -2300,8 +2317,10 @@ Yes, currently it is not very development start friendly. That will change!
        (:clone clj.core) 
        (:require
 	[forex.util.fiber.mbox :as m]
-	[clojure.contrib.logging :as l])
-       (:use 
+	[clojure.contrib.logging :as l]) 
+       (:import (java.io DataInputStream ByteArrayInputStream))
+       (:use
+	forex.backend.mql.utils
 	forex.util.emacs 
 	forex.util.core forex.util.general
 	forex.util.zmq forex.util.log
@@ -2311,59 +2330,58 @@ Yes, currently it is not very development start friendly. That will change!
   ;;also, unfortunately, if we add more servers, speed doesn't increase linearly. so the bottleneck is in the clojure code ... a better designed socket service should really be made.
   ;; in addition, if servers drop out, we will be waiting forever for them. this is bad.
 
-  (defvar mql-socket-recv-address "tcp://127.0.0.1:3000")
+  (defvar mql-socket-recv-address "tcp://127.0.0.1:3010")
   (defvar mql-socket-send-address "tcp://127.0.0.1:3005")
-  (defvar mql-socket-pub-address "tcp://127.0.0.1:3010")
-  (defonce- *ids* (atom {})) 
-  ;;utils  
-  (defonce- *msg-id* (atom 0))
-  (defn- msg-id []
-    (str (swap! *msg-id* inc)))
-  (defmacro catch-unexpected [& body]
-    `(try (do ~@body)
-	  (catch Exception e# (.printStackTrace e#) (warn e#))))
+
+  (defonce- *ids* (atom {}))
+  (defrecord MqlError [e])
 
   ;;socket service
-  ;;TODO: send id then message
-  (defn- mql-recv [msg] 
-    (catch-unexpected  
-     (let [key (first msg)
-	   msg-ask (get @*ids* key)] 
-       (if msg-ask
-	 (do 
-	   (deliver msg-ask (second msg))
-	   (swap! *ids* dissoc key))
-	 (warn "msg-ask corresponding to key %s is nil" key)))))
+  (defn mql-recv [msg] 
+    (catch-unexpected
+     (let [[id type info] msg]
+       (when id
+	 (let [type (String. type)
+	       msg-ask (get @*ids* id)
+	       result (cond
+		       (= type "long") (Long/parseLong (String. info))
+		       (= type "boolean")
+		       (let [a (Integer/parseInt (String. info))]
+			 (condp = a
+			     1 true
+			     0 false
+			     (Exception. (str "unkown boolean return result of " a))))
+		       (= type "double[]") (into-doubles info)
+		       (= type "double") (Double/parseDouble (String. info)) 
+		       (= type "int") (Integer/parseInt (String. info))
+		       (= type "string") (String. info) 
+		       (= type "error") (MqlError. (parse-int (String. info)))
+		       (= type "global") (String. info)
+		       true (Exception. (str "Unkown type " type)))] 
+	   (if msg-ask
+	     (do (deliver msg-ask result) (swap! *ids* dissoc id))
+	     (warn "msg-ask corresponding to id %s is nil" id))))))) 
 
-  (comment
-    (defn unblock []
-      (doall (map #(deliver % (Exception. "unblock")) (keys *ids*)))))
+  (defn- socket-service-match [events send receive]
+    (let [event (first events)]
+      (match
+       event
+       [local "STOP"] (do (info "closing ...") "STOP")  
+       [local ["REQUEST" ?msg ?askin]]  
+       (let [id (msg-id)  
+	     result  (.snd send (str id " " msg) +noblock+)]
+	 (if-not result  
+	   (do  
+	     (warn
+	      "failed to queue request %s: are any metatrader scripts alive?"
+	      msg)
+	     (catch-unexpected
+	      (deliver askin (Exception. "metatrader side of socket service is down"))))
+	   (swap! *ids* assoc id askin)))  
+       [receive ?msg] (mql-recv msg)   
+       ?msg (warn "Ignoring invalid message %s" msg))))
 
-  (comment ;;this causes problems ...deleted
-    (if-not (satisfies?  PWait askin)
-      (warn
-       "Ignoring invalid REQUEST which does not contain a PWait argument %s %s" 
-       msg askin)))
-
-  (defn- socket-service-match [events send receive] 
-    (match  
-     (first events)
-     [local "STOP"] (do (info "closing ...") "STOP")  
-     [local ["REQUEST" ?msg ?askin]]  
-     (let [id (msg-id)  
-	   result  (.snd send (str id " " msg) +noblock+)]
-       (if-not result  
-	 (do  
-	   (warn
-	    "failed to queue request %s: are any metatrader scripts alive?"
-	    msg)
-	   (catch-unexpected
-	    (deliver askin (Exception. "metatrader side of socket service is down"))))
-	 (swap! *ids* assoc id askin)))  
-     [receive ?msg] (mql-recv msg)  
-     ?msg (warn "Ignoring invalid message %s" msg)))
-
-  ;;TODO: weird bugwhen stopping everything with an ea.
+  ;;TODO: weird bug when stopping everything with an ea.
 
   (defn spawn-mql-socket-service
     []  
@@ -2374,7 +2392,7 @@ Yes, currently it is not very development start friendly. That will change!
        #(with-open [send (doto (new-socket +push+)
 			   (.bind mql-socket-send-address))
 		    receive (doto (new-socket +pull+)
-			      (.bind mql-socket-recv-address))]
+			      (.bind mql-socket-recv-address))] 
 	  (loop [events (event-seq [receive local])]
 	    (when-not (= "STOP" (socket-service-match events send receive))
 	      (recur (rest events)))))
@@ -2387,7 +2405,7 @@ Yes, currently it is not very development start friendly. That will change!
   (defn start []
     (if (alive?)
       (warn "mql socket is already alive!")
-      (reset! *s* (spawn-mql-socket-service))))
+      (do (reset! *ids* {}) (reset! *s* (spawn-mql-socket-service)))))
   (defn stop []
     (if (alive?)
       (! (:pid @*s*) "STOP")
@@ -2407,8 +2425,8 @@ Yes, currently it is not very development start friendly. That will change!
   ;;ALSO, we can now apparently get the write lock! hmm...
   ;;ALL BECAUSE WE DONT USE INFINITE TIMEOUT?  
   (defn receive
-    ([msg] (receive msg nil))
-    ([msg timeout]
+    ([msg] (receive msg false))
+    ([msg resend]
        (let [ask (promise)]
 	 (request ask msg)
 	 (loop [i 0]
@@ -2416,10 +2434,12 @@ Yes, currently it is not very development start friendly. That will change!
 	     (let [result @ask]
 	       (cond 
 		(instance? Exception result) (throw result)
-		result result
-		true (throwf "invalid result received %s" result)))
+		(or result (false? result)) result
+		true (throwf "invalid result received %s" result))) 
 	     (do (debug "too much time! for msg %s retry %s" msg i)
-		 (recur (+ i 1))))))))
+		 (if resend
+		   (do (debug "resending request ...") (receive msg resend))
+		   (recur (+ i 1)))))))))
 #+end_src 
 ** Module 
 *** Account
@@ -2451,11 +2471,8 @@ Yes, currently it is not very development start friendly. That will change!
     ([ticket price sl tp]
        (order-modify ticket price sl tp :blue))
     ([ticket price sl tp color_of]
-       (receive
-	(format "OrderModify %s %s %s %s %s"
-		ticket price sl tp (get! color color_of)))
-       ;;{:id ticket :price price :sl sl :tp tp :color color_of}
-       ))
+       (receive (format "OrderModify %s %s %s %s %s"
+			ticket price sl tp (get! color color_of))))) 
 
   (defn order-send
     ([symbol cmd volume price] (order-send symbol cmd volume price 0 0))
@@ -2467,26 +2484,25 @@ Yes, currently it is not very development start friendly. That will change!
 		volume price slip sl tp))))
 
   (defn order-close-time [ticket]
-    (receive-int (format "OrderCloseTime %s" ticket)))
+    (receive (format "OrderCloseTime %s" ticket)))
 
   (defn order-close [ticket lots price slippage color_of]
-    (receive  
-     (format "OrderClose %s %s %s %s %s"
-	     ticket lots price slippage (get! color color_of))))
+    (receive (format "OrderClose %s %s %s %s %s"
+		     ticket lots price slippage (get! color color_of))))
   (defn order-delete [ticket]
     (receive (format "OrderDelete %s" ticket)))
 
   (defn market-info [symbol type]
-     (receive-double (format "MarketInfo %s %s" symbol type)))
+     (receive (format "MarketInfo %s %s" symbol type)))
 
   (defn order-close-time [ticket]
-    (receive-double (format "OrderCloseTime %s" ticket)))
+    (receive (format "OrderCloseTime %s" ticket)))
 
   (defn order-type [ticket]
-    (receive-double (format "OrderType %s" ticket)))
+    (receive (format "OrderType %s" ticket)))
 
   (defn order-lots [ticket]
-    (receive-double (format "OrderLots %s" ticket)))
+    (receive (format "OrderLots %s" ticket)))
 #+end_src
  
 #+srcname:account-utils
@@ -2499,26 +2515,22 @@ Yes, currently it is not very development start friendly. That will change!
 	  forex.util.emacs  
 	  forex.util.general
 	  forex.module.error)
-  ;;  (:require forex.module.error [forex.module.error :as err])
     (:require  [forex.module.account.core :as core]))
 
 
   ;;account common
   (defn- sym [a] (symbol (camel-to-dash a)))
   (defmacro- single [name] `(defn ~(sym name) [] (receive! ~name)))
-  (defmacro- double-single [name] `(defn ~(sym name) [] (receive-double! ~name)))
   (defmacro- singles [& names] `(do ~@(map (fn [a] `(single ~a)) names)))
-  (defmacro- double-singles [& names] `(do ~@(map (fn [a] `(double-single ~a)) names)))
+
 
   ;;none of the below singles or double-singles should throw a mql error - therefore, it is a bug if they do
-  (singles 
+  (singles
    "AccountCurrency"
    "AccountCompany"
    "AccountServer" 
    "AccountName"
-   "AccountNumber")
-
-  (double-singles
+   "AccountNumber"
    "AccountCredit"
    "AccountBalance"
    "AccountEquity"
@@ -2527,6 +2539,10 @@ Yes, currently it is not very development start friendly. That will change!
    "AccountMargin"
    "AccountProfit"
    "OrdersTotal")
+  (defn demo? [] (receive "IsDemo"))
+  (defn connected? [] (receive "IsConnected"))
+  (defn trade? [] (receive "IsTradeAllowed"))
+
   ;;
 
   (defmacro- define-market-info [& args]
@@ -2570,10 +2586,11 @@ Yes, currently it is not very development start friendly. That will change!
     marginrequired 32
     freezelevel 33)
 
-  (defn demo? []
-    (if (re-find #"(?i)demo" (account-server))
-      true
-      false))
+  (comment
+    (defn demo? []
+      (if (re-find #"(?i)demo" (account-server))
+	true
+	false)))
 
   (defn sell? [{type :type}]
     (or (= type :sell) (= type :sell-stop) (= type :sell-limit)))
@@ -2586,7 +2603,6 @@ Yes, currently it is not very development start friendly. That will change!
        (let [a (to-big num)
 	     b (to-big (mode-minlot symbol))]
 	 (* b (.intValue (/ a b))))))
-
 
   (defn- assert-order [order] (is? [(or (sell? order) (buy? order))]))
 
@@ -2618,19 +2634,14 @@ Yes, currently it is not very development start friendly. That will change!
 
 
   ;;TODO: change for 4 digit broker
-  (defn digit []
-    (let [pt (mode-point "EURUSD")]
-      (cond
-       (= pt 0.00001) 5
-       (= pt 0.0001) 4
-       true (throwf
-	     "unexpected broker digits given mode-point of % on EURUSD" pt))))
+  (defn digits []
+    (mode-digits "EURUSD"))
 
   ;;TODO: check for valid symbol on all of this??
   (defn spread
     ([] (spread (env :symbol)))
     ([symbol]
-       (let [d (digit) spread (mode-spread symbol)]
+       (let [d (digits) spread (mode-spread symbol)]
 	 (cond
 	  (= d 5) (/ spread 10)
 	  (= d 4) spread))))
@@ -2638,7 +2649,7 @@ Yes, currently it is not very development start friendly. That will change!
   (defn point
     ([pt] (/ pt (point)))
     ([]
-       (let [d (digit)] 
+       (let [d (digits)]  
 	 (if (= d 5)
 	   (* 10 (mode-point))
 	   (mode-point)))))
@@ -2652,14 +2663,15 @@ Yes, currently it is not very development start friendly. That will change!
   ;;TODO: create a new atom-hash on merging, etc????????
   (clojure.core/use 'nstools.ns)
   (ns+ forex.module.account
-    (:clone clj.core)
-    (:use forex.util.core
-	  forex.util.emacs  
-	  forex.util.general forex.util.log
-	  forex.module.indicator
-	  forex.module.error forex.module.account.utils)
-    (:require forex.module.error [forex.module.error :as err])
-    (:require  [forex.module.account.core :as core]))
+       (:clone clj.core)
+       (:import forex.backend.mql.socket-service.MqlError)
+       (:use forex.util.core
+	     forex.util.emacs  
+	     forex.util.general forex.util.log
+	     forex.module.indicator
+	     forex.module.error forex.module.account.utils)
+
+       (:require  [forex.module.account.core :as core]))
 
   (defvar *account-warn-on-mql-error* true)
 
@@ -2679,9 +2691,10 @@ Yes, currently it is not very development start friendly. That will change!
 
   (defn- >? [a] (and (number? a) (>= a 0)))
 
-  (defmacro- default [& body] 
-    `(binding [*default* @~#'err/*er*]
-       ~@body))
+  (comment
+    (defmacro- default [& body] 
+      `(binding [*default* @~#'err/*er*]
+	 ~@body)))
 
   ;;TODO: do we need all of these assertions?
   (def- value-to-order-type
@@ -2706,9 +2719,8 @@ Yes, currently it is not very development start friendly. That will change!
     (aif (core/order-close-time id) it -1)) ;;TODO: return 0 instead?
   (defn- order-type*  [order]
     (is? (string? (:id order)))
-    (default
-      (aif (core/order-type (:id order))
-	   (value-to-order-type (int it)))))
+    (aif (core/order-type (:id order))
+	 (value-to-order-type (int it))))
 
   (defn- delete!* [{id :id lots :lots :as o}]
     (with-order o
@@ -2805,7 +2817,7 @@ Yes, currently it is not very development start friendly. That will change!
 	     (account-warn it order))))) 
 
   (defn- open?* [order] 
-    (default (= (order-close-time order) 0)))
+    (= (order-close-time order) 0))
   (defn- close?* [order]
     (not (open? order)))
   (defn- order?* [order]
@@ -2835,7 +2847,7 @@ Yes, currently it is not very development start friendly. That will change!
 	    :market? market?*
 	    :entry? entry?*})
 
-  (extend-type forex.module.error.MqlError
+  (extend-type MqlError
     POrder
     (order! [this] this)
     (delete! [this] this)
@@ -3189,57 +3201,21 @@ Yes, currently it is not very development start friendly. That will change!
 #+begin_src clojure :tangle src/forex/module/error.clj
   (clojure.core/use 'nstools.ns)
   (ns+ forex.module.error
-    (:clone clj.core)
-    (:require [forex.backend.mql.socket-service :as s])
-    (:use forex.util.general
-	  forex.util.core
-	  forex.util.emacs 
-	  forex.util.general))
+       (:clone clj.core)
+       (:require forex.backend.mql.socket-service)
+       (:require [forex.backend.mql.socket-service :as s])
+       (:use forex.util.general
+	     forex.util.core
+	     forex.util.emacs 
+	     forex.util.general))
 
-  ;;raw receive
-  (defn raw-receive [msg]
-    (s/receive msg))
-  (defn raw-receive-lst [msg]
-    (split (raw-receive msg) #" +"))
-
-
-  ;;receive with errors
-  ;;TODO: error 4054 also occurs when we pass in invalid symbol
-  ;;distinguish from loading???
-  (defn receive-lst!
-    ([msg] (receive-lst! msg nil))
-    ([msg try]
-       (loop [retries 0]
-	 (let [spl (raw-receive-lst msg)] 
-	   (if (= (first spl) "error")
-	     (let [err (try (Integer/parseInt (second spl))
-			    (catch Exception e (second spl)))]
-	       (cond
-		(and try (< retries try) (or (= err 4066) (= err 4054))) (do (Thread/sleep 300) (recur (inc retries)))
-		true (throwf "MQL error %s" (second spl))))
-	     spl)))))
-
-  (defn receive!
-    ([msg] (receive! msg nil))
-    ([msg try]
-       (join " " (receive-lst! msg try))))
-
-  (defn receive-double!
-    ([msg] (receive-double! msg nil))
-    ([msg try] (Double/parseDouble (receive! msg try))))
-
-  ;;receive with default instead of errors, returns error object for errors
-  ;;is customizable to default to errors!
-  (defrecord MqlError [e])
-  (defonce- *er* (gensym)) 
-  (def *default* *er*)
-
-  (defn e? [a] (instance? MqlError a))
+  (defn e? [a]
+    (instance? forex.backend.mql.socket-service.MqlError a))
 
   (defmacro aif
     ([test then] `(aif ~test ~then nil))
     ([test then else]
-       `(let [~'it ~test]
+       `(let [~'it ~test] 
 	  (if (and ~'it (not (e? ~'it)))
 	    ~then
 	    ~else)))) 
@@ -3253,33 +3229,34 @@ Yes, currently it is not very development start friendly. That will change!
 	    ~else)))) 
   (defmacro awhen-not [test & body] `(aif-not ~test (do ~@body)))
 
-  (defn- parse-int [a] (try (Integer/parseInt a) (catch Exception e a)))
+  ;;receive with errors
+  (defn receive!
+    ([msg] (receive! msg nil))
+    ([msg try]
+       (loop [retries 0]
+	 (let [result (s/receive msg)]
+	   (if (e? result)
+	     (let [e (:e result)]
+	      (cond 
+	       (and try (< retries try) (or (= e 4066) (= e 4054))) (do (Thread/sleep 300) (recur (inc retries)))
+	       true (throwf "MQL error %s" e)))
+	     result)))))
+
+  ;;receive with default instead of errors, returns error object for errors
+  ;;is customizable to default to errors!
+
+  (defonce- *er* (gensym)) 
+  (def *default* *er*)
 
   (defn receive
     ([msg] (receive msg *default*))
     ([msg default]
-       (let [spl (raw-receive-lst msg)]
-	 (if (and (= (first spl) "error"))
-	   (let [err (parse-int  (second spl))] 
-	     (if (= default *er*)
-	       (MqlError. err) 
-	       (if (fn? default) (default (MqlError. err)) default)))
-	   (join "" spl)))))
-
-  (defn receive-double
-    ([msg] (receive-double msg *default*))
-    ([msg default]
-       (let [spl (raw-receive-lst msg)]
-	 (if (= (first spl) "error")
+       (let [result (s/receive msg)]
+	 (if (e? result)
 	   (if (= default *er*)
-	     (MqlError. (Integer/parseInt (second spl)))
-	     (if (fn? default) (default (MqlError. (Integer/parseInt (second spl)))) default))
-	   (Double/parseDouble (join " "  spl))))))
-
-  (defn receive-int [s]
-    (aif (receive-double s)
-	 (int it)
-	 it))
+	     result
+	     (if (fn? default) (default result) default))
+	   result))))
 #+end_src
 *** Indicator
 #+srcname:indicator-common
@@ -3311,34 +3288,23 @@ Yes, currently it is not very development start friendly. That will change!
 	     nil))))
 
   ;;high low open close
-  (defn get-rel-data [^String symbol ^Integer period ^Integer from ^Integer to]
-    (is?  (>= to from) "in get-data, from/to is invalid")
-    (loop [dat nil retries 0]
-      (if (> retries 3) (throwf "MQL error %s" (second dat)))
-      (let [data (s/raw-receive-lst (format "bars_relative %s %s %s %s"
-					symbol period from to))]
-	(if (= (first data) "error") 
-	  (do (sleep 0.4) (recur data (+ retries 1)))
-	  data)))) 
 
-  (defn- rel [i]
-    (let [sym (env :symbol)
-	  period (env :period)]
-      (is? (and (string? sym) (integer? period)))
-      (get-rel-data sym period i i)))
   (defn- off [a] (+ (or (env :i) 0) a))
+  (defn- receive-double!
+    ([a] (receive-double! a 3))
+    ([a retries] (double (first (receive! a retries))))) 
   (defn high
-    ([] (high 0)) 
-    ([i] (Double/parseDouble (nth (rel (off i)) 1))))
-  (defn open 
+    ([] (high 0))    
+    ([i] (receive-double! (format "iHigh %s %s %s 1" (env :symbol) (env :timeframe) (off i)))))
+  (defn open  
     ([] (open 0)) 
-    ([i] (Double/parseDouble (nth (rel (off i)) 3))))
+    ([i] (receive-double! (format "iOpen %s %s %s 1" (env :symbol) (env :timeframe) (off i)))))
   (defn low
     ([] (low 0))
-    ([i] (Double/parseDouble (nth (rel (off i)) 2))))
+    ([i] (receive-double! (format "iLow %s %s %s 1" (env :symbol) (env :timeframe) (off i)))))
   (defn close
     ([] (close 0))
-    ([i] (Double/parseDouble (nth (rel (off i)) 4))))
+    ([i] (receive-double! (format "iClose %s %s %s 1" (env :symbol) (env :timeframe) (off i)))))
 
   ;;TODO: change
   (defn ask
@@ -3363,7 +3329,7 @@ Yes, currently it is not very development start friendly. That will change!
        {:pre [(env?)  (>? offset)
 	      (number? method) (>? period)]}
        (receive-double! 
-	(format "Custom_Moving_Averages %s %s %s %s %s 0 %s"
+	(format "Default_Moving_Averages %s %s %s %s 1 %s 0 %s"
 		(env :symbol) (env :period) ;;period/method
 		0 (off offset) period method)
 	3))) 
@@ -3378,8 +3344,8 @@ Yes, currently it is not very development start friendly. That will change!
     ([params] (psar params 0))
     ([params offset]
        {:pre [(env?) (>? offset)  (= (count params) 2)]}
-       (receive-double! 
-	(format "Custom_Parabolic %s %s %s %s %s %s"
+       (receive-double!
+	(format "Default_Parabolic %s %s %s %s 1 %s %s"
 		(env :symbol) (env :period)
 		0 (off offset) (first params) (second params))
 	3)))
@@ -3387,8 +3353,8 @@ Yes, currently it is not very development start friendly. That will change!
     ([period] (cci period 0))
     ([period offset]
        {:pre [(env?) (>? offset)  (number? period)]}
-       (receive-double! 
-	(format "Custom_CCI %s %s %s %s %s"
+       (receive-double!
+	(format "Default_CCI %s %s %s %s 1 %s"
 		(env :symbol) (env :period)
 		0 (off offset) period)
 	3)))
@@ -3398,8 +3364,8 @@ Yes, currently it is not very development start friendly. That will change!
     ([period] (momentum period 0))
     ([period offset]
        {:pre [(env?) (>? offset)  (number? period)]}
-       (receive-double! 
-	(format "Custom_Momentum %s %s %s %s %s"
+       (receive-double!
+	(format "Default_Momentum %s %s %s %s 1 %s"
 		(env :symbol) (env :period)
 		0 (off offset) period)
 	3)))
@@ -3410,7 +3376,7 @@ Yes, currently it is not very development start friendly. That will change!
     ([period offset]
        {:pre [(env?) (>? offset) (number? period)]}
        (receive-double! 
-	(format "Custom_RSI %s %s %s %s %s"
+	(format "Default_RSI %s %s %s %s 1 %s"
 		(env :symbol) (env :period)
 		0 (off offset) period)
 	3)))
@@ -3418,9 +3384,9 @@ Yes, currently it is not very development start friendly. That will change!
   (defn vma
     ([params] (vma params 0))
     ([params offset]
-       {:pre [(env?) (>? offset) (= (count params) 4)]}
+       {:pre [(env?)  (>? offset) (= (count params) 4)]}
        (receive-double! 
-	(format "Custom_FantailVMA3 %s %s %s %s %s"
+	(format "Custom_FantailVMA3 %s %s %s %s 1 %s"
 		(env :symbol) (env :period)
 		0 (off offset) (apply str (interpose " " params)))
 	3)))
@@ -3431,8 +3397,6 @@ Yes, currently it is not very development start friendly. That will change!
        ([~params] (a# ~params 0))
        ([~params ~index]
 	  ~@body)))
-
-
 
   (defn rsi-black 
     ([params] (fn 
@@ -3445,7 +3409,7 @@ Yes, currently it is not very development start friendly. That will change!
        {:pre [(env?) (>? offset) (>? mode) 
 	      (= (count params) 5)]}
        (receive-double! 
-	(format "Custom_Rsi_BlackFeet_modded %s %s %s %s %s"
+	(format "Custom_Rsi_BlackFeet_modded %s %s %s %s 1 %s"
 		(env :symbol) (env :period)
 		mode (off offset) (apply str (interpose " " params)))
 	3)))
@@ -3470,7 +3434,7 @@ Yes, currently it is not very development start friendly. That will change!
        {:pre [(env?) (>? offset) (>? mode) 
 	      (= (count params) 4)]}
        (receive-double! 
-	(format "Custom_Blazan_Dynamic_Stop %s %s %s %s %s"
+	(format "Custom_Blazan_Dynamic_Stop %s %s %s %s 1 %s"
 		(env :symbol) (env :period)
 		mode (off offset) (apply str (interpose " " params)))
 	3)))
