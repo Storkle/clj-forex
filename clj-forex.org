@@ -73,7 +73,7 @@ f9 can be used to jump from source code to location in org file.
                     (goto-char (truncate (/ (+ (point-min) (point-max)) 2)))
                     (let ((detangled (org-babel-detangle)))
                       (if (= detangled 0) (progn (message "failed on %s" file)
-                                                 (sleep-for 2)))
+                                               ))
                       (incf amount detangled)))))
         (message "Detangled %s source blocks/ %s" amount (length out)))))
   (global-set-key (kbd "<f8>") 'detangle)
