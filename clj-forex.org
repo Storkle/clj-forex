@@ -2423,23 +2423,25 @@ Yes, currently it is not very development start friendly. That will change!
   ;;so when we get the really annoying failures to
   ;;stop we can examine this:)
   ;;ALSO, we can now apparently get the write lock! hmm...
-  ;;ALL BECAUSE WE DONT USE INFINITE TIMEOUT?  
+  ;;ALL BECAUSE WE DONT USE INFINITE TIMEOUT?
   (defn receive
-    ([msg] (receive msg false))
+    ([msg] (receive msg true))
     ([msg resend]
-       (let [ask (promise)]
-	 (request ask msg)
-	 (loop [i 0]
-	   (if (wait-for ask 5000)
+       (let [ask-obj (promise)]
+	 (request ask-obj msg)
+	 (loop [i 0 ask ask-obj]
+	   (if (wait-for ask 5000) 
 	     (let [result @ask]
 	       (cond 
 		(instance? Exception result) (throw result)
 		(or result (false? result)) result
 		true (throwf "invalid result received %s" result))) 
-	     (do (debug "too much time! for msg %s retry %s" msg i)
-		 (if resend
-		   (do (debug "resending request ...") (receive msg resend))
-		   (recur (+ i 1)))))))))
+	     (if (and resend (< i 3)) 
+	       (let [ask (promise)]
+		 (debug "resending message %s" msg)
+		 (recur (+ i 1) ask))
+	       (do (debug "too much time for msg %s" msg)
+		   (recur (+ i 1) ask))))))))
 #+end_src 
 
 #+srcname:mql-socket-service-utils
@@ -2496,7 +2498,8 @@ Yes, currently it is not very development start friendly. That will change!
     ([ticket price sl tp color_of]
        (receive (format "OrderModify %s %s %s %s %s"
 			(first ticket)
-			price sl tp (get! color color_of))))) 
+			price sl tp (get! color color_of))
+		false))) 
 
   (defn order-send
     ([symbol cmd volume price] (order-send symbol cmd volume price 0 0))
@@ -2505,19 +2508,22 @@ Yes, currently it is not very development start friendly. That will change!
        (receive
 	(format "OrderSend %s %s %s %s %s %s %s"
 		symbol (get! order cmd)
-		volume price slip sl tp))))
+		volume price slip sl tp)
+	false)))
+
+  (defn order-close [ticket lots price slippage color_of]
+    (receive (format "OrderClose %s %s %s %s %s"
+		     (first ticket) lots price slippage (get! color color_of))
+	     false))
+  (defn order-delete [ticket]
+    (receive (format "OrderDelete %s" (first ticket))
+	     false))
 
   (defn order-close-time [ticket]
     (receive (format "OrderCloseTime %s" (first ticket))))
 
-  (defn order-close [ticket lots price slippage color_of]
-    (receive (format "OrderClose %s %s %s %s %s"
-		     (first ticket) lots price slippage (get! color color_of))))
-  (defn order-delete [ticket]
-    (receive (format "OrderDelete %s" (first ticket))))
-
   (defn market-info [symbol type]
-     (receive (format "MarketInfo %s %s" symbol type)))
+    (receive (format "MarketInfo %s %s" symbol type)))
 
   (defn order-close-time [ticket]
     (receive (format "OrderCloseTime %s" (first ticket))))
@@ -2887,7 +2893,9 @@ Yes, currently it is not very development start friendly. That will change!
     POrder
     (order-close-time [this] (order-close-time @this))
     (order-type [this] (order-type @this))
-    ;;(order! [this] (aif (order! @this) (do (reset! (.val this) it) this) it))
+    (order! [this] (aif (order! @this)
+			(do (reset! (.val this) it) this)
+			it))
     (delete! [this] (aif (delete! @this) (do (reset! (.val this) it) this) it))  
     (close!
      ([this new-amount] (aif (close! @this new-amount) (do (reset! (.val this) it) this) it))
@@ -3274,18 +3282,9 @@ Yes, currently it is not very development start friendly. That will change!
   ;;receive with default instead of errors, returns error object for errors
   ;;is customizable to default to errors!
 
-  (defonce- *er* (gensym)) 
-  (def *default* *er*)
-
   (defn receive
-    ([msg] (receive msg *default*))
-    ([msg default]
-       (let [result (s/receive msg)]
-	 (if (e? result)
-	   (if (= default *er*)
-	     result
-	     (if (fn? default) (default result) default))
-	   result))))
+    ([msg] (receive msg true))
+    ([msg resend] (s/receive msg resend)))
 #+end_src
 *** Indicator
 #+srcname:indicator-common
@@ -3398,6 +3397,16 @@ Yes, currently it is not very development start friendly. That will change!
 		0 (off offset) period)
 	3)))
 
+
+  (defn atr
+    ([period] (atr period 0))
+    ([period offset]
+       {:pre [(env?) (>? offset) (number? period)]}
+       (receive-double! 
+	(format "Default_ATR %s %s %s %s 1 %s"
+		(env :symbol) (env :period)
+		0 (off offset) period)
+	3)))
 
   (defn rsi
     ([period] (rsi period 0))
