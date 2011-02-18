@@ -37,14 +37,6 @@ int deinit() {
  return(0);
 }
 
-//send uuid of this node plus its symbol and period
-/*void register () {
- z_send(recv,"",ZMQ_SNDMORE);
- z_send(recv,Symbol(),ZMQ_SNDMORE);
- z_send(recv,""+Period(),ZMQ_NOBLOCK);
-}
-*/
-
 int loop () { 
   Print("Entering Commando2 Loop");
   while(true) {   
@@ -70,7 +62,7 @@ int loop () {
 
 
 int start()
-  {
+{
   ObjectCreate("label", OBJ_LABEL, 0, 0, 0);
   ObjectSet("label", OBJPROP_XDISTANCE, 0);
   ObjectSet("label", OBJPROP_YDISTANCE, 10);
@@ -81,4 +73,4 @@ int start()
     }  
    loop();
    return(0);
-  }
+}

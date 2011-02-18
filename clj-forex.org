@@ -2472,7 +2472,8 @@ Yes, currently it is not very development start friendly. That will change!
        (order-modify ticket price sl tp :blue))
     ([ticket price sl tp color_of]
        (receive (format "OrderModify %s %s %s %s %s"
-			ticket price sl tp (get! color color_of))))) 
+			(first ticket)
+			price sl tp (get! color color_of))))) 
 
   (defn order-send
     ([symbol cmd volume price] (order-send symbol cmd volume price 0 0))
@@ -2484,25 +2485,25 @@ Yes, currently it is not very development start friendly. That will change!
 		volume price slip sl tp))))
 
   (defn order-close-time [ticket]
-    (receive (format "OrderCloseTime %s" ticket)))
+    (receive (format "OrderCloseTime %s" (first ticket))))
 
   (defn order-close [ticket lots price slippage color_of]
     (receive (format "OrderClose %s %s %s %s %s"
-		     ticket lots price slippage (get! color color_of))))
+		     (first ticket) lots price slippage (get! color color_of))))
   (defn order-delete [ticket]
-    (receive (format "OrderDelete %s" ticket)))
+    (receive (format "OrderDelete %s" (first ticket))))
 
   (defn market-info [symbol type]
      (receive (format "MarketInfo %s %s" symbol type)))
 
   (defn order-close-time [ticket]
-    (receive (format "OrderCloseTime %s" ticket)))
+    (receive (format "OrderCloseTime %s" (first ticket))))
 
   (defn order-type [ticket]
-    (receive (format "OrderType %s" ticket)))
+    (receive (format "OrderType %s" (first ticket))))
 
   (defn order-lots [ticket]
-    (receive (format "OrderLots %s" ticket)))
+    (receive (format "OrderLots %s" (first ticket))))
 #+end_src
  
 #+srcname:account-utils
@@ -2714,26 +2715,25 @@ Yes, currently it is not very development start friendly. That will change!
     (market? [this]) (entry? [this]))
 
   (defn- order-close-time* [{id :id}]
-    (is? (string? id))
+    {:pre [(string? (first id))]}
     ;;we dont need to know mql4 error codes for order close time
     (aif (core/order-close-time id) it -1)) ;;TODO: return 0 instead?
-  (defn- order-type*  [order]
-    (is? (string? (:id order)))
-    (aif (core/order-type (:id order))
+  (defn- order-type*  [{id :id}] 
+    {:pre [(string? (first id))]}
+    (aif (core/order-type id)
 	 (value-to-order-type (int it))))
-
   (defn- delete!* [{id :id lots :lots :as o}]
     (with-order o
       (if-not (= lots 0)
 	(aif (core/order-delete id) (merge o {:lots 0}) it)
 	o)))
 
-
+  ;;TOOD: make more robust? does metatrader always append modified trade? is it thread safe?
   (defn- close!*
     ([o] (close! o 0))
     ([{:keys [price lots slip id symbol] :as order} new-lots]
        (with-order order
-	 (is? [(string? id) (string? symbol) 
+	 (is? [(string? (first id)) (string? symbol) 
 	       [price (pos? price)]
 	       [(number? lots) (>= lots 0)]])
 	 (is? (>= (- lots new-lots) 0))
@@ -2743,9 +2743,15 @@ Yes, currently it is not very development start friendly. That will change!
 				    (ask symbol)
 				    (bid symbol))
 				  slip :blue)
-		(merge order {:lots new-lots})
+		(merge order {:lots new-lots
+			      :id (cond
+				   (= new-lots 0) id
+				   (= it "false") (do (severe "dropping a partial close id for order %s"
+							      (merge order {:lots new-lots}))
+						      id) 
+				   true  (concat (list it) id))})
 		(account-warn it order "invalid new lots %s" new-lots))
-	   order))))
+	   order)))) 
 
   ;;TODO: normalize so we dont get mql error 1?
   ;;TODO: act as a regular modify if we dont pass in sl,tp,or price 
@@ -2807,7 +2813,7 @@ Yes, currently it is not very development start friendly. That will change!
 	(verify-order order)
 	(aif (core/order-send symbol type lots price 0 0 slip)
 	     (let [result
-		   (let [o (merge order {:id it})]
+		   (let [o (merge order {:id [it]})]
 		     ;;now, use modify to change sl and tp
 		     (aif (modify!* o {:sl sl :tp tp})
 			  (merge o {:sl sl :tp tp})
@@ -3288,7 +3294,6 @@ Yes, currently it is not very development start friendly. That will change!
 	     nil))))
 
   ;;high low open close
-
   (defn- off [a] (+ (or (env :i) 0) a))
   (defn- receive-double!
     ([a] (receive-double! a 3))

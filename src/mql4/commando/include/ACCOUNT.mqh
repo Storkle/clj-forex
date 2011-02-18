@@ -134,7 +134,12 @@ void process_OrderClose(string command[]) {
     send_error(GetLastError());
     return;
   }
-  send_string("true");
+
+  if (OrderSelect(OrdersTotal()-1, SELECT_BY_POS, MODE_TRADES)==true) {
+    send_string(OrderTicket());
+  } else {
+    send_string ("false");
+  }
 }
 
 string process_MarketInfo(string command[]) {
@@ -188,11 +193,11 @@ void process_OrderCloseTime(string command[]) {
 
 void process_OrderType(string command[]) {
    int ticket= StrToInteger(command[2]);
-   if (OrderSelect(ticket,SELECT_BY_TICKET)==False) {
-     send_error(GetLastError());
+   if (OrderSelect(ticket,SELECT_BY_TICKET)==true) {
+     send_int(OrderType());
      return;
    }
-   send_string(OrderType());
+   send_error(GetLastError());
 }
 
 string process_OrderDelete(string command[]) {
