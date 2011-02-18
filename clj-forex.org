@@ -3315,23 +3315,26 @@ Yes, currently it is not very development start friendly. That will change!
 	     (and (< a1 b1) (> a2 b2) [:sell i])
 	     nil))))
 
+  (defn- env? [] (and (string? (env :symbol)) (integer? (env :period))))
+  (defn- >? [a] (or (zero? a) (pos? a)))
+
   ;;high low open close
   (defn- off [a] (+ (or (env :i) 0) a))
   (defn- receive-double!
     ([a] (receive-double! a 3))
-    ([a retries] (double (first (receive! a retries))))) 
+    ([a retries] {:pre (env?)} (double (first (receive! a retries))))) 
   (defn high
     ([] (high 0))    
-    ([i] (receive-double! (format "iHigh %s %s %s 1" (env :symbol) (env :timeframe) (off i)))))
+    ([i] (receive-double! (format "iHigh %s %s %s 1" (env :symbol) (env :period) (off i)))))
   (defn open  
     ([] (open 0)) 
-    ([i] (receive-double! (format "iOpen %s %s %s 1" (env :symbol) (env :timeframe) (off i)))))
+    ([i] (receive-double! (format "iOpen %s %s %s 1" (env :symbol) (env :period) (off i)))))
   (defn low
     ([] (low 0))
-    ([i] (receive-double! (format "iLow %s %s %s 1" (env :symbol) (env :timeframe) (off i)))))
+    ([i] (receive-double! (format "iLow %s %s %s 1" (env :symbol) (env :period) (off i)))))
   (defn close
     ([] (close 0))
-    ([i] (receive-double! (format "iClose %s %s %s 1" (env :symbol) (env :timeframe) (off i)))))
+    ([i] (receive-double! (format "iClose %s %s %s 1" (env :symbol) (env :period) (off i)))))
 
   ;;TODO: change
   (defn ask
@@ -3342,8 +3345,6 @@ Yes, currently it is not very development start friendly. That will change!
     ([] (bid (env :symbol)))
     ([symbol] (aif (mode-bid symbol) it (throwf "MQL error %s" (:e it)))))
 
-  (defn- env? [] (and (string? (env :symbol)) (integer? (env :period))))
-  (defn- >? [a] (or (zero? a) (pos? a)))
   ;;an example of acessing a custom ea
 
 
@@ -4094,11 +4095,12 @@ use clj-forex....
      (after? (now) end-time)
      (awhen (delete! order) (exit "order timed out"))))
 
+  ;;TODO: better sl saving 
   (defn break-even [{:keys [sl tp2 tp1]}]
     (if (hit? order tp1)
       (do (out "closing to half ...")
-	  (awhen (-> (modify! order {:sl (:price order) :tp tp2})
-		     (close! (lot (/ (:lots order) 2))))
+	  (awhen (-> (modify! order {:sl (:break-even order)})
+		     (close! (lot (/ (:lots order) 2))))	       
 		 (out "setting to trail") (reset! state :trail)))
       (modify! order {:sl sl})))
 
@@ -4107,7 +4109,7 @@ use clj-forex....
   (defn ll [a]
     (apply min (map low (range 1 (inc a)))))
   (defn trail []
-    (modify! order {:sl (omax order (:sl order) (if (sell? order) (hh 3) (ll 3)))})) 
+    (modify! order {:sl (omax order (:sl order)  (if (sell? order) (hh 3) (ll 3)))})) 
   ;;;GUI
   (defn init-gui [] 
     (let [panel (JPanel.) text (JTextArea. 20 30)
