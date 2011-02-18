@@ -2441,6 +2441,29 @@ Yes, currently it is not very development start friendly. That will change!
 		   (do (debug "resending request ...") (receive msg resend))
 		   (recur (+ i 1)))))))))
 #+end_src 
+
+#+srcname:mql-socket-service-utils
+#+begin_src clojure :tangle src/forex/backend/mql/utils.clj
+  (ns forex.backend.mql.utils  
+    (:use forex.util.general)
+    (:import (java.io DataInputStream ByteArrayInputStream))
+    (:use forex.util.log))
+  
+  (defonce *msg-id* (atom 0))
+  (defn msg-id []
+    (str (swap! *msg-id* inc)))
+  
+  (defn parse-int [a]
+    (try (Integer/parseInt a) (catch Exception e a)))
+  (defmacro catch-unexpected [& body]
+    `(try (do ~@body)
+          (catch Exception e# (.printStackTrace e#) (warn e#))))
+   
+  (defn into-doubles [array] 
+    (let [stream (DataInputStream. (ByteArrayInputStream. array))]
+      (repeatedly (/ (count array) 8) #(.readDouble stream))))   
+#+end_src 
+
 ** Module 
 *** Account
 #+srcname:account-core
