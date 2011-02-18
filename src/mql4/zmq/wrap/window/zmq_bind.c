@@ -4,7 +4,50 @@
 #define WINAPI __stdcall
 
 //i used zmq version 2.0.10
-//Properties->Linker->General and Properties->Linker->Input
+
+
+void * memcp(void * dst, void const * src, size_t len)
+{
+    char * pDst = (char *) dst;
+    char const * pSrc = (char const *) src;
+    int i=0;
+    while (len--)
+    {
+        pDst[i]=pSrc[len];//*pDst++ = *pSrc++;
+        ++i;
+    }
+    return (dst);
+}
+
+
+
+EXPORT int WINAPI _zmq_send_double_array ( char* array,int size, void*socket,int flags) {
+  zmq_msg_t reply;
+  zmq_msg_init_size (&reply, sizeof(double)*size);
+  int i;
+  memcp((char*)zmq_msg_data(&reply),array,sizeof(double)*size);
+  int ret = zmq_send (socket, &reply, flags);
+  zmq_msg_close (&reply);  
+  return ret; 
+}
+
+EXPORT int WINAPI _zmq_send_int_array ( char* array,int size, void*socket,int flags) {
+  zmq_msg_t reply;
+  zmq_msg_init_size (&reply, sizeof(int)*size);
+  int i;
+  memcp((char*)zmq_msg_data(&reply),array,sizeof(int)*size);
+  int ret = zmq_send (socket, &reply, flags); 
+  zmq_msg_close (&reply);  
+  return ret; 
+}
+
+EXPORT int64_t WINAPI _zmq_get_opt_more (void*  socket) {
+   int64_t more;           //  Multipart detection
+   size_t more_size = sizeof (more);
+   zmq_getsockopt (socket, ZMQ_RCVMORE, &more, &more_size);
+   return more; 
+}
+
 char *copy (void* s,zmq_msg_t* msg) {
     int len = zmq_msg_size(msg);
     char *d = (char *)(malloc (len + 1)); 

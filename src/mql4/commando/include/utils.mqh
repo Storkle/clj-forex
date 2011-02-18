@@ -8,7 +8,7 @@ void send_error(int err,int flags=ZMQ_NOBLOCK) {
   z_send(socket,StrToInteger(id),flags); 
 }
 void send_array(double array[],int flags=ZMQ_NOBLOCK) {
-  z_send_doubles(socket,array,ZMQ_SNDMORE);
+  z_send_double_array(socket,array,ZMQ_SNDMORE);
   z_send(socket,"double[]",ZMQ_SNDMORE);
   z_send(socket,StrToInteger(id),flags); 
 }

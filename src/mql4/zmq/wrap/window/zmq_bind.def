@@ -1,5 +1,9 @@
 LIBRARY "zmq_bind"
 EXPORTS 
+_zmq_send_double_array
+_zmq_send_int_array
+_zmq_get_opt_more 
+
 _zmq_setsockopt
 _zmq_poll
 _zmq_new_poll

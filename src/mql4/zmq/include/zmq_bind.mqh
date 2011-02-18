@@ -148,7 +148,7 @@ int z_connect(int socket,string endpoint) { //for the clients
 }
  
 //TODO: z_send_raw
-int z_send_doubles(int socket,double array[],int flags=0) {
+int z_send_double_array(int socket,double array[],int flags=0) {
  z_trace("z_send_double_array: "+flags); 
  int ret = _zmq_send_double_array(array,ArraySize(array),socket,flags); 
  if (ret==-1)
@@ -162,7 +162,7 @@ int z_send_int_array(int socket,int array[],int flags=0) {
    z_error();  
  return(ret);
 }
-
+ 
 
 int z_send(int socket,string msg,int flags=0) {
  z_trace("z_send: "+msg+" "+flags); 

@@ -121,7 +121,7 @@ void process_OrderModify(string command[]) {
     send_error(GetLastError());
     return;
   }
-  send_string("true");
+  send_boolean(true);
 }
 void process_OrderClose(string command[]) {
   int ticket = StrToInteger(command[2]);
@@ -135,10 +135,10 @@ void process_OrderClose(string command[]) {
     return;
   }
 
-  if (OrderSelect(OrdersTotal()-1, SELECT_BY_POS, MODE_TRADES)==true) {
-    send_string(OrderTicket());
+  if (OrderSelect(OrdersTotal()-1, SELECT_BY_POS, MODE_TRADES)==true && OrderLots()!=0) {
+    send_string(OrderTicket()); 
   } else {
-    send_string ("false");
+    send_boolean (false);
   }
 }
 

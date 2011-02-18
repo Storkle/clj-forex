@@ -38,7 +38,7 @@ int deinit() {
 }
 
 int loop () { 
-  Print("Entering Commando2 Loop");
+  Print("Entering Commando Loop");
   while(true) {   
     string request = ""; 
     string command[];
@@ -47,8 +47,9 @@ int loop () {
           request = z_recv(recv);
           break;
       }
-      if (IsStopped())
+      /*if (IsStopped())
         return(0);
+      */
      }        
     split(command,request);
     int ret = process(push,command);
@@ -64,9 +65,9 @@ int loop () {
 int start()
 {
   ObjectCreate("label", OBJ_LABEL, 0, 0, 0);
-  ObjectSet("label", OBJPROP_XDISTANCE, 0);
+  ObjectSet("label", OBJPROP_XDISTANCE, 2);
   ObjectSet("label", OBJPROP_YDISTANCE, 10);
-  ObjectSetText("label", "COMMANDO2", 10, "Times New Roman", Blue);
+  ObjectSetText("label", "COMMANDO v2", 10, "Times New Roman", Blue);
   WindowRedraw();
    if (connect()==-1) {
       return(-1); 

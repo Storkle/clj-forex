@@ -2100,6 +2100,18 @@ Yes, currently it is not very development start friendly. That will change!
 		  SwingUtilities)))
 
   (import javax.swing.JOptionPane)
+
+  (defn add-watcher [var key f]
+    (add-watch
+     var key
+     (bound-fn [& args]
+	       (try (apply f args)
+		    (catch Exception e
+
+		      (severe "caught exception in watcher %s: %s"
+			      [var key] e)
+		      (.printStackTrace e))))))
+
   (defn inform [msg & args]
     (JOptionPane/showMessageDialog
      nil (apply format (str msg) args) "!" JOptionPane/INFORMATION_MESSAGE)) 
@@ -2772,12 +2784,13 @@ Yes, currently it is not very development start friendly. That will change!
 				    (ask symbol)
 				    (bid symbol))
 				  slip :blue)
-		(merge order {:lots new-lots
+		(merge order {:lots new-lots 
 			      :id (cond
-				   (= new-lots 0) id
-				   (= it "false") (do (severe "dropping a partial close id for order %s"
-							      (merge order {:lots new-lots}))
-						      id) 
+				   (= new-lots 0) id 
+				   (= it false)
+				   (do (severe "dropping a partial close id for order %s"
+					       (merge order {:lots new-lots}))
+				       id) 
 				   true  (concat (list it) id))})
 		(account-warn it order "invalid new lots %s" new-lots))
 	   order)))) 
@@ -3583,15 +3596,7 @@ Yes, currently it is not very development start friendly. That will change!
   (defn- color [a color]
     (format "<html><color=%s><b>%s</b></color><html>" color a))
 
-  (defn add-watcher [var key f]
-    (add-watch var key
-	       (bound-fn [& args]
-			 (try (apply f args)
-			      (catch Exception e
 
-				(severe "caught exception in watcher %s: %s"
-					[var key] e)
-				(.printStackTrace e))))))
 
 
   (defn table-model [titles data]
@@ -3647,10 +3652,10 @@ Yes, currently it is not very development start friendly. That will change!
 		     (doto  (JButton. "refresh")
 		       (add-action-listener
 			(fn [e] (update-table table @*eas*))))
-		     ;;TODO: technically, is thread safe, oh well, do we care?
 		     (doto (JButton. "stop")
 		       (add-action-listener
-			(fn [e] 
+			(fn [e]
+			  ;;TODO: locking on a table is bad if youre going to have a prompt - will lock up stopping of eas, etc. x
 			  (locking table 
 			    (let [i (.getSelectedRow table)
 				  ea (when (>= i 0) (.getValueAt (.getModel table)
@@ -3709,7 +3714,6 @@ Yes, currently it is not very development start friendly. That will change!
 
   ;;Useful User Vars
   (defonce gui nil) 
-  (defonce toplevel nil)
   (defn message [msg & args]
     (when-let [it (:status gui)]
       (.setText it (apply format msg args))))
@@ -3814,7 +3818,7 @@ Yes, currently it is not very development start friendly. That will change!
       (remove-system-icon icon)
       (run-hook-with-args gui-on-exit-hooks icon)))
   (defn on-click [icon]
-    (.setVisible (:frame toplevel) true))
+    (.setVisible (:frame gui) true))
   (defn gui-make-icon []
     (system-icon
      {:image gui-icon-image
@@ -3823,7 +3827,6 @@ Yes, currently it is not very development start friendly. That will change!
 
   (defn new-gui []
     (alter-var-root #'gui (constantly nil))
-    (alter-var-root #'toplevel (constantly nil))
     (run-hooks gui-create-pre-hook)
     (let [icon (gui-make-icon)
 	  image (if (string? gui-image) (create-icon gui-image))
@@ -3850,17 +3853,15 @@ Yes, currently it is not very development start friendly. That will change!
 		    (add-key-listener obj #'on-key)
 		    (add-popup-listener obj #'on-popup))
 		  (conj (vals (components panel)) panel)))
-      (alter-var-root  #'gui (constantly (components panel)))
-      (alter-var-root #'toplevel (constantly {:frame frame :panel panel
-					      :icon icon}))
+      (alter-var-root  #'gui (constantly (merge (components panel) {:frame frame :panel panel :icon icon})))
       (run-hooks gui-create-post-hook)
       frame))
 
 
   (defn add-ea-registry-watch []
-    (add-watch
+    (add-watcher
      *ea-registry* "registry-add"
-     (bound-fn [key ref old new] 
+     (fn [key ref old new] 
        (when-let [it (:selector gui)]
 	 (.removeAllItems it)
 	 (dorun (map #(.addItem it %) new))))))
@@ -3869,13 +3870,13 @@ Yes, currently it is not very development start friendly. That will change!
     ([] (invoke-new-gui ""))
     ([msg] 
        (invoke-later
-	(when (:icon toplevel)
-	  (remove-system-icon (:icon toplevel)))
-	(when (:frame toplevel)
-	  (.setVisible (:frame toplevel) false))
+	(when-let [it (:icon gui)]
+	  (remove-system-icon it))
+	(when-let [it (:frame gui)]
+	  (.setVisible it false))
 	(new-gui)
-	(.setVisible (:frame toplevel) true) 
-	(add-system-icon (:icon toplevel)) 
+	(.setVisible (:frame gui) true) 
+	(add-system-icon (:icon gui)) 
 	(when msg (message msg))
 	(add-ea-registry-watch))))
 #+end_src
@@ -3902,8 +3903,7 @@ Yes, currently it is not very development start friendly. That will change!
 	      e))] 
       (add-to-list  
        #'gui-on-exit-hooks on-system-exit)
-      (invoke-new-gui (when user-exception 
-			"error when loading forex-user: check log"))))
+      (invoke-new-gui (when user-exception "error when loading forex-user: check log"))))
 #+end_src
 
 #+srcname:interface-tray
@@ -4086,7 +4086,7 @@ use clj-forex....
     (cond
      ;;changed to market
      (market? order)
-     (do (reset! state :break-even) (out "changed to break even"))
+     (do (reset! state :break-even) (out "order opened - monitoring tp1"))
      ;;entry order reach sl 
      (if (sell? order) (> (close) (:sl order)) (< (close) (:sl order)))
      ;;TODO: reliable delete????
@@ -4101,8 +4101,8 @@ use clj-forex....
       (do (out "closing to half ...")
 	  (awhen (-> (modify! order {:sl (:break-even order)})
 		     (close! (lot (/ (:lots order) 2))))	       
-		 (out "setting to trail") (reset! state :trail)))
-      (modify! order {:sl sl})))
+		 (out "trailing order") (reset! state :trail)))
+      (modify! order {:sl sl}))) 
 
   (defn hh [a]
     (apply max (map high (range 1 (inc a)))))
@@ -4171,7 +4171,7 @@ use clj-forex....
 		    (let [[method-type symbol type price stop tp1 tp2] (rest it)
 			  method (.toLowerCase method-type)]
 		      {:method method
-		       :hour (if (= method "spring") 4 12)
+		       :hour (if (= method "pip reactor") 4 12) 
 		       :symbol (.replaceAll symbol "/" "")
 		       :type (condp = (.toLowerCase type)
 				 "buy" :buy-stop
