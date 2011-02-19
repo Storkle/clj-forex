@@ -8,53 +8,53 @@
 
 void * memcp(void * dst, void const * src, size_t len)
 {
-    char * pDst = (char *) dst;
-    char const * pSrc = (char const *) src;
-    int i=0;
-    while (len--)
+  char * pDst = (char *) dst;
+  char const * pSrc = (char const *) src;
+  int i=0;
+  while (len--)
     {
-        pDst[i]=pSrc[len];//*pDst++ = *pSrc++;
-        ++i;
+      pDst[i]=pSrc[len];//*pDst++ = *pSrc++;
+      ++i;
     }
-    return (dst);
+  return (dst);
 }
 
 
 
 EXPORT int WINAPI _zmq_send_double_array ( char* array,int size, void*socket,int flags) {
+  int ret;
   zmq_msg_t reply;
-  zmq_msg_init_size (&reply, sizeof(double)*size);
-  int i;
+  zmq_msg_init_size (&reply, sizeof(double)*size); 
   memcp((char*)zmq_msg_data(&reply),array,sizeof(double)*size);
-  int ret = zmq_send (socket, &reply, flags);
+  ret = zmq_send (socket, &reply, flags);
   zmq_msg_close (&reply);  
   return ret; 
 }
 
 EXPORT int WINAPI _zmq_send_int_array ( char* array,int size, void*socket,int flags) {
   zmq_msg_t reply;
+  int ret;
   zmq_msg_init_size (&reply, sizeof(int)*size);
-  int i;
   memcp((char*)zmq_msg_data(&reply),array,sizeof(int)*size);
-  int ret = zmq_send (socket, &reply, flags); 
+  ret = zmq_send (socket, &reply, flags); 
   zmq_msg_close (&reply);  
   return ret; 
-}
+  }
 
-EXPORT int64_t WINAPI _zmq_get_opt_more (void*  socket) {
-   int64_t more;           //  Multipart detection
-   size_t more_size = sizeof (more);
-   zmq_getsockopt (socket, ZMQ_RCVMORE, &more, &more_size);
-   return more; 
+EXPORT int WINAPI _zmq_get_opt_more (void*  socket) {
+  int more;           //  Multipart detection
+  int more_size = sizeof (more);
+  zmq_getsockopt (socket, ZMQ_RCVMORE, &more, &more_size);
+  return more; 
 }
 
 char *copy (void* s,zmq_msg_t* msg) {
-    int len = zmq_msg_size(msg);
-    char *d = (char *)(malloc (len + 1)); 
-    if (d == NULL) return NULL;               
-    memcpy (d,s,len);  
-    d[len] = '\0';                             
-    return d;                             
+  int len = zmq_msg_size(msg);
+  char *d = (char *)(malloc (len + 1)); 
+  if (d == NULL) return NULL;               
+  memcpy (d,s,len);  
+  d[len] = '\0';                             
+  return d;                             
 }
 
 
@@ -115,7 +115,7 @@ EXPORT void* WINAPI _zmq_socket (void* context, int type) {
   return zmq_socket(context,type);  
 }
 EXPORT int WINAPI _zmq_close(void* socket) {
- return zmq_close(socket); 
+  return zmq_close(socket); 
 }
 EXPORT int WINAPI _zmq_bind(void*socket,const char* endpoint) {
   return zmq_bind(socket,endpoint);   
@@ -127,7 +127,7 @@ EXPORT int WINAPI _zmq_send(void*socket,zmq_msg_t*msg,int flags) {
   return zmq_send(socket,msg,flags); 
 }
 EXPORT int WINAPI _zmq_recv(void*socket,zmq_msg_t* msg,int flags) {
- return zmq_recv(socket,msg,flags);  
+  return zmq_recv(socket,msg,flags);  
 }
 
 EXPORT int WINAPI _zmq_setsockopt (void *socket, int option_name, const void *option_value, int option_len) {
@@ -139,7 +139,7 @@ EXPORT const char* WINAPI _zmq_strerror(int errnum) {
   return zmq_strerror(errnum);
 }
 EXPORT int WINAPI _zmq_errno() {
- return zmq_errno();
+  return zmq_errno();
 }
  
 //misc

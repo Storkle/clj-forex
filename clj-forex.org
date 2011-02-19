@@ -2552,12 +2552,14 @@ Yes, currently it is not very development start friendly. That will change!
   (clojure.core/use 'nstools.ns)
 
   (ns+ forex.module.account.utils
-    (:clone clj.core)
-    (:use forex.util.core
-	  forex.util.emacs  
-	  forex.util.general
-	  forex.module.error)
-    (:require  [forex.module.account.core :as core]))
+       (:clone clj.core)
+       (:use forex.util.core
+	     forex.util.emacs  
+	     forex.util.general
+	     forex.module.error
+
+	     )
+       (:require  [forex.module.account.core :as core]))
 
 
   ;;account common
@@ -2642,9 +2644,9 @@ Yes, currently it is not very development start friendly. That will change!
   (defn lot 
     ([num] (lot num (env :symbol)))
     ([num symbol]
-       (let [a (to-big num)
-	     b (to-big (mode-minlot symbol))]
-	 (* b (.intValue (/ a b))))))
+       (double (let [a (to-big num)  
+		     b (to-big (mode-minlot symbol))]
+		 (* b (.intValue (/ a b)))))))
 
   (defn- assert-order [order] (is? [(or (sell? order) (buy? order))]))
 
@@ -3352,7 +3354,8 @@ Yes, currently it is not very development start friendly. That will change!
   ;;TODO: change
   (defn ask
     ([] (ask (env :symbol)))
-    ([symbol] (aif (mode-ask symbol) it (throwf "MQL error %s" (:e it)))))
+    ([symbol] (aif (mode-ask symbol)
+		   it (throwf "MQL error %s" (:e it)))))
   ;;bid==close 
   (defn bid
     ([] (bid (env :symbol)))
@@ -3499,6 +3502,16 @@ Yes, currently it is not very development start friendly. That will change!
      (buy? order)
      (>= (close) val )
      true (throwf "invalid order type %s" order)))
+
+
+
+  (defn risk
+    ([percent sl] (risk percent sl (close)))
+    ([percent sl price] (risk percent sl price (env :symbol)))
+    ([percent sl price symbol]
+       (wenv {:symbol symbol}
+	(lot (* 0.1 (/ (* (/ percent 100) (account-balance))
+		       (point (Math/abs (- price sl)))))))))
 #+end_src
 ** Interface
 #+srcname:interface-ea-new
@@ -4058,7 +4071,7 @@ use clj-forex....
        (:clone forex.gui) 
        (:use forex.examples.timeout-ea.utils
 	     forex.interface.gui)
-       (:import (javax.swing JScrollPane)))
+       (:import (javax.swing JScrollPane JTextField)))
   (register-ea)
    ;;ea vars   
   (defvar state (atom :timeout))
@@ -4068,12 +4081,12 @@ use clj-forex....
   (declare timeout break-even trail)
 
   ;;TODO: when we order, and modify fails, how do we get the error? later :)...
-  (defn init [{:keys [type sl price hour]}]
-    (aif (order! {:type type :sl sl :price price
-		  :lots (* (mode-minlot) 2)})
+  (defn init [{:keys [type sl price hour lots]}]
+    (aif (order! {:type type :sl sl :price price :lots lots
+		  })
 	 {#'end-time (plus (now) (hours hour))
 	  #'order (atom-hash it)} 
-	 (:e it))) 
+	 (:e it)))  
 
   (defn start [args]
     (cond
@@ -4112,24 +4125,32 @@ use clj-forex....
     (modify! order {:sl (omax order (:sl order)  (if (sell? order) (hh 3) (ll 3)))})) 
   ;;;GUI
   (defn init-gui [] 
-    (let [panel (JPanel.) text (JTextArea. 20 30)
+    (let [panel (JPanel.)
+	  text (JTextArea. 20 30)
+	  risk (JTextField. "1" 7)
 	  frame (jframe "timeout ea")]
       (doto frame
 	(.add (miglayout
 	       panel :layout "center" :column "center" :row "center"
 	       (JLabel. "paste email text") :wrap
 	       (JScrollPane. text) "span,grow" :wrap
+	       risk (JLabel. "% risk") :wrap
 	       (doto (JButton. "ok")
 		 (add-action-listener
-		  (fn [e] 
-		    (let [parsed (match-method (.getText text))]
-		      (if parsed
-			(when (prompt "is order %s ok?" parsed)
-			  (with-out-str+ out
-			    (if-not (run parsed) 
-			      (inform "failed to run ea %s" (str out))
-			      (.setVisible frame false)))) 
-			(inform "failed to match input text"))))))
+		  (fn [e]
+		    (try
+		      (let [risk (Double/parseDouble (.getText risk))
+			    parsed (match-method risk (.getText text))]
+			(if (= 0 (:lots parsed))
+			  (inform "not enough $ to trade order %s" parsed)
+			  (if parsed
+			    (when (prompt "is order %s ok?" parsed)
+			      (with-out-str+ out
+				(if-not (run parsed) 
+				  (inform "failed to run ea %s" (str out))
+				  (.setVisible frame false)))) 
+			    (inform "failed to match input text"))))
+		      (catch Exception e (inform "invalid risk %s" (.getText risk)))))))
 	       "w 50%"
 	       (doto (JButton. "cancel")
 		 (add-action-listener (fn [_] (.setVisible frame false))))
@@ -4161,23 +4182,29 @@ use clj-forex....
 		 "\\s+" "\\\\s+")))
 
   (defmacro catch-un [& body]
-    `(try (do ~@body) (catch Exception e# (warn "caught unexpected error: %s" e#))))
+    `(try (do ~@body) (catch Exception e#
+			(.printStackTrace e#) (warn "caught unexpected error: %s" e#))))
 
-  (defn match-method [s]
+  (defn match-method [risk-percent s]
     (when s 
       (debugging "Matching Profit Multiplier Trade: "
 		 (catch-un 
 		  (when-let [it (first (re-seq method-regex (.replaceAll s "[\\r\\n]+" " ")))]
 		    (let [[method-type symbol type price stop tp1 tp2] (rest it)
-			  method (.toLowerCase method-type)]
+			  method (.toLowerCase method-type)
+			  symbol (.replaceAll symbol "/" "")]
 		      {:method method
 		       :hour (if (= method "pip reactor") 4 12) 
-		       :symbol (.replaceAll symbol "/" "")
+		       :symbol symbol
 		       :type (condp = (.toLowerCase type)
 				 "buy" :buy-stop
 				 "sell" :sell-stop)
 		       :price (Double/parseDouble price)
 		       :sl (Double/parseDouble stop)
+		       :lots (risk risk-percent
+				   (Double/parseDouble stop)
+				   (Double/parseDouble price)
+				   symbol)
 		       :tp1 (Double/parseDouble tp1)
 		       :tp2 (Double/parseDouble tp2)}))))))
 #+end_src
