@@ -2708,7 +2708,8 @@ Yes, currently it is not very development start friendly. That will change!
   (clojure.core/use 'nstools.ns)
   (ns+ forex.module.account
        (:clone clj.core)
-       (:import forex.backend.mql.socket-service.MqlError)
+       (:require forex.backend.mql.socket-service)
+      ;; (:import forex.backend.mql.socket-service.MqlError)
        (:use forex.util.core
 	     forex.util.emacs  
 	     forex.util.general forex.util.log
@@ -2897,11 +2898,12 @@ Yes, currently it is not very development start friendly. That will change!
 	    :market? market?*
 	    :entry? entry?*})
 
-  (extend-type MqlError
+  (extend-type forex.backend.mql.socket-service.MqlError
     POrder
     (order! [this] this)
     (delete! [this] this)
     (close! [this] this)
+    (close! [this _] this)
     (modify! [this] this))
 
   (extend-type forex.util.core.AtomHash ;;clojure.lang.Atom
@@ -3972,11 +3974,13 @@ Yes, currently it is not very development start friendly. That will change!
 ** User 
 #+srcname:forex_user
 #+begin_src clojure :tangle src/forex_user.clj
-  ;;forex_user is the ns in which customization will occur
+  ;;TODO: bug when no account is connected! yikes!
 
+  ;;forex_user is the ns in which customization will occur
+  (println "LOADING forex-user")
   (clojure.core/use 'nstools.ns)
-  (ns+ forex-user 
-       (:clone forex.default)
+  (ns+ forex-user  
+       (:clone forex.default) 
        (:use forex.interface.gui forex.util.log clj.io))
   (require :reload 'forex.examples.timeout-ea.timeout-ea)
   ;;(require :reload-all 'forex.interface.main)
@@ -4111,11 +4115,11 @@ use clj-forex....
   ;;TODO: better sl saving 
   (defn break-even [{:keys [sl tp2 tp1]}]
     (if (hit? order tp1)
-      (do (out "closing to half ...")
-	  (awhen (-> (modify! order {:sl (:break-even order)})
+      (do (out "closing to half ...") 
+	  (awhen (-> (modify! order {:sl (:break order)})
 		     (close! (lot (/ (:lots order) 2))))	       
 		 (out "trailing order") (reset! state :trail)))
-      (modify! order {:sl sl}))) 
+      (modify! order {:sl sl})))  
 
   (defn hh [a]
     (apply max (map high (range 1 (inc a)))))
