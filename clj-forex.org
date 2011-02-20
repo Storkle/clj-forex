@@ -3500,9 +3500,9 @@ Yes, currently it is not very development start friendly. That will change!
   (defn hit? [order val]
     (cond
      (sell? order)
-     (<= (close) val)
+     (<= val (close))
      (buy? order)
-     (>= (close) val )
+     (>= val (close)) 
      true (throwf "invalid order type %s" order)))
 
 
@@ -4085,8 +4085,8 @@ use clj-forex....
   (declare timeout break-even trail)
 
   ;;TODO: when we order, and modify fails, how do we get the error? later :)...
-  (defn init [{:keys [type sl price hour lots]}]
-    (aif (order! {:type type :sl sl :price price :lots lots
+  (defn init [{:keys [type sl price hour lots tp2]}]
+    (aif (order! {:type type :sl sl :price price :lots lots :tp tp2
 		  })
 	 {#'end-time (plus (now) (hours hour))
 	  #'order (atom-hash it)} 
@@ -4116,18 +4116,27 @@ use clj-forex....
   (defn break-even [{:keys [sl tp2 tp1]}]
     (if (hit? order tp1)
       (do (out "closing to half ...") 
-	  (awhen (-> (modify! order {:sl (:break order)})
+	  (awhen (-> (modify! order {:sl (:break order) :tp 0}) 
 		     (close! (lot (/ (:lots order) 2))))	       
-		 (out "trailing order") (reset! state :trail)))
-      (modify! order {:sl sl})))  
+		 (reset! state :trail)
+		 (out "trailing order")))
+      (modify! order {:sl sl :tp tp2})))  
 
-  (defn hh [a]
+  (defn hh [a] 
     (apply max (map high (range 1 (inc a)))))
   (defn ll [a]
     (apply min (map low (range 1 (inc a)))))
   (defn trail []
-    (modify! order {:sl (omax order (:sl order)  (if (sell? order) (hh 3) (ll 3)))})) 
-  ;;;GUI
+    (wenv {:period +h1+}
+	  (when (or (and (sell? order) (< (cci 30 1) -100))
+		    (and (buy? order) (> (cci 30 1) 100)))
+	    (modify! order
+		     {:sl (omax order
+				(:sl order)
+				(if (sell? order)
+				  (+ (hh 3) (pip 2))
+				  (- (ll 3) (pip 2))))})))) 
+  ;;;GUI   
   (defn init-gui [] 
     (let [panel (JPanel.)
 	  text (JTextArea. 20 30)
