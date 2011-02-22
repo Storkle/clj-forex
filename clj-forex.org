@@ -3500,9 +3500,9 @@ Yes, currently it is not very development start friendly. That will change!
   (defn hit? [order val]
     (cond
      (sell? order)
-     (<= val (close))
+     (<= (close) val)
      (buy? order)
-     (>= val (close)) 
+     (>= (close) val) 
      true (throwf "invalid order type %s" order)))
 
 
@@ -4118,9 +4118,9 @@ use clj-forex....
       (do (out "closing to half ...") 
 	  (awhen (-> (modify! order {:sl (:break order) :tp 0}) 
 		     (close! (lot (/ (:lots order) 2))))	       
-		 (reset! state :trail)
+		 (reset! state :trail) 
 		 (out "trailing order")))
-      (modify! order {:sl sl :tp tp2})))  
+      (modify! order {:sl sl :tp tp2})))   
 
   (defn hh [a] 
     (apply max (map high (range 1 (inc a)))))
@@ -4218,6 +4218,7 @@ use clj-forex....
 				   (Double/parseDouble stop)
 				   (Double/parseDouble price)
 				   symbol)
+		       :period +h4+
 		       :tp1 (Double/parseDouble tp1)
 		       :tp2 (Double/parseDouble tp2)}))))))
 #+end_src
