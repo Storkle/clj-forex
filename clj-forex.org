@@ -102,6 +102,7 @@ Yes, currently it is not very development start friendly. That will change!
 		   [mmemail "1.0.1"] 
 		   [nstools "0.2.4"]
 		   [com.miglayout/miglayout "3.7.4"]
+		   [incanter "1.2.3"]
 		   [commons-codec "1.4"]]   
     :dev-dependencies [[native-deps "1.0.5"]
 		       [swank-clojure "1.3.0-SNAPSHOT"]]  
@@ -348,11 +349,24 @@ Yes, currently it is not very development start friendly. That will change!
 #+source:clj-core
 #+begin_src clojure :tangle src/clj/core.clj
   (ns clj.core
-    (:refer-clojure :exclude [promise swap! reset! defrecord spit file])
+    (:refer-clojure
+     :exclude [def promise swap! reset! defrecord spit file])
     (:require clj.third-party.defrecord2)
     (:import clojure.lang.APersistentMap java.io.Writer))
   (defmacro defrecord [name fields & protocols]
     `(clj.third-party.defrecord2/defrecord2 ~name ~fields ~@protocols))
+
+  ;;taken and modified from http://clojure101.blogspot.com/2009/04/destructuring-binding-support-in-def.html
+
+  (defmacro def+
+    "def with binding (def+ {:keys [a b d]} {:a 1 :b 2 :d 3})"
+    [a b]
+    (let [let-expr (macroexpand `(let [~a ~b]))
+	  vars
+	  (filter #(not (.contains (str %) "__"))
+		  (map first (partition 2 (second let-expr))))
+	  def-vars (map (fn [v] `(def ~v ~v)) vars)]
+      (concat let-expr def-vars)))
 
   ;;TODO: serializable records and atoms and refs 
   (defmulti swap! (fn [a & args] (class a)))
@@ -989,6 +1003,13 @@ Yes, currently it is not very development start friendly. That will change!
        (if (empty? files)
 	 nil
 	 (apply concat (vec files) (map list-files (filter #(.isDirectory %) files)))))))
+
+  ;;TOOD: change to be multifn - regex string or function! or regex!
+  (defn files [dir regex]
+    (let [regex (re-pattern regex)]
+      (filter #(and (.exists %) (.isFile %)
+		    (re-seq regex (.getName %)))
+	      (.listFiles (file dir)))))
 
   ;;(count (filter #(= (file-type %) "clj") (list-files "/home/seth/Dropbox/.rep/clj-forex/")))
 #+end_src
@@ -2230,9 +2251,10 @@ Yes, currently it is not very development start friendly. That will change!
 #+begin_src clojure :tangle src/forex/util/mql_indicator_devel.clj
   (clojure.core/use 'nstools.ns)
   ;;this file allows one to automatically produce binding code for metatrader custom indicators
-  (ns+ forex.util.mql-indicator-devel
-    (:clone clj.core)
-    (:import java.io.File))
+  (ns+ forex.utils.mql-indicator-devel
+       (:clone clj.core)
+       (:use forex.util.emacs clj.io)
+       (:import java.io.File))
 
   (defmacro for+ [args & body]
     (let [a (partition-all 2 args)]
@@ -2256,7 +2278,7 @@ Yes, currently it is not very development start friendly. That will change!
 			   (throwf "unknown type %s" type)))
 	  user-extract (apply str
 			      (interpose "\n"
-					 (for+ [[type name] args index (iterate inc 6)]
+					 (for+ [[type name] args index (iterate inc 7)]
 					       (let [type-fn (type-to-fn type)]
 						 (if type-fn
 						   (format "%s %s = %s(command[%s]);" type name type-fn index)
@@ -2265,56 +2287,84 @@ Yes, currently it is not very development start friendly. That will change!
   string symbol = command[2];
   int timeframe = StrToInteger(command[3]);
   int mode = StrToInteger(command[4]);
-  int shift = StrToInteger(command[5]);")]
-      (str always "\n" user-extract)))
+  int shift = StrToInteger(command[5]);
+  int amount = StrToInteger(command[6]);")]
+      (str always "\n" user-extract)))  
 
   (defn extension [f] (let [e (second (.split (if (instance? File f) (.getName f) f) "\\."))] (if (string? e) (.trim e))))
 
-  (defn to-test [all]
-    (format "%nstring process_INDICATORS(string commands[]) {%nstring ret = \"\";string command=commands[1];%n%s%nreturn(ret);}"
-	    (apply str
-		   "if (command==\"0\") {\n}\n"
-		   (map #(format "else if (command==\"%s\") {%nprotocol_found=true;%nret = %s(commands);%n}%n" (:function-name %) (:function-name %)) all))))
+  (defn to-test
+    ([all] (to-test all "process_PERSONAL_INDICATORS"))
+    ([all name]
+       (format "%nint %s(string c,string command[]) {%n%s%nelse {%nreturn(-1);%n}%nreturn(0);%n}"
+	       name
+	       (apply str
+		      "if (c==\"0\") {\n}\n"
+		      (map #(format "else if (c==\"%s\") {%n%s(command);%n}%n" (:function-name %) (:function-name %)) all)
+		      )))) 
 
 
   (defn- listify [s] (if-not (empty? s) (str (apply str (interpose "," s)) ",") "" ))
   (defn name-of [f] (first (.split (.getName f) "\\.")))
   (defn iCustom
-    "given a file, generate mql4 binding code to the indicator in the flie"
-    [f]
+    "given a File, generate mql4 binding code to the indicator in the flie"
+    [f prefix]
     (let [name (.replaceAll (first (.split (.getName f) "\\.")) "( |-)+" "_")
 	  s (slurp f)
 	  args (map #(list (first %) (format "i_%s" (second %))) (args s))
 	  buffers (buffers s)]
       (when (and s args buffers)
-	(let [custom (format "double val = iCustom(symbol,timeframe,\"%s\",%smode,shift);" ;
-					       (name-of f) (listify (map second args))) 
-	      extract (extract args)
-
+	(let [extract (extract args)
+	      custom
+	      (format 
+	       "array[j] = iCustom(symbol,timeframe,\"%s\",%smode,shift);"
+	       (name-of f) (listify (map second args)))
+	      body (format "double array[];%nArrayResize(array,amount);int j=0;%n
+  for (int i=shift+amount-1;i>=shift;i--) {
+  %s
+  j+=1;
+  }" custom)
 	      return (format
 		      "
   int err = GetLastError();
-  if(err!=0)
-    return(\"error \" + err);
-  return(val); 
+  if(err!=0) {
+    send_error(err);
+    return;
+  }
+  send_array(array); 
   }")
-	      function-name (format "Custom_%s" name)
-	      function-header (format "string %s (string command[]) {" function-name)] 
-	  {:file f :file-name name :function-name function-name :args args :buffers buffers
-	   :code  (format "%s %s %s %s" function-header extract custom return)}))))
+	      function-name (format "%s_%s" prefix name) 
+	      function-header (format "void %s (string command[]) {"
+				      function-name)]  
+	  {:file f :file-name name
+	   :function-name function-name :args args :buffers buffers
+	   :code  (format "%s %s %s %s" function-header extract body return)}))))
 
-  (defn iCustom-all [dir out]
+  (defn iCustom-all [dir out name prefix]
     (let [files (.listFiles (File. dir))
-	  customs (for [f files :when (= (extension f) "mq4")] (iCustom f))]
-      (spit out (format "bool protocol_found = false;%n%s\n%s" (apply str (interpose "\n\n" (map :code customs)))
-			(to-test customs)))))
+	  customs (for [f files :when (= (extension f) "mq4")] (iCustom f prefix))]
+
+      (spit out (format "%s\n%s" (apply str (interpose "\n\n" (map :code customs)))
+			(to-test customs name)))))
 
 
   ;;example usage - first param is custom indicator folder, second is output file
-  (defn do-it []
+  (defvar metatrader-home-dir "/home/seth/.wine/dosdevices/c:/Program Files/MetaTrader - Alpari (US)/")
+  (defn customize-indicators []
+    (comment
+
+      (iCustom-all
+       (format "%s/experts/indicators/" metatrader-home-dir)
+       (format "%s/experts/include/INDICATORS_DEFAULT.mqh" metatrader-home-dir)
+       "process_INDICATORS_DEFAULT"
+       "Default"))
     (iCustom-all
-     "/home/seth/.wine/dosdevices/c:/Program Files/FXCM MT4 powered by BT/experts/indicators/"
-     "/home/seth/.wine/dosdevices/c:/Program Files/FXCM MT4 powered by BT/experts/include/INDICATORS.mqh"))
+     (format "%s/experts/indicators/" metatrader-home-dir )
+     (format "%s/experts/include/INDICATORS_CUSTOM.mqh" metatrader-home-dir)
+     "process_INDICATORS_CUSTOM"
+     "Custom")) 
+
+  ;;(customize-indicators)
 #+end_src
 
 ** Backend
@@ -4127,9 +4177,9 @@ use clj-forex....
   (defn ll [a]
     (apply min (map low (range 1 (inc a)))))
   (defn trail []
-    (wenv {:period +h1+}
-	  (when (or (and (sell? order) (< (cci 30 1) -100))
-		    (and (buy? order) (> (cci 30 1) 100)))
+    (wenv {:period 2}
+	  (when (or (and (sell? order) (< (cci 14 1) -100))
+		    (and (buy? order) (> (cci 14 1) 100)))
 	    (modify! order
 		     {:sl (omax order
 				(:sl order)
@@ -4229,7 +4279,10 @@ use clj-forex....
   (ns+ forex.examples.renko.renko
        (:clone forex.default) 
        (:use forex.util.general)) 
-  (register-ea) 
+  (register-ea)
+  ;;TODO: i have some cases in which backend sockets get confused and sends something to a dead socket!
+  ;; sigh - i really dont want to do that other socket architecture
+
   ;;TODO: *ea-stop* already refers to: #'forex.module.ea/*ea-stop* in namespace: forex.default 
   ;;TODO: on GBP/JPY, why did it enter so late???? 
   ;;TODO!!!: speed up ns+ by alot! and dont have it automatically reload it, please!!!
@@ -4361,7 +4414,7 @@ use clj-forex....
      (= @state :monitor) (monitor)
      (= @state :gobble) (gobble order)))
 
-  (defn vars [ea] (:vars ea))
-  (defn getv [vvar ea] (get (:vars ea) vvar))
+  ;;(defn vars [ea] (:vars ea))
+  ;;(defn getv [vvar ea] (get (:vars ea) vvar))
 #+end_src
  
