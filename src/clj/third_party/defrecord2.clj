@@ -1,6 +1,4 @@
 
-;; [[file:~/Dropbox/.rep/clj-forex/clj-forex.org::*ThirdParty][defrecord2]]
-
 ;;BY David McNeil
 ;;https://github.com/david-mcneil/defrecord2
 ;;modified defrecord2 macro so i could include protocols
@@ -226,4 +224,4 @@
                                                ~ctor-name
                                                native-keys#)))))))
 
-;; defrecord2 ends here
+

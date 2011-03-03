@@ -1,6 +1,4 @@
 
-;; [[file:~/Dropbox/.rep/clj-forex/clj-forex.org::*CLJ][clj-core]]
-
 (ns clj.core
   (:refer-clojure
    :exclude [def promise swap! reset! defrecord spit file])
@@ -68,4 +66,3 @@
 (defmethod print-dup clojure.lang.Ref [o w]
   (.write w "#=(clojure.core/ref ") (print-dup @o w) (.write w ")"))
 
-;; clj-core ends here

@@ -16,7 +16,7 @@
      (:require clojure.contrib.core
 	       [forex.backend.mql.socket-service :as backend])) 
 
-(defn- enumerate [i] (map (fn [a b] [a b]) (keys i) (vals i)))
+(defn enumerate [i] (map (fn [a b] [a b]) (keys i) (vals i)))
 (defn clean-rates [] 
   (swap! *indicators*
 	 (fn [old]
@@ -28,8 +28,6 @@
   (count (keys @*indicators*)))  
 
 ;;TODO: use from/to
-;;TODO: test when no MQL socket is alive
-(defmacro aand [& clauses])
 (defn refresh-rates
   ([] (refresh-rates (to-long (now))))
   ([now]
@@ -41,7 +39,6 @@
 			      (indicator-protocol
 			       (merge indicator {:from now})))))
 		      0))]
-       ;;TODO: aand
        (if-not (or (e? results)
 		   (and (e? (first results))
 			(= (count results) 1)))

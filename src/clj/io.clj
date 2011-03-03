@@ -1,6 +1,4 @@
 
-;; [[file:~/Dropbox/.rep/clj-forex/clj-forex.org::*CLJ][clj-io]]
-
 ;;; duck_streams.clj -- duck-typed I/O streams for Clojure
 
 ;; by Stuart Sierra, http://stuartsierra.com/
@@ -596,4 +594,3 @@ Raise an exception if any deletion fails unless silently is true."
 
 ;;(count (filter #(= (file-type %) "clj") (list-files "/home/seth/Dropbox/.rep/clj-forex/")))
 
-;; clj-io ends here
