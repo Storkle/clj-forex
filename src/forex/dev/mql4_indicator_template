@@ -1,0 +1,49 @@
+void %s (string request[]) {
+  string symbol = request[1];
+  int timeframe = StrToInteger(request[2]);
+  int mode = StrToInteger(request[3]); 
+  int from_date = StrToInteger(request[4]);
+  int to_date = StrToInteger(request[5]);
+  int min = StrToInteger(request[6]);
+  int max = StrToInteger(request[7]); 
+
+  %s
+ 
+  //set from and to, based on min and max!!!
+  int from = iBarShift(symbol,timeframe,from_date);
+  //if to_date is zero, max is # of bars, 
+  int to = from+max-1; 
+  if (to_date!=0)
+    to = iBarShift(symbol,timeframe,to_date);
+    
+  int err = GetLastError();
+  if (err!=0) {
+    send_error(err);
+    return;
+  }
+  
+  if (to_date!=0) {
+    if (to-from+1>max) {
+       to = from+max-1;
+    }
+    if (to-from+1<min) {
+       to = from+min-1;
+    }
+  }
+  //
+  
+  to = MathMin(to,iBars(symbol,timeframe)-1);
+  double array[];
+  ArrayResize(array,to-from+1);
+  int j=0;
+  for (int i=to;i>=from;i--) {
+    array[j] = %s;
+    j+=1;
+  } 
+  err = GetLastError(); 
+  if (err!=0) {
+    send_error(err);
+    return;
+  } 
+  send_array(array);
+ }

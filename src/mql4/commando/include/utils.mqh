@@ -2,50 +2,61 @@
 
 int socket;
 string id; 
-void send_error(int err,int flags=ZMQ_NOBLOCK) { 
+int flag = ZMQ_NOBLOCK;
+
+void snd_id() {
+  Print("id is "+id+" flag is "+flag);
+  if (flag!=ZMQ_SNDMORE) {
+    Print("sending id");
+    z_send(socket,id,flag); 
+  }
+}
+
+
+void send_error(int err) { 
   z_send(socket,err,ZMQ_SNDMORE);
   z_send(socket,"error",ZMQ_SNDMORE);
-  z_send(socket,StrToInteger(id),flags); 
+  snd_id(); 
 }
-void send_array(double array[],int flags=ZMQ_NOBLOCK) {
+void send_array(double array[]) {
   z_send_double_array(socket,array,ZMQ_SNDMORE);
   z_send(socket,"double[]",ZMQ_SNDMORE);
-  z_send(socket,StrToInteger(id),flags); 
+  snd_id(); 
 }
-void send_string(string item,int flags=ZMQ_NOBLOCK) {
+void send_string(string item) {
   z_send(socket,item,ZMQ_SNDMORE);
   z_send(socket,"string",ZMQ_SNDMORE);
-  z_send(socket,StrToInteger(id),flags); 
+  snd_id(); 
 }
-void send_int(string item,int flags=ZMQ_NOBLOCK) {
+void send_int(string item) {
   z_send(socket,item,ZMQ_SNDMORE);
   z_send(socket,"int",ZMQ_SNDMORE);
-  z_send(socket,StrToInteger(id),flags); 
+  snd_id();
 }
-void send_boolean(string item,int flags=ZMQ_NOBLOCK) {
+void send_boolean(string item) {
   z_send(socket,item,ZMQ_SNDMORE);
   z_send(socket,"boolean",ZMQ_SNDMORE);
-  z_send(socket,StrToInteger(id),flags); 
+  snd_id();
 }
-void send_long(string item,int flags=ZMQ_NOBLOCK) {
+void send_long(string item) {
   z_send(socket,item,ZMQ_SNDMORE);
   z_send(socket,"long",ZMQ_SNDMORE);
-  z_send(socket,StrToInteger(id),flags); 
+  snd_id();
 }
-void send_double(string item,int flags=ZMQ_NOBLOCK) {
+void send_double(string item) {
   z_send(socket,item,ZMQ_SNDMORE);
   z_send(socket,"double",ZMQ_SNDMORE);
-  z_send(socket,StrToInteger(id),flags); 
+  snd_id();
 }
-void send_global(string item,int flags=ZMQ_NOBLOCK) {
+void send_global(string item) {
   z_send(socket,item,ZMQ_SNDMORE);
   z_send(socket,"global",ZMQ_SNDMORE);
-  z_send(socket,StrToInteger(id),flags); 
+  snd_id();
 }
 void send_identity() {
   send_global(Symbol()+" "+Period()); 
 }
-
+ 
 void send_unknown() {
  send_error(-1);
 }

@@ -6,9 +6,8 @@
 #include <INDICATORS_CUSTOM.mqh>  //automatically generated
 
 int process (int out,string request[]) {
-    string command = request[1];
+    string command = request[0];
     socket = out;
-    id = request[0];  
     //processing  
     GetLastError();
     int ret = process_GLOBAL(command,request);

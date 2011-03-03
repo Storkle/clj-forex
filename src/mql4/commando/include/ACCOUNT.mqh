@@ -110,12 +110,12 @@ void process_AccountServer(string command[]) {
 
 
 void process_OrderModify(string command[]) {
-  int ticket = StrToInteger(command[2]);
-  double price = StrToDouble(command[3]);
-  double stoploss = StrToDouble(command[4]);
-  double takeprofit = StrToDouble(command[5]);
+  int ticket = StrToInteger(command[1]);
+  double price = StrToDouble(command[2]);
+  double stoploss = StrToDouble(command[3]);
+  double takeprofit = StrToDouble(command[4]);
   datetime expiration = 0;//make_datetime(command[5]);
-  int color_of = StrToInteger(command[6]);
+  int color_of = StrToInteger(command[5]);
   bool success = OrderModify(ticket,price,stoploss,takeprofit,expiration,color_of);
   if (success!=true) {
     send_error(GetLastError());
@@ -124,27 +124,31 @@ void process_OrderModify(string command[]) {
   send_boolean(true);
 }
 void process_OrderClose(string command[]) {
-  int ticket = StrToInteger(command[2]);
-  double lots = StrToDouble(command[3]);
-  double price = StrToDouble(command[4]);
-  int slippage = StrToDouble(command[5]);
-  int color_of =StrToInteger(command[6]);
+  int ticket = StrToInteger(command[1]);
+  double lots = StrToDouble(command[2]);
+  double price = StrToDouble(command[3]);
+  int slippage = StrToDouble(command[4]);
+  int color_of =StrToInteger(command[5]);
+  
+  OrderSelect(ticket,SELECT_BY_TICKET);
+  double old_lots = OrderLots();
+  
   bool success = OrderClose(ticket,lots,price,slippage,color_of);
   if (success!=true) {
     send_error(GetLastError());
     return;
   }
-
-  if (OrderSelect(OrdersTotal()-1, SELECT_BY_POS, MODE_TRADES)==true && OrderLots()!=0) {
+  
+  if (old_lots!=lots && OrderSelect(OrdersTotal()-1, SELECT_BY_POS, MODE_TRADES)==true) {
     send_string(OrderTicket()); 
-  } else {
-    send_boolean (false);
+  } else { 
+    send_boolean (true);
   }
 }
 
 string process_MarketInfo(string command[]) {
-  string symbol = command[2];
-  int type = StrToInteger(command[3]);
+  string symbol = command[1];
+  int type = StrToInteger(command[2]);
   double result = MarketInfo(symbol,type);
   int err = GetLastError();
   if (err!=0) {
@@ -159,15 +163,15 @@ double norm (string symbol,double d) {
 }
 
 void process_OrderSend(string command[]) {
- string symbol = command[2];
- int cmd = StrToInteger(command[3]);
- double volume = StrToDouble(command[4]);
- double price = norm(symbol,StrToDouble(command[5]));
- int slippage = StrToInteger(command[6]);
- double stoploss = norm(symbol,StrToDouble(command[7]));
- double takeprofit = norm(symbol,StrToDouble(command[8]));
+ string symbol = command[1];
+ int cmd = StrToInteger(command[2]);
+ double volume = StrToDouble(command[3]);
+ double price = norm(symbol,StrToDouble(command[4]));
+ int slippage = StrToInteger(command[5]);
+ double stoploss = norm(symbol,StrToDouble(command[6]));
+ double takeprofit = norm(symbol,StrToDouble(command[7]));
  datetime expiration = 0;//make_datetime(command[8]);
- int color_of = StrToInteger(command[9]);
+ int color_of = StrToInteger(command[8]);
  
  int ticket = OrderSend(symbol,cmd,volume,norm(symbol,price),slippage,stoploss,takeprofit,NULL,0,expiration,color_of);
  int err = GetLastError();
@@ -183,7 +187,7 @@ void process_OrdersTotal (string command[]) {
 }
 
 void process_OrderCloseTime(string command[]) {
-   int ticket= StrToInteger(command[2]);
+   int ticket= StrToInteger(command[1]);
    if (OrderSelect(ticket,SELECT_BY_TICKET,MODE_HISTORY)==true) {
      send_long(OrderCloseTime());
      return;
@@ -192,7 +196,7 @@ void process_OrderCloseTime(string command[]) {
 }
 
 void process_OrderType(string command[]) {
-   int ticket= StrToInteger(command[2]);
+   int ticket= StrToInteger(command[1]);
    if (OrderSelect(ticket,SELECT_BY_TICKET)==true) {
      send_int(OrderType());
      return;
@@ -201,7 +205,7 @@ void process_OrderType(string command[]) {
 }
 
 string process_OrderDelete(string command[]) {
-   int ticket= StrToInteger(command[2]);
+   int ticket= StrToInteger(command[1]);
    if (OrderSelect(ticket,SELECT_BY_TICKET)==False) {
      send_error(GetLastError());
      return;
@@ -214,7 +218,7 @@ string process_OrderDelete(string command[]) {
 }
 
 string process_OrderLots(string command[]) {
-   int id = StrToInteger(command[2]);
+   int id = StrToInteger(command[1]);
    if (OrderSelect(id,SELECT_BY_TICKET)==False) {
      send_error(GetLastError());
      return;
