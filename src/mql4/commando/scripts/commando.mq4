@@ -75,7 +75,6 @@ int loop () {
       
      } 
     int size = ArraySize(requests);
-    Print("got size "+size+" and id "+id);
     for (int i=0;i<size;i++) {
        if (i==size-1) 
           flag = ZMQ_NOBLOCK; //TOOD: noblock - will it work if it is still connected?

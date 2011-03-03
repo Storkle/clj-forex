@@ -5,9 +5,7 @@ string id;
 int flag = ZMQ_NOBLOCK;
 
 void snd_id() {
-  Print("id is "+id+" flag is "+flag);
   if (flag!=ZMQ_SNDMORE) {
-    Print("sending id");
     z_send(socket,id,flag); 
   }
 }

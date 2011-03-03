@@ -83,7 +83,7 @@
                 (fn [e]
 		  (try
 		    (let [risk (Double/parseDouble (.getText risk))
-			  parsed (match-method risk (.getText text))]
+			  parsed (try (match-method risk (.getText text)) (catch Exception e nil))]
 		      (if (= 0 (:lots parsed))
 			(inform "not enough $ to trade order %s" parsed)
 			(if parsed

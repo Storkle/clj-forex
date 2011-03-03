@@ -25,26 +25,24 @@
 
 (defn match-method [risk-percent s]
   (when s 
-    (debugging "Matching Profit Multiplier Trade: "
-               (catch-un 
-                (when-let [it (first (re-seq method-regex (.replaceAll s "[\\r\\n]+" " ")))]
-                  (let [[method-type symbol type price stop tp1 tp2] (rest it)
-                        method (.toLowerCase method-type)
-			symbol (.replaceAll symbol "/" "")]
-                    {:method method
-                     :hour (if (= method "pip reactor") 4 12) 
-                     :symbol symbol
-                     :type (condp = (.toLowerCase type)
-                               "buy" :buy-stop
-                               "sell" :sell-stop)
-                     :price (Double/parseDouble price)
-                     :sl (Double/parseDouble stop)
-		     :lots (risk risk-percent
-				 (Double/parseDouble stop)
-				 (Double/parseDouble price)
-				 symbol)
-		     :period +h4+
-                     :tp1 (Double/parseDouble tp1)
-                     :tp2 (Double/parseDouble tp2)}))))))
+    (when-let [it (first (re-seq method-regex (.replaceAll s "[\\r\\n]+" " ")))]
+      (let [[method-type symbol type price stop tp1 tp2] (rest it)
+	    method (.toLowerCase method-type)
+	    symbol (.replaceAll symbol "/" "")]
+	{:method method
+	 :hour (if (= method "pip reactor") 4 12) 
+	 :symbol symbol
+	 :type (condp = (.toLowerCase type)
+		   "buy" :buy-stop
+		   "sell" :sell-stop)
+	 :price (Double/parseDouble price)
+	 :sl (Double/parseDouble stop)
+	 :lots (risk risk-percent
+		     (Double/parseDouble stop)
+		     (Double/parseDouble price)
+		     symbol)
+	 :period +h4+
+	 :tp1 (Double/parseDouble tp1)
+	 :tp2 (Double/parseDouble tp2)}))))
 
 
