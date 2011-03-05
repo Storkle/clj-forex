@@ -72,7 +72,16 @@ void split(string& arr[], string str)
   string item;
   int pos, size;
   
+  pos = StringFind(str,";");
+  string long="";
+  if (pos!=-1) {
+    long = StringSubstr(str,pos+1);
+    str = StringSubstr(str,0,pos);
+  }
+  
+  pos=0;
   int len = StringLen(str);
+  
   for (int i=0; i < len;) {
     pos = StringFind(str, sym, i);
     if (pos == -1) pos = len;
@@ -87,4 +96,8 @@ void split(string& arr[], string str)
     
     i = pos+1;
   }
+   if (long!="") {
+     ArrayResize(arr,ArraySize(arr)+1);
+     arr[ArraySize(arr)-1] = long;  
+   }
 }

@@ -45,11 +45,10 @@ void process_iClose (string request[]) {
   string symbol = request[1];
   int timeframe = StrToInteger(request[2]);
   //mode = request[4]; 
-  int from_date = StrToInteger(request[4]);
-  int to_date = StrToInteger(request[5]);
+  datetime from_date = StrToInteger(request[4]);
+  datetime to_date = StrToInteger(request[5]);
   int min = StrToInteger(request[6]);
   int max = StrToInteger(request[7]); 
-
   //set from and to, based on min and max!!!
   int from = iBarShift(symbol,timeframe,from_date);
   //if to_date is zero, max is # of bars, 
@@ -72,7 +71,6 @@ void process_iClose (string request[]) {
     }
   }
   //
-  
   to = MathMin(to,iBars(symbol,timeframe)-1);
   double array[];
   ArrayResize(array,to-from+1);
@@ -81,6 +79,7 @@ void process_iClose (string request[]) {
     array[j] = iClose(symbol,timeframe,i); 
     j+=1;
   } 
+
   err = GetLastError(); 
   if (err!=0) {
     send_error(err);

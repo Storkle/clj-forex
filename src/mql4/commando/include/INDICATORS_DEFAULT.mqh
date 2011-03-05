@@ -1,3 +1,5 @@
+#include <utils.mqh>
+
 void Default_MACD (string request[]) {
   string symbol = request[1];
   int timeframe = StrToInteger(request[2]);

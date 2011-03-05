@@ -12,6 +12,7 @@
 
 (def e? forex.backend.mql.error/e?)
 (def new-mql-error forex.backend.mql.error/new-mql-error)
+(def request forex.backend.mql.socket-service/request )
 (defmacro aif
   ([test then] `(aif ~test ~then nil))
   ([test then else]
@@ -56,8 +57,10 @@
   (receive msg false true))
 
 (defn receive! [& args]
-  (aif (apply receive args)
-       it
-       (throwf "MQL error %s when sending message with args %s" it args)))  
+  (let [result (apply receive args)]
+   (if-not (e? result)
+     result
+     (throwf "MQL error %s when sending message with args %s"
+	     result args))))  
 
 

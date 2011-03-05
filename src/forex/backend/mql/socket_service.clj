@@ -77,6 +77,7 @@
 	      false))) 
 	(.snd socket (str msg) +noblock+)))))  
 
+;;TODO: make shorter
 (defn- socket-service-match [events send receive]
   (let [event (first events)]
     (match
@@ -86,12 +87,14 @@
      (when-not (invalid-msg? msg)
        (let [id (msg-id)  
 	     result (snd-multi send id msg)]
-	     (if-not result  
-	       (do   
-		 (catch-unexpected
-		  (deliver askin (list
-				  (new-mql-error +error-clj-service-queue+)))))
-	       (swap! *ids* assoc id askin))))  
+	 (if result
+	   (when-not (nil? askin)
+	     (swap! *ids* assoc id askin))
+	   (when-not (nil? askin)  
+	     (catch-unexpected
+	      (deliver askin (list
+			      (new-mql-error +error-clj-service-queue+)))))
+	   )))  
      [receive ?msg] (mql-recv msg)   
      ?msg (warn "Ignoring invalid message %s" msg))))
  
@@ -128,7 +131,7 @@
 ;;interact with mql
 ;;TODO: if mql isnt alive and we retry/????
 (defn request
-  ([msg] (request msg (promise)))
+  ([msg] (request msg nil))
   ([msg askin]
      (io!
       (if (pid? (:pid @*s*)) 

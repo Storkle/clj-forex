@@ -1,4 +1,5 @@
 #include <utils.mqh>
+#include <GUI.mqh>
 #include <ACCOUNT.mqh>
 #include <GLOBAL.mqh>
 #include <INDICATORS_HAND.mqh>    //hand written defaults - includes 'i' functiosn, like iClose
@@ -9,6 +10,8 @@ int process (int out,string request[]) {
     string command = request[0];
     socket = out;
     //processing  
+    GetLastError();
+    if(process_GUI(command,request)==-1) {
     GetLastError();
     int ret = process_GLOBAL(command,request);
     if (ret==-2) return(-1);  
@@ -31,6 +34,7 @@ int process (int out,string request[]) {
             if (ret==-1) send_unknown();  
           }
         }
+      }
       }
     }
     return(0);
