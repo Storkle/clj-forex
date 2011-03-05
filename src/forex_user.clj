@@ -12,7 +12,6 @@
 (when-not (backend/alive?)
   (backend/start))
 
-
 (when-not log-file
   (setq forex.util.log/log
         (new-logger (.replaceAll

@@ -1,4 +1,4 @@
-(clojure.core/use 'nstools.ns)
+(clojure.core/use 'nstools.ns) 
 (ns+ forex.module.gui
      (:clone clj.core)
      (:use forex.module.indicator.util)
@@ -16,6 +16,7 @@
       [forex.backend.mql.socket-service :as backend])
      (:require [forex.module.error :as s])) 
 
+(defn- get! [map val] (let [ret (get map val)] (is? ret "couldnt get key %s in map %s" val map) ret))
 
 (def gui-property-map
   {:time1 0
@@ -112,6 +113,10 @@
    :text 21
    :arrow 22
    :label 23})
+(def gui-number-to-type-map (zipmap (vals gui-type-map) (keys gui-type-map)))
+(defn object-type [name]
+  (get! gui-number-to-type-map (receive! (format "ObjectType %s" name))))
+ 
 (defn object-create
   [{:keys [name type time1 price1 time2 price2 time3 price3]
     :or {name (str (gensym)) time2 0 price2 0 time3 0 price3 0
@@ -127,7 +132,6 @@
 (def gui-style-map
   {:solid 0 :dash 1 :dot 2 :dashdot 3 :dashdotdot 4})
 
-(defn get! [map val] (let [ret (get map val)] (is? ret "couldnt get key %s in map %s" val map) ret))
 
 (defn hline [price & {:keys [color style name] :or {style :solid name (str (gensym)) color :blue}}]
   {:pre [(number? price)]}
@@ -140,6 +144,5 @@
   (doto (object-create {:type :vline :name name :time1 time})
     (object-set :color (or (get gui-color-map color) color))
     (object-set :style (get! gui-style-map style))))
-
 
 ;;(object-create {:name "blazan dynamic stop" :type :hline :price1 1.386})

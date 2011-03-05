@@ -41,6 +41,16 @@ void process_ObjectGet(string &req[]) {
   send_double(ret);
 }
 
+void process_ObjectType(string &req[]) {
+  int ret = ObjectType(req[1]);
+  int err = GetLastError();
+  if (err!=0) {
+    send_error(err); 
+    return;
+  }
+  send_int(ret);
+}
+
 
 
 void process_ObjectSet(string &req[]) {
@@ -85,7 +95,10 @@ void process_ObjectDescription(string &req[]) {
 }
 
 int process_GUI(string c,string command[]) {
-  if (c=="WindowRedraw") {
+  if (c=="ObjectType") {
+    process_ObjectType(command);
+  }
+  else if (c=="WindowRedraw") {
     process_WindowRedraw(command);
   }
   else if (c=="ObjectDescription") 

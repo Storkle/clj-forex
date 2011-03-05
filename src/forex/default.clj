@@ -7,6 +7,7 @@
            forex.util.log)  
      (:use forex.module.error
            forex.module.ea
+	   forex.module.gui
 	   ;;TODO: change indicator, get indicator service?
            [forex.module.indicator :exclude [start stop alive?]]
            forex.module.account forex.module.account.utils
