@@ -14,9 +14,9 @@
      (:require clojure.contrib.core
       [forex.backend.mql.socket-service :as backend])
      (:require [forex.module.error :as s])) 
-  
+   
 (def *max* 1000)
-(def *now* (to-long (now)))
+(def *now* (.intValue (/ (to-long (now)) 1000M)))
 (defonce *indicators* (atom {}))
  
 (defn indicator-protocol

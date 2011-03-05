@@ -14,5 +14,5 @@
            forex.module.account forex.module.account.utils
            [clj-time.core :exclude [extend start]])
      (:require
-      [forex.backend.mql.socket-service :as backend]))
+      [forex.module.service :as backend]))
 

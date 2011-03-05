@@ -21,7 +21,7 @@
        {#'end-time (plus (now) (hours hour))
         #'order (atom-hash it)} 
        (:e it)))  
-
+;;TODO: why dont println work? arg!!!!
 (defn start [args]
   (cond
    (close? order) (exit "order is now closed")
@@ -83,21 +83,23 @@
                 (fn [e]
 		  (try
 		    (let [risk (Double/parseDouble (.getText risk))
-			  parsed (try (match-method risk (.getText text)) (catch Exception e nil))]
+			  parsed (try (match-method risk (.getText text)) (catch Exception e e))]
 		      (if (= 0 (:lots parsed))
 			(inform "not enough $ to trade order %s" parsed)
-			(if parsed
-			  (when (prompt "is order %s ok?" parsed)
-			    (with-out-str+ out
-			      (if-not (run parsed) 
-				(inform "failed to run ea %s" (str out))
-				(.setVisible frame false)))) 
-			  (inform "failed to match input text"))))
+			(cond
+			 (instance? Exception parsed) (inform parsed)
+			 parsed
+			 (when (prompt "is order %s ok?" parsed)
+			   (with-out-str+ out
+			     (if-not (run parsed) 
+			       (inform "failed to run ea %s" (str out))
+			       (.setVisible frame false)))) 
+			 true (inform "failed to match input text"))))
 		    (catch Exception e (inform "invalid risk %s" (.getText risk)))))))
              "w 50%"
              (doto (JButton. "cancel")
                (add-action-listener (fn [_] (.setVisible frame false))))
              "w 50%"))
       (.pack)
-      (.setVisible true))))
+      (.setVisible true)))) 
 
