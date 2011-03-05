@@ -1,6 +1,9 @@
 (ns forex.module.indicator.util
-  (:use forex.util.core))
- 
+  (:use forex.util.core
+	[clj-time.core :exclude [extend start]]
+	clj-time.coerce))
+(defn now-seconds [] (.intValue (/ (to-long (now)) 1000M)))
+
 (defn env? [{:keys [symbol period]}]
   (and (string? symbol) (integer? period)))
 (defn mklst [a]

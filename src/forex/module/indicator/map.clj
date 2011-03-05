@@ -16,7 +16,7 @@
      (:require [forex.module.error :as s])) 
    
 (def *max* 1000)
-(def *now* (.intValue (/ (to-long (now)) 1000M)))
+(def *now* (now-seconds)) 
 (defonce *indicators* (atom {}))
  
 (defn indicator-protocol

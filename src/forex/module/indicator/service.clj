@@ -6,7 +6,7 @@
 	   forex.module.indicator.map)
      (:use forex.util.emacs
 	   [clj-time.core :exclude [extend start]]
-	   [clj-time.coerce]
+	   clj-time.coerce
 	   forex.util.spawn
 	   forex.util.core
 	   forex.util.log
@@ -27,9 +27,10 @@
 			      [key val]))))))
   (count (keys @*indicators*)))  
 
+
 ;;TODO: use from/to
 (defn refresh-rates
-  ([] (refresh-rates (to-long (now))))
+  ([] (refresh-rates (now-seconds)))
   ([now]
      (let [i @*indicators*
 	   results (binding [*debug* false]
