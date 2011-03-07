@@ -14,8 +14,8 @@
 (def- signal (partial vma [2 2 1 1] )) 
 (def- middle (partial vma [2 2 26 1]))
 
-(def- support (blazan-dynamic-stop [150 70 1 10000] 1))
-(def- resistance (blazan-dynamic-stop [150 70 1 10000] 0))
+(def- support (partial blazan-dynamic-stop [150 70 1 10000] 1))
+(def- resistance (partial blazan-dynamic-stop [150 70 1 10000] 0))
 (defonce- trail-time-period +m5+)
 
 (defn uber-init-close? [{:keys [type] :as o}] 

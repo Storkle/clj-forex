@@ -29,8 +29,9 @@
 
 
 ;;TODO: use from/to
+;;TODO: why doesnt now work vs itime!!!
 (defn refresh-rates
-  ([] (refresh-rates (now-seconds)))
+  ([] (refresh-rates (update-time)))
   ([now]
      (let [i @*indicators*
 	   results (binding [*debug* false]
@@ -68,7 +69,7 @@
     (warn "global indicator update service is already dead")))
  
 ;;TODO: when we have clj-forex error, we need to subclass it!
-(defn start []
+(defn start [] 
   (if (alive?)
     (warn "global indicator update service is already alive")
     (debugging

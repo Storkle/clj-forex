@@ -14,11 +14,24 @@
      (:require clojure.contrib.core
       [forex.backend.mql.socket-service :as backend])
      (:require [forex.module.error :as s])) 
-   
+
+
+
 (def *max* 1000)
 (def *now* (now-seconds)) 
 (defonce *indicators* (atom {}))
- 
+
+
+(defn update-time
+  ([] (itime 0))
+  ([i & e]
+     {:pre [(integer? i)]}
+     (let [{:keys [symbol period]} (env-dispatch e true)]
+       (aif (receive (format "iTime %s %s %s" symbol period
+			     i))
+	    (alter-var-root *now* it))
+       *now*)))
+
 (defn indicator-protocol
   "retrieve protocol string needed for indicator"
   [{:keys [name param mode symbol

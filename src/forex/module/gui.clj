@@ -128,7 +128,8 @@
        name))))  
 
 (def gui-color-map
-  {:blue 1.671168E7})
+  {:blue 1.671168E7
+   :red 255})
 (def gui-style-map
   {:solid 0 :dash 1 :dot 2 :dashdot 3 :dashdotdot 4})
 

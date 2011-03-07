@@ -10,27 +10,24 @@
 (def signal (partial vma [2 2 1 1] ))
 (def middle (partial vma [2 2 26 1]))
 
-(def support (blazan-dynamic-stop [150 70 1 10000] 1))
-(def resistance (blazan-dynamic-stop [150 70 1 10000] 0))
+(def support (partial blazan-dynamic-stop [150 70 1 10000] 1))
+(def resistance (partial blazan-dynamic-stop [150 70 1 10000] 0))
 
+
+(def crosses (doall (map
+	       #(awhen (wenv {:i %} (open-order?))
+		       (vline (itime %) :color (if (= it :sell) :red :blue))) (range 0 1000))))
+(defn dir [period]
+  (wenv {:period period}
+	(cond
+	 (> (signal 1) (main 1)) :buy
+	 (< (signal 1) (main 1)) :sell)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;OPENING ORDER
 ;;TODO: o+ with keyword - order? without protocol - mayb use multimethod instead?
 (defn open-order? []
-  (when-let [dir (cross? signal main)]
-    (let [main-trend (wenv {:period +h1+}
-			   (cond
-			    (> (signal 1) (main 1)) :buy
-			    (< (signal 1) (main 1)) :sell))
-	  m15-rsi (wenv {:period +m15+} (rsi 10 1))]
-      (cond (= dir :buy)
-	    (and (> m15-rsi 50)
-		 (= main-trend :buy)
-		 :buy)
-	    (= dir :sell)
-	    (and (< m15-rsi 50)
-		 (= main-trend :sell)
-		 :sell)))))
+  (cross? signal main))
+
 
 ;;max 20 pips, min 5, or then blazan support
 (defn open-order [dir]

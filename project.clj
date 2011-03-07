@@ -15,7 +15,7 @@
 		 [commons-codec "1.4"]]   
   :dev-dependencies [[native-deps "1.0.5"]
                      [swank-clojure "1.3.0-SNAPSHOT"]]  
-  :native-dependencies [[org.clojars.starry/jzmq-native-deps "2.0.10.3"]]
+  :native-dependencies [[org.clojars.starry/jzmq-native-deps "2.0.10.4"]]
   :main forex.interface.main
   :repositories {"miglayout" "http://www.miglayout.com/mavensite/"} 
   ;; :run-aliases {:izpack forex.dev.install} 

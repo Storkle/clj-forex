@@ -6,7 +6,7 @@
      (:use forex.util.emacs clj.io)
      (:import java.io.File))
 (defvar mql4-indicator-template "src/forex/dev/mql4_indicator_template")
-(defvar metatrader-home-dir "/home/seth/.wine/dosdevices/c:/Program Files/FXCM MT4 powered by BT/")
+(defvar metatrader-home-dir "/home/seth/.wine/dosdevices/c:/Program Files/MetaTrader - Alpari (US)/")
 
 (defmacro for+ [args & body]
   (let [a (partition-all 2 args)]
@@ -82,11 +82,11 @@
 
 ;;example usage - first param is custom indicator folder, second is output file
 (defn customize-indicators []
-  (iCustom-all
-   (format "%s/experts/indicators/" metatrader-home-dir)
-   (format "%s/experts/include/INDICATORS_DEFAULT.mqh" metatrader-home-dir)
-   "process_INDICATORS_DEFAULT"
-   "Default")
+  (comment(iCustom-all
+    (format "%s/experts/indicators/" metatrader-home-dir)
+    (format "%s/experts/include/INDICATORS_DEFAULT.mqh" metatrader-home-dir)
+    "process_INDICATORS_DEFAULT"
+    "Default"))
   (iCustom-all
    (format "%s/experts/indicators/" metatrader-home-dir )
    (format "%s/experts/include/INDICATORS_CUSTOM.mqh" metatrader-home-dir)

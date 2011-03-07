@@ -16,8 +16,7 @@
 
 ;;TODO: when we order, and modify fails, how do we get the error? later :)...
 (defn init [{:keys [type sl price hour lots tp2]}]
-  (aif (order! {:type type :sl sl :price price :lots lots :tp tp2
-                })
+  (aif (order! {:type type :sl sl :price price :lots lots :tp tp2})
        {#'end-time (plus (now) (hours hour))
         #'order (atom-hash it)} 
        (:e it)))  
