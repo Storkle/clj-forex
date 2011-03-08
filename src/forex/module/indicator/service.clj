@@ -30,6 +30,8 @@
 
 ;;TODO: use from/to
 ;;TODO: why doesnt now work vs itime!!!
+;;TOOD: no error thrown with itime! yall!
+
 (defn refresh-rates
   ([] (refresh-rates (update-time)))
   ([now]

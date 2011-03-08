@@ -3,67 +3,65 @@
      (:clone forex.default) 
      (:use forex.util.general forex.examples.rainbow.uber-trail))
 
-(def ^{:var true} order (atom-hash))
-(def ^{:var true} state (atom :monitor))
-
-(def main (partial vma [2 2 100 1]))
-(def signal (partial vma [2 2 1 1] ))
+(def main (partial ema 100))
+(def signal (partial vma [2 2 1 1]))
 (def middle (partial vma [2 2 26 1]))
 
-(def support (partial blazan-dynamic-stop [150 70 1 10000] 1))
-(def resistance (partial blazan-dynamic-stop [150 70 1 10000] 0))
+;;TODO: negative range 
+(defn hh? []
+  (let [[a b c d e] (map high (reverse (range 0 5)))]
+    (and (< a b) (< b c) (> c d) (> d e) :sell)))
+(defn ll? []
+  (let [[a b c d e] (map high (reverse (range 0 5)))]
+    (and (> a b) (> b c) (< c d) (< d e) :buy)))
+
+(comment
+  (defn find-spikes []
+    (objects-delete-all)
+    (redraw
+     (def spikes
+       (doall (map #(awhen (wenv {:i %} (or (hh?) (ll?)))
+			   (vline (itime (+ % 2)) :color (if (= it :sell) :red :blue))
+			   [% it])
+		   (range 0 1000)))))))
 
 
-(def crosses (doall (map
+(defn find-crosses []
+    (objects-delete-all)
+    (redraw
+     (def crosses
+       (doall (map
 	       #(awhen (wenv {:i %} (open-order?))
-		       (vline (itime %) :color (if (= it :sell) :red :blue))) (range 0 1000))))
-(defn dir [period]
-  (wenv {:period period}
-	(cond
-	 (> (signal 1) (main 1)) :buy
-	 (< (signal 1) (main 1)) :sell)))
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;OPENING ORDER
-;;TODO: o+ with keyword - order? without protocol - mayb use multimethod instead?
+		       (vline (itime %) :color (if (= it :sell) :red :blue))
+		       [% it])
+	       (range 0 1000))))
+     (vline (itime 999))))
+;;TODO: weird, update service was down, nothing updating!!!
 (defn open-order? []
   (cross? signal main))
+;;TODO: itime should also shift!
+(defn dir [period]
+    (let [i (ibarshift (itime 1) period)]
+      (wenv {:period period :i 0} (or (and (> (cci 30 i) 0) (> (rsi 14 i) 50) :buy) (and (< (cci 30 i) 0) (< (rsi 14 i) 50) :sell)))
+    
+      ))
 
+;;TODO: receive-indicator! for ibarshift and itime!
+;;TODO: requested data in updating state error! argh! i thought we had fixed that...
+(defn open-order? []
+  (awhen (cross? signal main)
+	 (or
+	  (and (= it :buy)
+	       (> (cci 30 1) 0)
+	       (> (rsi 14 1) 50)
+	       (= (dir +d1+) :buy)
+	       :buy)
+	  (and (= it :sell)
+	       (< (cci 30 1) 0)
+	       (< (rsi 14 1) 50)
+	       (= (dir +d1+) :sell)
+	       :sell))))
 
-;;max 20 pips, min 5, or then blazan support
-(defn open-order [dir]
-  (let [sl (if (= dir :buy)
-	     (let [r (resistance 1)
-		   d1 (+ (close 1) (pip 5))
-		   d2 (+ (close 1) (pip 20))]
-	       (cond
-		(< r d1) d1
-		(> r d2) d2
-		true r))
-	     (let [r (support 1)
-		   d1 (- (close 1) (pip 5))
-		   d2 (- (close 1) (pip 20))]
-	       (cond
-		(> r d1) d1
-		(< r d2) d2
-		true r)))
-	lots (risk 1 sl (close))]
-    (order! {:lots lots :state :init :type dir})))
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;main
-(defn monitor []
-  (when-let [it (open-order?)]
-    (awhen (open-order it)
-	   (reset! order it)
-	   (reset! state :manage)
-	   (out "opened order ... monitoring"))))
-
-
-(defn gobble []
-  (when (uber-trail! order)
-    (reset! order nil)
-    (reset! state :monitor)))
- 
-(defn start [& args]
-  (wenv {:period +m5+}
-	(cond (= @state :monitor) (monitor)
-	      (= @state :manage) (gobble))))
+;;GBPJPY = +h4+
+;;EURUSD = +d1+
+;;USDCHF = 3

@@ -52,7 +52,7 @@
 (defn window-redraw []
   (request "WindowRedraw"))
 
-(defmacro- redraw [& body]
+(defmacro redraw [& body]
   `(binding [*redraw-nest* (inc *redraw-nest*)]
      (let [result# (do ~@body)]
        (when (and *gui-redraw* (= *redraw-nest* 1))
@@ -129,7 +129,8 @@
 
 (def gui-color-map
   {:blue 1.671168E7
-   :red 255})
+   :red 255
+   :green 50000})
 (def gui-style-map
   {:solid 0 :dash 1 :dot 2 :dashdot 3 :dashdotdot 4})
 

@@ -16,15 +16,17 @@
   ([i & e]
      {:pre [(integer? i)]}
      (let [{:keys [symbol period]} (env-dispatch e true)]
-       (receive! (format "iBarShift %s %s %s"
-			 symbol period i)))))
+       (receive-indicator  (format "iBarShift %s %s %s"
+				   symbol period i)
+			   3)))) 
 (defn itime
   ([] (itime 0))
-  ([i & e]
-     {:pre [(integer? i)]}
-     (let [{:keys [symbol period]} (env-dispatch e true)]
-       (receive! (format "iTime %s %s %s" symbol period
-			 i))))) 
+  ([j & e]
+     {:pre [(integer? j)]}
+     (let [{:keys [symbol period i]} (env-dispatch e true)]
+       (receive-indicator (format "iTime %s %s %s" symbol period
+				  (+ j (or i 0)))
+			  3)))) 
 (defn ibars 
   ([& e]
      (let [{:keys [symbol period]} (env-dispatch e true)]

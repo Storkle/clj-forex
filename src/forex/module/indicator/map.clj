@@ -16,7 +16,14 @@
      (:require [forex.module.error :as s])) 
 
 
-
+(defn- itime
+  ([] (itime 0))
+  ([j & e]
+     {:pre [(integer? j)]}
+     (let [{:keys [symbol period i]} (env-dispatch e true)]
+       (receive-indicator (format "iTime %s %s %s" symbol period
+				  (+ j (or i 0)))
+			  3)))) 
 (def *max* 1000)
 (def *now* (now-seconds)) 
 (defonce *indicators* (atom {}))
