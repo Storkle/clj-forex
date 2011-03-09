@@ -1,0 +1,248 @@
+* Introduction
+Clj-forex is still not released, even as alpha software. However,
+to give users a peek at what it is shaping up to be, this tutorial
+will attempt to cover the general aspects of programming in clj-forex
+* Installation
+See INSTALL in github
+
+Once installed, you should lein run clj-forex and then
+create a new file with the following in it in order to follow
+along. This file, for now, should be placed somewhere under the
+src directory of the clj-forex github checkout. Alternatively, you can
+create a checkouts folder in which you create links to another
+project directory. Search for checkout dependencies on this page [[https://github.com/technomancy/leiningen][checkout dependencies]].
+Unfortunately, Im not sure if this works for libs that you require in the other checkouts - in fact,
+im pretty sure it doesnt. But this is not a problem for this tutorial!.
+
+#+begin_src clojure
+(clojure.core/use 'nstools.ns)
+(ns+ replace.me.with.ns
+     (:clone forex.default) 
+     (:use forex.util.general)) 
+#+end_src
+
+Take a look at workflow.png on how the workflow looks like - involves emacs! (for now, i will assume you know how to install and setup everything
+later i will have more details). 
+* Problems
+See INSTALL for why it is not released yet
+* Usage
+** Environment
+Clj-forex is first and foremost optimized for convenience. Therefore, there is a global environment which contains often
+used parameters, including :period, :symbol, and :i. Therefore, these do not have to be passed into a function. 
+#+begin_src clojure
+(env) ;;get current enviornment
+(env! {:period +h1+ :symbol "USDJPY"}) ;;change current environment
+(close) ;;get current close value for USDJPY, period h1
+(wenv {:symbol "EURUSD"} (close)) ;;get eurusd close value (see indicator section below)
+;;or above could be (close 0 "USDJPY")
+(wenv {:symbol "EURUSD" :i 1} (close)) ;;equivalent of (close 1 "USDJPY")
+;;WARNING: the above usage of :i will change (im thinking about it ...) - basically, you can use :i in two situations - 
+;;when you want to backtest, or when every thing has an offset of 1, and its just more convenient to do a global offset -
+;;so im thinking , use :j for the backest and :i for the local offset. 
+
+#+end_src
+** Indicators
+*** Accessing Indicators
+All indicators are, for now, retrieved as arrays from mql4. 
+The general standard for the user interface for accessing indicators
+is shown below
+
+#accessing/using indicators
+#+begin_src clojure
+;;if a name starts witih an 'i', this means it will return
+;;a vector of length *max*, which is for right now 1000.
+;;You should, for now, stick with 1000 because the background
+;;thread which updates indicators retrieves each time the 1000 numbers
+;;and if you go larger it could slow it down too much. This will change soon
+;;as it is clearly only necessary to retrieve, say, the last 10 or so
+;;values
+
+(iclose)
+(sma 20) (ema 20) (smma 20) (lwma 20)
+(iclose "EURUSD" {:period +h1+})
+(iclose +h1+ "EURUSD")
+(iclose "EURUSD" +h1+)
+(iclose {:period +h1+ :symbol "EURUSD"})
+
+(irsi 30) (irsi [30]) 
+(irsi 30 "USDJPY" +h1+) ;;retrieve rsi 30 array
+(iindicator parameters mode & environment)
+
+;;the above shows 2 different types of accessing
+;;the indicator can either have no parameters, 1+ parameters, or
+;;1+ parameters and a mode
+;;an example of where a mode would be necessary is the stochastic
+;;indicator which has multiple lines on it.
+
+;;if a name doesnt start with an i, you must also give it an index. The genereal form is
+(iindicator parameter mode [i = 0] & environment)
+(close) ;;return close at index 0
+(close 0)
+(irsi 30 11)
+(irsi 30 1111111111111111111111 +h1+) ;;if it is out of bounds, it will return 0
+
+;;also useful is itime and ibarshift - see mql4 docs for what these d
+#+end_src
+*** Accessing Indicators - Behind the Scenes
+Take a look at src/forex/module/indicator/map.clj . Basically,
+we retrieve indicator from socket if it is not already saved.
+If it is saved, we simply access the save copy. In the background,
+a thread retrieves the new values of all the indicators that have
+been saved and then updates the cache. 
+For example
+
+#+begin_src clojure
+;;change ns to forex.module.indicator.map
+;;retrieve 100 close prices. Theres a tons of defaults used
+;;so look at the functions to determine this. 
+(indicator-vector {:name "iClose" :param nil :mode 0 :max 100})
+#+end_src
+
+The same namespace contains the memoization functions. In shorthand.clj, we
+produce macros which follow the standards mentioned previously. In service.clj,
+we provide the background thread which updates the indicators. In util.clj, we provide
+some utilities, and finally in indicator.clj, we utilize the shorthand macros.
+
+*** Accessing New Indicators
+This is great, but how do we access new indicators? For now, we go
+to forex.util.mql_indicator_devel.clj. First, we change the 
+metatrader-home-dir (probably in the forex_user.clj would be a good
+idea, since that is always loaded on lein run). Then, we run
+(customize-indicators). Then we recompile commando.mq4. If the indicator names
+arent too long, it will compile fine. If they are too long, for now, you'll just have
+to delete those indicators. 
+Now, once we recompile commando.mq4 and then place it once again on a 
+chart, we should be able to access it via the technique shown in the previous
+section. And then you can use shorthand.clj macros, show in indicators.clj, to produce
+the standard shorthand access!
+
+Now, it is possible to port mql4 indicators to java, automatically. I have
+done this by hand, and I barely had to change any of the mql4 code (java and mql4 are
+basically the same - minus some static vars, etc.). However, this would be work 
+and it is not one of my priorities!
+
+** Account
+Various account utilities are available (basically bindings to mql4).
+For now, i will redirect you to forex.module.account.utils
+Just a taste:
+#+begin_src clojure
+(account-currency)
+(account-company)
+(connected?) ;;connected to internet?
+(demo?) ;;are we on a demo?
+(digit) ;;5 or 4 digit server?
+(mode-ask) (mode-bid) (mode-minlot)  
+(pip 23) ;; convert 23 pips to point
+(point 0.0001) ;;conver to pips
+(point) ;;return 0.0001 or 0.01 depending on currency
+
+#+end_src
+
+** Orders
+*** Basics
+#+begin_src clojure
+;;this is all contained in forex.module.account
+;;6 types - :buy :sell :buy-stop :sell-stop :sell-limit :buy-limit
+(order! {:type :buy :symbol "EURUSD" :tp 1.2 :sl 1.1 :lots (* (mode-minlot) 3)})
+(order! {:type :buy :lots 0.03}) ;;use current environment for symbol 
+(order! {:type :buy :lots (lot 0.032)}) ;;use 'lot' to round to mode-minlot
+(close! order) ;;close all of order
+(close! order 0.2) ;;close order, leaving only 0.2 lots left
+(modify! order {:sl 0 :tp 2.2}) ;;if sl or tp is zero, this means tp/sl doesnt exist
+(delete! order) ;;delete an entry order
+(market? order) (entry? order) ;;is it a market or entry order
+(sell? order) (buy? order) ;;is the :type in the order a sell or buy?
+(open? order) (close? order) ;;is order opened or closed
+(order-close-time order)
+
+#+end_src
+*** Handling Errors
+If an error is produced when manipulating orders, it returns an object of type MqlError. 
+#+begin_src clojure
+(e? a) ;;is a an error?
+;;an error is also counted as equivalent to false
+;;also, result is bound to the variable 'it'
+(aif (order! {:type :buy :lots 0.2}) it (throwf "arg: an error! %s" it)) 
+(aif-not (order! {:type :buy :lots 0.2}) (throwf "arg") it)
+;;close to break even and modify tp 
+(awhen (-> (modify! order {:tp new-tp :sl (:break order)}) (close! order (lot (/ (:lots order) 2))))
+       (println (format "closed order with a spread of %s" (:spread order))))
+(awhen-not test then)
+#+end_src
+
+
+Notice, that all order functions accept a MqlError object - if they receive it, they will simply return the same object. This allows
+chaining as above (-> (modify! ...) (close! ...)).
+
+In general, errors are handled different ways. If you attempt to access an indicator for the first time, and it cant return
+a result, it will throw the Mql error. On the other hand, if it has already been accessed once, since it is now memoized and updated by the background thread, no errors
+will be thrown. On the other hand, almost everything else (like mode-ask, account-currency, account-margin,etc.) will thrown the error.
+This will be changed before clj-forex is released - the appropriate behavior should be to return the last known value, just like
+indicators do. 
+*** Map Destructuring/Permanent Storage = Atom-Hash!
+What if we want to store an order in a permanent location? Welcome to atom-hash. 
+#+begin_src clojure
+
+(def h (atom-hash {:a 2 :b 34}))
+(let [{:keys [a b]} h]
+  (println (format "got %s and %s" a b))
+  ;;this can be done
+  (swap! h merge {:a 33})
+  ;;or this can be done
+  (reset! h {:a 22})
+  ;;or this
+  (modify! h {:a 22}) ;;this is equivalent to a swap! using merge
+  )
+#+end_src
+So, if you want the order map values to change when you use modify!, you do something like this
+#+begin_src clojure
+(awhen (order! {:type :buy :lots 0.2})
+       (def a (atom-hash it)))
+;;or
+(def a (order! (atom-hash {:type :buy :lots 0.2 :my-random-paramter 22})))
+;;and then
+(modify! a {:sl new-sl :my-random-parameter 2222})
+a ;;=> sl has been updated if the above was successfull!
+
+#+end_src
+The reason swap! and reset! works with atom-hashes is because we change the definition of swap! and reset! to be multimethods
+using [[http://onclojure.com/2010/02/17/managing-namespaces/][ns+]]. 
+
+** Eas
+TODO - more in depth later \\
+For now,  look at one of the examples in forex.exampels (look at forex.examples.timeout-ea).
+ Basically, there are four functions, init,start,run, and deinit. Ns to it, and then do (run) to run an ea. A global variable
+that has been defined as a var will be copied and bound using binding, so each ea has its own copy. Only atoms, refs, and atom-hashes
+are copied - everything else should be persistent. You can customize this copying using a multimethod in the forex.module.ea namespace.
+
+The init function is called at init, run is called every new tick value (well, we sleep 1 second and then look to see if there is a new close value),
+and deinit is run once we close. Look at the \*eas\* var to look at all eas. You can query them with (query {:symbol "USDJPY"}). And other stuff ....
+
+** GUI
+TODO - more details, less restrictive \\
+This is currently very limited - only ONE commando script should be attached to the mql4 chart, and the gui objectss will be
+drawn on this. 
+For example, this draws some pivot points - 
+#+begin_src clojure
+(defn pivot-points []
+  (wenv {:period +d1+}
+	(let [pp (/ (+ (high 1) (low 1) (close 1)) 3)
+	      r1 (- (* 2 pp) (low 1))
+	      s1 (- (* 2 pp) (high 1))
+	      r2 (+ pp (- (high 1) (low 1)))
+	      s2 (- pp (- (high 1) (low 1)))
+	      r3 (+ (high 1) (* 2 (- pp (low 1))))
+	      s3 (- (low 1) (* 2 (- (high 1) pp)))] 
+	  (hline pp :name "PP" :color :blue)
+	  (hline r1 :name "R1" :color :green)
+	  (hline s1 :name "S1" :color :green)
+	  (hline r2 :name "R2" :color :red)
+	  (hline s2 :name "S2" :color :red)
+	  (hline r3 :name "R3" :color :orange)
+	  (hline s3 :name "S3" :color :orange))))
+#+end_src
+* Background Services
+Theres 2 background service - the mql4 socket service and the indicator thread update servor. The mql4 socket service
+will improve - for example, it makes sense to have a separate socket for each ea (or at least have the option). Enough said !!! ....
+
+

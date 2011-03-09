@@ -130,7 +130,10 @@
 (def gui-color-map
   {:blue 1.671168E7
    :red 255
-   :green 50000})
+   :purple 1.6711935E7
+   :yellow 65535.0
+   :orange 42495.0
+   :green 32768.0})
 (def gui-style-map
   {:solid 0 :dash 1 :dot 2 :dashdot 3 :dashdotdot 4})
 

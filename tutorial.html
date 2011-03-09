@@ -1,0 +1,541 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+               "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"
+lang="en" xml:lang="en">
+<head>
+<title>tutorial</title>
+<meta http-equiv="Content-Type" content="text/html;charset=utf-8"/>
+<meta name="generator" content="Org-mode"/>
+<meta name="generated" content="2011-03-09 15:55:48 CST"/>
+<meta name="author" content="Seth"/>
+<meta name="description" content=""/>
+<meta name="keywords" content=""/>
+<style type="text/css">
+ <!--/*--><![CDATA[/*><!--*/
+  html { font-family: Times, serif; font-size: 12pt; }
+  .title  { text-align: center; }
+  .todo   { color: red; }
+  .done   { color: green; }
+  .tag    { background-color: #add8e6; font-weight:normal }
+  .target { }
+  .timestamp { color: #bebebe; }
+  .timestamp-kwd { color: #5f9ea0; }
+  .right  {margin-left:auto; margin-right:0px;  text-align:right;}
+  .left   {margin-left:0px;  margin-right:auto; text-align:left;}
+  .center {margin-left:auto; margin-right:auto; text-align:center;}
+  p.verse { margin-left: 3% }
+  pre {
+	border: 1pt solid #AEBDCC;
+	background-color: #F3F5F7;
+	padding: 5pt;
+	font-family: courier, monospace;
+        font-size: 90%;
+        overflow:auto;
+  }
+  table { border-collapse: collapse; }
+  td, th { vertical-align: top;  }
+  th.right  { text-align:center;  }
+  th.left   { text-align:center;   }
+  th.center { text-align:center; }
+  td.right  { text-align:right;  }
+  td.left   { text-align:left;   }
+  td.center { text-align:center; }
+  dt { font-weight: bold; }
+  div.figure { padding: 0.5em; }
+  div.figure p { text-align: center; }
+  textarea { overflow-x: auto; }
+  .linenr { font-size:smaller }
+  .code-highlighted {background-color:#ffff00;}
+  .org-info-js_info-navigation { border-style:none; }
+  #org-info-js_console-label { font-size:10px; font-weight:bold;
+                               white-space:nowrap; }
+  .org-info-js_search-highlight {background-color:#ffff00; color:#000000;
+                                 font-weight:bold; }
+  /*]]>*/-->
+</style>
+<script type="text/javascript">
+<!--/*--><![CDATA[/*><!--*/
+ function CodeHighlightOn(elem, id)
+ {
+   var target = document.getElementById(id);
+   if(null != target) {
+     elem.cacheClassElem = elem.className;
+     elem.cacheClassTarget = target.className;
+     target.className = "code-highlighted";
+     elem.className   = "code-highlighted";
+   }
+ }
+ function CodeHighlightOff(elem, id)
+ {
+   var target = document.getElementById(id);
+   if(elem.cacheClassElem)
+     elem.className = elem.cacheClassElem;
+   if(elem.cacheClassTarget)
+     target.className = elem.cacheClassTarget;
+ }
+/*]]>*///-->
+</script>
+
+</head>
+<body>
+<div id="content">
+
+<h1 class="title">tutorial</h1>
+
+
+<div id="table-of-contents">
+<h2>Table of Contents</h2>
+<div id="text-table-of-contents">
+<ul>
+<li><a href="#sec-1">1 Introduction </a></li>
+<li><a href="#sec-2">2 Installation </a></li>
+<li><a href="#sec-3">3 Problems </a></li>
+<li><a href="#sec-4">4 Usage </a>
+<ul>
+<li><a href="#sec-4_1">4.1 Environment </a></li>
+<li><a href="#sec-4_2">4.2 Indicators </a>
+<ul>
+<li><a href="#sec-4_2_1">4.2.1 Accessing Indicators </a></li>
+<li><a href="#sec-4_2_2">4.2.2 Accessing Indicators - Behind the Scenes </a></li>
+<li><a href="#sec-4_2_3">4.2.3 Accessing New Indicators </a></li>
+</ul>
+</li>
+<li><a href="#sec-4_3">4.3 Account </a></li>
+<li><a href="#sec-4_4">4.4 Orders </a>
+<ul>
+<li><a href="#sec-4_4_1">4.4.1 Basics </a></li>
+<li><a href="#sec-4_4_2">4.4.2 Handling Errors </a></li>
+<li><a href="#sec-4_4_3">4.4.3 Map Destructuring/Permanent Storage = Atom-Hash! </a></li>
+</ul>
+</li>
+<li><a href="#sec-4_5">4.5 Eas </a></li>
+<li><a href="#sec-4_6">4.6 GUI </a></li>
+</ul>
+</li>
+<li><a href="#sec-5">5 Background Services </a></li>
+</ul>
+</div>
+</div>
+
+<div id="outline-container-1" class="outline-2">
+<h2 id="sec-1"><span class="section-number-2">1</span> Introduction </h2>
+<div class="outline-text-2" id="text-1">
+
+<p>Clj-forex is still not released, even as alpha software. However,
+to give users a peek at what it is shaping up to be, this tutorial
+will attempt to cover the general aspects of programming in clj-forex
+</p></div>
+
+</div>
+
+<div id="outline-container-2" class="outline-2">
+<h2 id="sec-2"><span class="section-number-2">2</span> Installation </h2>
+<div class="outline-text-2" id="text-2">
+
+<p>See INSTALL in github
+</p>
+<p>
+Once installed, you should lein run clj-forex and then
+create a new file with the following in it in order to follow
+along. This file, for now, should be placed somewhere under the
+src directory of the clj-forex github checkout. Alternatively, you can
+create a checkouts folder in which you create links to another
+project directory. Search for checkout dependencies on this page <a href="https://github.com/technomancy/leiningen">checkout dependencies</a>.
+Unfortunately, Im not sure if this works for libs that you require in the other checkouts - in fact,
+im pretty sure it doesnt. But this is not a problem for this tutorial!.
+</p>
+
+
+
+<pre class="src src-clojure">(clojure.core/<span style="color: #da70d6;">use</span> 'nstools.ns)
+(ns+ replace.me.with.ns
+     (<span style="color: #da70d6;">:clone</span> forex.default) 
+     (<span style="color: #da70d6;">:use</span> forex.util.general)) 
+</pre>
+
+
+
+<p>
+Take a look at workflow.png on how the workflow looks like - involves emacs! (for now, i will assume you know how to install and setup everything
+later i will have more details). 
+</p></div>
+
+</div>
+
+<div id="outline-container-3" class="outline-2">
+<h2 id="sec-3"><span class="section-number-2">3</span> Problems </h2>
+<div class="outline-text-2" id="text-3">
+
+<p>See INSTALL for why it is not released yet
+</p></div>
+
+</div>
+
+<div id="outline-container-4" class="outline-2">
+<h2 id="sec-4"><span class="section-number-2">4</span> Usage </h2>
+<div class="outline-text-2" id="text-4">
+
+
+</div>
+
+<div id="outline-container-4_1" class="outline-3">
+<h3 id="sec-4_1"><span class="section-number-3">4.1</span> Environment </h3>
+<div class="outline-text-3" id="text-4_1">
+
+<p>Clj-forex is first and foremost optimized for convenience. Therefore, there is a global environment which contains often
+used parameters, including :period, :symbol, and :i. Therefore, these do not have to be passed into a function. 
+</p>
+
+
+<pre class="src src-clojure">(env) <span style="color: #b22222;">;;</span><span style="color: #b22222;">get current enviornment
+</span>(env! {<span style="color: #da70d6;">:period</span> +h1+ <span style="color: #da70d6;">:symbol</span> <span style="color: #bc8f8f;">"USDJPY"</span>}) <span style="color: #b22222;">;;</span><span style="color: #b22222;">change current environment
+</span>(close) <span style="color: #b22222;">;;</span><span style="color: #b22222;">get current close value for USDJPY, period h1
+</span>(wenv {<span style="color: #da70d6;">:symbol</span> <span style="color: #bc8f8f;">"EURUSD"</span>} (close)) <span style="color: #b22222;">;;</span><span style="color: #b22222;">get eurusd close value (see indicator section below)
+</span><span style="color: #b22222;">;;</span><span style="color: #b22222;">or above could be (close 0 "USDJPY")
+</span>(wenv {<span style="color: #da70d6;">:symbol</span> <span style="color: #bc8f8f;">"EURUSD"</span> <span style="color: #da70d6;">:i</span> 1} (close)) <span style="color: #b22222;">;;</span><span style="color: #b22222;">equivalent of (close 1 "USDJPY")
+</span><span style="color: #b22222;">;;</span><span style="color: #b22222;">WARNING: the above usage of :i will change (im thinking about it ...) - basically, you can use :i in two situations - 
+</span><span style="color: #b22222;">;;</span><span style="color: #b22222;">when you want to backtest, or when every thing has an offset of 1, and its just more convenient to do a global offset -
+</span><span style="color: #b22222;">;;</span><span style="color: #b22222;">so im thinking , use :j for the backest and :i for the local offset. 
+</span>
+</pre>
+
+
+</div>
+
+</div>
+
+<div id="outline-container-4_2" class="outline-3">
+<h3 id="sec-4_2"><span class="section-number-3">4.2</span> Indicators </h3>
+<div class="outline-text-3" id="text-4_2">
+
+
+</div>
+
+<div id="outline-container-4_2_1" class="outline-4">
+<h4 id="sec-4_2_1"><span class="section-number-4">4.2.1</span> Accessing Indicators </h4>
+<div class="outline-text-4" id="text-4_2_1">
+
+<p>All indicators are, for now, retrieved as arrays from mql4. 
+The general standard for the user interface for accessing indicators
+is shown below
+</p>
+
+
+
+<pre class="src src-clojure"><span style="color: #b22222;">;;</span><span style="color: #b22222;">if a name starts witih an 'i', this means it will return
+</span><span style="color: #b22222;">;;</span><span style="color: #b22222;">a vector of length *max*, which is for right now 1000.
+</span><span style="color: #b22222;">;;</span><span style="color: #b22222;">You should, for now, stick with 1000 because the background
+</span><span style="color: #b22222;">;;</span><span style="color: #b22222;">thread which updates indicators retrieves each time the 1000 numbers
+</span><span style="color: #b22222;">;;</span><span style="color: #b22222;">and if you go larger it could slow it down too much. This will change soon
+</span><span style="color: #b22222;">;;</span><span style="color: #b22222;">as it is clearly only necessary to retrieve, say, the last 10 or so
+</span><span style="color: #b22222;">;;</span><span style="color: #b22222;">values
+</span>
+(iclose)
+(sma 20) (ema 20) (smma 20) (lwma 20)
+(iclose <span style="color: #bc8f8f;">"EURUSD"</span> {<span style="color: #da70d6;">:period</span> +h1+})
+(iclose +h1+ <span style="color: #bc8f8f;">"EURUSD"</span>)
+(iclose <span style="color: #bc8f8f;">"EURUSD"</span> +h1+)
+(iclose {<span style="color: #da70d6;">:period</span> +h1+ <span style="color: #da70d6;">:symbol</span> <span style="color: #bc8f8f;">"EURUSD"</span>})
+
+(irsi 30) (irsi [30]) 
+(irsi 30 <span style="color: #bc8f8f;">"USDJPY"</span> +h1+) <span style="color: #b22222;">;;</span><span style="color: #b22222;">retrieve rsi 30 array
+</span>(iindicator parameters mode &amp; environment)
+
+<span style="color: #b22222;">;;</span><span style="color: #b22222;">the above shows 2 different types of accessing
+</span><span style="color: #b22222;">;;</span><span style="color: #b22222;">the indicator can either have no parameters, 1+ parameters, or
+</span><span style="color: #b22222;">;;</span><span style="color: #b22222;">1+ parameters and a mode
+</span><span style="color: #b22222;">;;</span><span style="color: #b22222;">an example of where a mode would be necessary is the stochastic
+</span><span style="color: #b22222;">;;</span><span style="color: #b22222;">indicator which has multiple lines on it.
+</span>
+<span style="color: #b22222;">;;</span><span style="color: #b22222;">if a name doesnt start with an i, you must also give it an index. The genereal form is
+</span>(iindicator parameter mode [i = 0] &amp; environment)
+(close) <span style="color: #b22222;">;;</span><span style="color: #b22222;">return close at index 0
+</span>(close 0)
+(irsi 30 11)
+(irsi 30 1111111111111111111111 +h1+) <span style="color: #b22222;">;;</span><span style="color: #b22222;">if it is out of bounds, it will return 0
+</span>
+<span style="color: #b22222;">;;</span><span style="color: #b22222;">also useful is itime and ibarshift - see mql4 docs for what these d
+</span></pre>
+
+
+</div>
+
+</div>
+
+<div id="outline-container-4_2_2" class="outline-4">
+<h4 id="sec-4_2_2"><span class="section-number-4">4.2.2</span> Accessing Indicators - Behind the Scenes </h4>
+<div class="outline-text-4" id="text-4_2_2">
+
+<p>Take a look at src/forex/module/indicator/map.clj . Basically,
+we retrieve indicator from socket if it is not already saved.
+If it is saved, we simply access the save copy. In the background,
+a thread retrieves the new values of all the indicators that have
+been saved and then updates the cache. 
+For example
+</p>
+
+
+
+<pre class="src src-clojure"><span style="color: #b22222;">;;</span><span style="color: #b22222;">change ns to forex.module.indicator.map
+</span><span style="color: #b22222;">;;</span><span style="color: #b22222;">retrieve 100 close prices. Theres a tons of defaults used
+</span><span style="color: #b22222;">;;</span><span style="color: #b22222;">so look at the functions to determine this. 
+</span>(indicator-vector {<span style="color: #da70d6;">:name</span> <span style="color: #bc8f8f;">"iClose"</span> <span style="color: #da70d6;">:param</span> nil <span style="color: #da70d6;">:mode</span> 0 <span style="color: #da70d6;">:max</span> 100})
+</pre>
+
+
+
+<p>
+The same namespace contains the memoization functions. In shorthand.clj, we
+produce macros which follow the standards mentioned previously. In service.clj,
+we provide the background thread which updates the indicators. In util.clj, we provide
+some utilities, and finally in indicator.clj, we utilize the shorthand macros.
+</p>
+</div>
+
+</div>
+
+<div id="outline-container-4_2_3" class="outline-4">
+<h4 id="sec-4_2_3"><span class="section-number-4">4.2.3</span> Accessing New Indicators </h4>
+<div class="outline-text-4" id="text-4_2_3">
+
+<p>This is great, but how do we access new indicators? For now, we go
+to forex.util.mql<sub>indicator</sub><sub>devel</sub>.clj. First, we change the 
+metatrader-home-dir (probably in the forex<sub>user</sub>.clj would be a good
+idea, since that is always loaded on lein run). Then, we run
+(customize-indicators). Then we recompile commando.mq4. If the indicator names
+arent too long, it will compile fine. If they are too long, for now, you'll just have
+to delete those indicators. 
+Now, once we recompile commando.mq4 and then place it once again on a 
+chart, we should be able to access it via the technique shown in the previous
+section. And then you can use shorthand.clj macros, show in indicators.clj, to produce
+the standard shorthand access!
+</p>
+<p>
+Now, it is possible to port mql4 indicators to java, automatically. I have
+done this by hand, and I barely had to change any of the mql4 code (java and mql4 are
+basically the same - minus some static vars, etc.). However, this would be work 
+and it is not one of my priorities!
+</p>
+</div>
+</div>
+
+</div>
+
+<div id="outline-container-4_3" class="outline-3">
+<h3 id="sec-4_3"><span class="section-number-3">4.3</span> Account </h3>
+<div class="outline-text-3" id="text-4_3">
+
+<p>Various account utilities are available (basically bindings to mql4).
+For now, i will redirect you to forex.module.account.utils
+Just a taste:
+</p>
+
+
+<pre class="src src-clojure">(account-currency)
+(account-company)
+(connected?) <span style="color: #b22222;">;;</span><span style="color: #b22222;">connected to internet?
+</span>(demo?) <span style="color: #b22222;">;;</span><span style="color: #b22222;">are we on a demo?
+</span>(digit) <span style="color: #b22222;">;;</span><span style="color: #b22222;">5 or 4 digit server?
+</span>(mode-ask) (mode-bid) (mode-minlot)  
+(pip 23) <span style="color: #b22222;">;; </span><span style="color: #b22222;">convert 23 pips to point
+</span>(point 0.0001) <span style="color: #b22222;">;;</span><span style="color: #b22222;">conver to pips
+</span>(point) <span style="color: #b22222;">;;</span><span style="color: #b22222;">return 0.0001 or 0.01 depending on currency
+</span>
+</pre>
+
+
+
+</div>
+
+</div>
+
+<div id="outline-container-4_4" class="outline-3">
+<h3 id="sec-4_4"><span class="section-number-3">4.4</span> Orders </h3>
+<div class="outline-text-3" id="text-4_4">
+
+
+</div>
+
+<div id="outline-container-4_4_1" class="outline-4">
+<h4 id="sec-4_4_1"><span class="section-number-4">4.4.1</span> Basics </h4>
+<div class="outline-text-4" id="text-4_4_1">
+
+
+
+
+<pre class="src src-clojure"><span style="color: #b22222;">;;</span><span style="color: #b22222;">this is all contained in forex.module.account
+</span><span style="color: #b22222;">;;</span><span style="color: #b22222;">6 types - :buy :sell :buy-stop :sell-stop :sell-limit :buy-limit
+</span>(order! {<span style="color: #da70d6;">:type</span> <span style="color: #da70d6;">:buy</span> <span style="color: #da70d6;">:symbol</span> <span style="color: #bc8f8f;">"EURUSD"</span> <span style="color: #da70d6;">:tp</span> 1.2 <span style="color: #da70d6;">:sl</span> 1.1 <span style="color: #da70d6;">:lots</span> (<span style="color: #da70d6;">*</span> (mode-minlot) 3)})
+(order! {<span style="color: #da70d6;">:type</span> <span style="color: #da70d6;">:buy</span> <span style="color: #da70d6;">:lots</span> 0.03}) <span style="color: #b22222;">;;</span><span style="color: #b22222;">use current environment for symbol 
+</span>(order! {<span style="color: #da70d6;">:type</span> <span style="color: #da70d6;">:buy</span> <span style="color: #da70d6;">:lots</span> (lot 0.032)}) <span style="color: #b22222;">;;</span><span style="color: #b22222;">use 'lot' to round to mode-minlot
+</span>(close! order) <span style="color: #b22222;">;;</span><span style="color: #b22222;">close all of order
+</span>(close! order 0.2) <span style="color: #b22222;">;;</span><span style="color: #b22222;">close order, leaving only 0.2 lots left
+</span>(modify! order {<span style="color: #da70d6;">:sl</span> 0 <span style="color: #da70d6;">:tp</span> 2.2}) <span style="color: #b22222;">;;</span><span style="color: #b22222;">if sl or tp is zero, this means tp/sl doesnt exist
+</span>(delete! order) <span style="color: #b22222;">;;</span><span style="color: #b22222;">delete an entry order
+</span>(market? order) (entry? order) <span style="color: #b22222;">;;</span><span style="color: #b22222;">is it a market or entry order
+</span>(sell? order) (buy? order) <span style="color: #b22222;">;;</span><span style="color: #b22222;">is the :type in the order a sell or buy?
+</span>(open? order) (close? order) <span style="color: #b22222;">;;</span><span style="color: #b22222;">is order opened or closed
+</span>(order-close-time order)
+
+</pre>
+
+
+</div>
+
+</div>
+
+<div id="outline-container-4_4_2" class="outline-4">
+<h4 id="sec-4_4_2"><span class="section-number-4">4.4.2</span> Handling Errors </h4>
+<div class="outline-text-4" id="text-4_4_2">
+
+<p>If an error is produced when manipulating orders, it returns an object of type MqlError. 
+</p>
+
+
+<pre class="src src-clojure">(e? a) <span style="color: #b22222;">;;</span><span style="color: #b22222;">is a an error?
+</span><span style="color: #b22222;">;;</span><span style="color: #b22222;">an error is also counted as equivalent to false
+</span><span style="color: #b22222;">;;</span><span style="color: #b22222;">also, result is bound to the variable 'it'
+</span>(aif (order! {<span style="color: #da70d6;">:type</span> <span style="color: #da70d6;">:buy</span> <span style="color: #da70d6;">:lots</span> 0.2}) it (throwf <span style="color: #bc8f8f;">"arg: an error! %s"</span> it)) 
+(aif-not (order! {<span style="color: #da70d6;">:type</span> <span style="color: #da70d6;">:buy</span> <span style="color: #da70d6;">:lots</span> 0.2}) (throwf <span style="color: #bc8f8f;">"arg"</span>) it)
+<span style="color: #b22222;">;;</span><span style="color: #b22222;">close to break even and modify tp 
+</span>(awhen (<span style="color: #a020f0;">-&gt;</span> (modify! order {<span style="color: #da70d6;">:tp</span> new-tp <span style="color: #da70d6;">:sl</span> (<span style="color: #da70d6;">:break</span> order)}) (close! order (lot (<span style="color: #da70d6;">/</span> (<span style="color: #da70d6;">:lots</span> order) 2))))
+       (<span style="color: #da70d6;">println</span> (<span style="color: #da70d6;">format</span> <span style="color: #bc8f8f;">"closed order with a spread of %s"</span> (<span style="color: #da70d6;">:spread</span> order))))
+(awhen-not test then)
+</pre>
+
+
+
+
+<p>
+Notice, that all order functions accept a MqlError object - if they receive it, they will simply return the same object. This allows
+chaining as above (-&gt; (modify! &hellip;) (close! &hellip;)).
+</p>
+<p>
+In general, errors are handled different ways. If you attempt to access an indicator for the first time, and it cant return
+a result, it will throw the Mql error. On the other hand, if it has already been accessed once, since it is now memoized and updated by the background thread, no errors
+will be thrown. On the other hand, almost everything else (like mode-ask, account-currency, account-margin,etc.) will thrown the error.
+This will be changed before clj-forex is released - the appropriate behavior should be to return the last known value, just like
+indicators do. 
+</p></div>
+
+</div>
+
+<div id="outline-container-4_4_3" class="outline-4">
+<h4 id="sec-4_4_3"><span class="section-number-4">4.4.3</span> Map Destructuring/Permanent Storage = Atom-Hash! </h4>
+<div class="outline-text-4" id="text-4_4_3">
+
+<p>What if we want to store an order in a permanent location? Welcome to atom-hash. 
+</p>
+
+
+<pre class="src src-clojure">(<span style="color: #a020f0;">def</span> <span style="color: #0000ff;">h</span> (atom-hash {<span style="color: #da70d6;">:a</span> 2 <span style="color: #da70d6;">:b</span> 34}))
+(<span style="color: #a020f0;">let</span> [{<span style="color: #da70d6;">:keys</span> [a b]} h]
+  (<span style="color: #da70d6;">println</span> (<span style="color: #da70d6;">format</span> <span style="color: #bc8f8f;">"got %s and %s"</span> a b))
+  <span style="color: #b22222;">;;</span><span style="color: #b22222;">this can be done
+</span>  (<span style="color: #da70d6;">swap!</span> h merge {<span style="color: #da70d6;">:a</span> 33})
+  <span style="color: #b22222;">;;</span><span style="color: #b22222;">or this can be done
+</span>  (<span style="color: #da70d6;">reset!</span> h {<span style="color: #da70d6;">:a</span> 22})
+  <span style="color: #b22222;">;;</span><span style="color: #b22222;">or this
+</span>  (modify! h {<span style="color: #da70d6;">:a</span> 22}) <span style="color: #b22222;">;;</span><span style="color: #b22222;">this is equivalent to a swap! using merge
+</span>  )
+</pre>
+
+
+<p>
+So, if you want the order map values to change when you use modify!, you do something like this
+</p>
+
+
+<pre class="src src-clojure">(awhen (order! {<span style="color: #da70d6;">:type</span> <span style="color: #da70d6;">:buy</span> <span style="color: #da70d6;">:lots</span> 0.2})
+       (<span style="color: #a020f0;">def</span> <span style="color: #0000ff;">a</span> (atom-hash it)))
+<span style="color: #b22222;">;;</span><span style="color: #b22222;">or
+</span>(<span style="color: #a020f0;">def</span> <span style="color: #0000ff;">a</span> (order! (atom-hash {<span style="color: #da70d6;">:type</span> <span style="color: #da70d6;">:buy</span> <span style="color: #da70d6;">:lots</span> 0.2 <span style="color: #da70d6;">:my-random-paramter</span> 22})))
+<span style="color: #b22222;">;;</span><span style="color: #b22222;">and then
+</span>(modify! a {<span style="color: #da70d6;">:sl</span> new-sl <span style="color: #da70d6;">:my-random-parameter</span> 2222})
+a <span style="color: #b22222;">;;</span><span style="color: #b22222;">=&gt; sl has been updated if the above was successfull!
+</span>
+</pre>
+
+
+<p>
+The reason swap! and reset! works with atom-hashes is because we change the definition of swap! and reset! to be multimethods
+using <a href="http://onclojure.com/2010/02/17/managing-namespaces/">ns+</a>. 
+</p>
+</div>
+</div>
+
+</div>
+
+<div id="outline-container-4_5" class="outline-3">
+<h3 id="sec-4_5"><span class="section-number-3">4.5</span> Eas </h3>
+<div class="outline-text-3" id="text-4_5">
+
+<p>TODO - more in depth later <br/>
+For now,  look at one of the examples in forex.exampels (look at forex.examples.timeout-ea).
+Basically, there are four functions, init,start,run, and deinit. Ns to it, and then do (run) to run an ea. A global variable
+that has been defined as a var will be copied and bound using binding, so each ea has its own copy. Only atoms, refs, and atom-hashes
+are copied - everything else should be persistent. You can customize this copying using a multimethod in the forex.module.ea namespace.
+</p>
+<p>
+The init function is called at init, run is called every new tick value (well, we sleep 1 second and then look to see if there is a new close value),
+and deinit is run once we close. Look at the \*eas\* var to look at all eas. You can query them with (query {:symbol "USDJPY"}). And other stuff &hellip;.
+</p>
+</div>
+
+</div>
+
+<div id="outline-container-4_6" class="outline-3">
+<h3 id="sec-4_6"><span class="section-number-3">4.6</span> GUI </h3>
+<div class="outline-text-3" id="text-4_6">
+
+<p>TODO - more details, less restrictive <br/>
+This is currently very limited - only ONE commando script should be attached to the mql4 chart, and the gui objectss will be
+drawn on this. 
+For example, this draws some pivot points - 
+</p>
+
+
+<pre class="src src-clojure">(<span style="color: #a020f0;">defn</span> <span style="color: #0000ff;">pivot-points</span> []
+  (wenv {<span style="color: #da70d6;">:period</span> +d1+}
+        (<span style="color: #a020f0;">let</span> [pp (<span style="color: #da70d6;">/</span> (<span style="color: #da70d6;">+</span> (high 1) (low 1) (close 1)) 3)
+              r1 (<span style="color: #da70d6;">-</span> (<span style="color: #da70d6;">*</span> 2 pp) (low 1))
+              s1 (<span style="color: #da70d6;">-</span> (<span style="color: #da70d6;">*</span> 2 pp) (high 1))
+              r2 (<span style="color: #da70d6;">+</span> pp (<span style="color: #da70d6;">-</span> (high 1) (low 1)))
+              s2 (<span style="color: #da70d6;">-</span> pp (<span style="color: #da70d6;">-</span> (high 1) (low 1)))
+              r3 (<span style="color: #da70d6;">+</span> (high 1) (<span style="color: #da70d6;">*</span> 2 (<span style="color: #da70d6;">-</span> pp (low 1))))
+              s3 (<span style="color: #da70d6;">-</span> (low 1) (<span style="color: #da70d6;">*</span> 2 (<span style="color: #da70d6;">-</span> (high 1) pp)))] 
+          (hline pp <span style="color: #da70d6;">:name</span> <span style="color: #bc8f8f;">"PP"</span> <span style="color: #da70d6;">:color</span> <span style="color: #da70d6;">:blue</span>)
+          (hline r1 <span style="color: #da70d6;">:name</span> <span style="color: #bc8f8f;">"R1"</span> <span style="color: #da70d6;">:color</span> <span style="color: #da70d6;">:green</span>)
+          (hline s1 <span style="color: #da70d6;">:name</span> <span style="color: #bc8f8f;">"S1"</span> <span style="color: #da70d6;">:color</span> <span style="color: #da70d6;">:green</span>)
+          (hline r2 <span style="color: #da70d6;">:name</span> <span style="color: #bc8f8f;">"R2"</span> <span style="color: #da70d6;">:color</span> <span style="color: #da70d6;">:red</span>)
+          (hline s2 <span style="color: #da70d6;">:name</span> <span style="color: #bc8f8f;">"S2"</span> <span style="color: #da70d6;">:color</span> <span style="color: #da70d6;">:red</span>)
+          (hline r3 <span style="color: #da70d6;">:name</span> <span style="color: #bc8f8f;">"R3"</span> <span style="color: #da70d6;">:color</span> <span style="color: #da70d6;">:orange</span>)
+          (hline s3 <span style="color: #da70d6;">:name</span> <span style="color: #bc8f8f;">"S3"</span> <span style="color: #da70d6;">:color</span> <span style="color: #da70d6;">:orange</span>))))
+</pre>
+
+
+</div>
+</div>
+
+</div>
+
+<div id="outline-container-5" class="outline-2">
+<h2 id="sec-5"><span class="section-number-2">5</span> Background Services </h2>
+<div class="outline-text-2" id="text-5">
+
+<p>Theres 2 background service - the mql4 socket service and the indicator thread update servor. The mql4 socket service
+will improve - for example, it makes sense to have a separate socket for each ea (or at least have the option). Enough said !!! &hellip;.
+</p>
+
+</div>
+</div>
+<div id="postamble">
+<p class="author"> Author: Seth
+</p>
+<p class="date"> Date: 2011-03-09 15:55:48 CST</p>
+<p class="creator">HTML generated by org-mode 7.4 in emacs 23</p>
+</div>
+</div>
+</body>
+</html>
