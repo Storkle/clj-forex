@@ -1,0 +1,31 @@
+* TODO Ditch zeromq for netty
+Netty is just a bettery library. However, zeromq is an excellent library for usage on the mql4/c side - conveniences I use
+include automatic reconnecting, any size messages, asynchronous/synchronous behavior, multipart messages. The best method I think
+is to use google protobufs to replace the multipart messages - im not sure how im going to achieve the other stuff, but it must
+be done! Netty is just great and doesnt segv the java environment when you do something wrong :)
+* TODO Switch to event based architecture
+events for - updating streams, receiving something on socket, gui events, error events, etc...
+[[https://github.com/stuartsierra/cljque/]]
+* TODO Provide Constant Environment for robustness 
+Indicaator data shouldnt change, ask/bid rate, spread shouldnt change when ea is executing once. Or we should have the option
+for it not to change, anyways (pause/unpause also needed for repl environment). Also, it should access the latest available data, but only indirectly through a background update thread.
+That way, if the internet or socket is down, no errors will be thrown unless the user attempts to do something which requires the socket,
+like getting new data streams, placing orders, etc. 
+* TODO Provide Time Data 
+* TODO Easy EAs/Scripts
+Eas need :
+(1) Signal source (i.e. run every tick, etc)
+(2) Ability to refresh rates (constant environment)
+(3) Own special environment - (market-orders returns orders that the ea made, etc.)
+(4) Mutable vars
+Creating an ea should be a simple matter of - 
+'specify a function 'x' which will run every event 'e'
+* TODO More general order achitecture - accessing manual orders, merging orders
+* TODO Architecture which allows access to multiple accounts, multiple data streams, etc. Should be able to mix and match 
+Maybe we want data from socket X but want to place orders using interface Y. Think on this ....
+* TODO Price Stream Manipulation, and Storage
+New time frames, offset time frames, and price stream time data should be able to be created. (renko chart also??)
+Also what would be nice is to somehow combine a database of price data - somehow merge that with the idea of updating persistent
+vectors and the shorthand notation for accessing indicators. 
+
+
