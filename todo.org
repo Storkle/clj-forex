@@ -1,8 +1,3 @@
-* TODO Ditch zeromq for netty
-Netty is just a bettery library. However, zeromq is an excellent library for usage on the mql4/c side - conveniences I use
-include automatic reconnecting, any size messages, asynchronous/synchronous behavior, multipart messages. The best method I think
-is to use google protobufs to replace the multipart messages - im not sure how im going to achieve the other stuff, but it must
-be done! Netty is just great and doesnt segv the java environment when you do something wrong :)
 * TODO Switch to event based architecture
 events for - updating streams, receiving something on socket, gui events, error events, etc...
 [[https://github.com/stuartsierra/cljque/]]
