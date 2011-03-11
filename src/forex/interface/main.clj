@@ -12,13 +12,13 @@ This will stop all running expert advisors." gui-frame-title))
 (defn -main [& args]
   (let [user-exception 
         (try
-          (require 'forex-user) 
+          (require 'forex-init) 
           nil
           (catch Exception e 
             (.printStackTrace e)
             e))] 
     (add-to-list  
      #'gui-on-exit-hooks on-system-exit)
-    (invoke-new-gui (when user-exception "error when loading forex-user: check log"))))
+    (invoke-new-gui (when user-exception "error when loading forex-init: check log"))))
 
 

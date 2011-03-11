@@ -18,6 +18,7 @@ There are various bad deficiencies (which is why it hasnt been released) -
 3) can only add gui elements to the one chart that command.mq4 script is running on
 4) each ea should have the choice of gettings its own socket --- not possible right now ....
 5) If the connection gets severed, things like current ask/bid price, spread, et should return what was previously retrieved - right now, it will throw an error - except for indicator streams which are updated by a background thread, and theas access the storage of indicators or, if there is none, it will get it from the socket (and then there will be an error thrown if socket is down).
+6.1) Cant access mutilple accounts/multiple streams, etc. 
 6) if one doesnt receive a response when creating/modifying orders, it will forever wait (no way to detect if order was actually placed, and a response somehow got accidently dropped)
 7) and some other stuff i cant think of right now... those are the major ones anyways ... 
 

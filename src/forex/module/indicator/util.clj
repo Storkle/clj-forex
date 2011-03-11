@@ -31,3 +31,11 @@
 
 (defn set-arglists! [to from]
   (alter-meta! to merge {:arglists (:arglists (meta from))}))
+
+
+(defn subv
+  ([v start default]
+     (subv v start (count v) default))
+  ([v start end default]
+     (try (subvec v start end) (catch IndexOutOfBoundsException e default))))
+ 

@@ -77,14 +77,14 @@
    {:name "log" :key \l :action #'on-log}
    {:name "start swank" :key \s}
    {:name "restart eas" :key \r :action #'on-restart-eas} 
-   {:name "load forex-user" 
+   {:name "load forex-init" 
     :action #(try       
                (message "loading ...")
-               (require :reload 'forex-user)
-               (message "loaded forex-user")
+               (require :reload 'forex-init)
+               (message "loaded forex-init")
                (catch Exception e
-                 (message "failed to load forex-user")
-                 (inform "failed to load forex-user %s" e)))}
+                 (message "failed to load forex-init")
+                 (inform "failed to load forex-init %s" e)))}
    {:name "preferences" :key \p}])
 (defvar gui-frame-title "clj-forex")
 (defvar gui-reminder-visible true) 

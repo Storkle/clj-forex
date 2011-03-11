@@ -1,7 +1,13 @@
 #include <utils.mqh>
 
 int process_ACCOUNT (string c,string command[]) {
-  if (c=="AccountBalance") {
+  if (c=="TimeCurrent") {
+    process_TimeCurrent(command);
+  }
+  else if (c=="TimeLocal") {
+    process_TimeLocal(command);
+  }
+  else if (c=="AccountBalance") {
     process_AccountBalance(command);
   } else if (c=="AccountCredit") {
     process_AccountCredit(command);
@@ -55,6 +61,14 @@ int process_ACCOUNT (string c,string command[]) {
   return(0);
 }
 
+
+void process_TimeCurrent(string command[]) {
+ send_long(TimeCurrent());
+}
+
+void process_TimeLocal(string command[]) {
+ send_long(TimeLocal());
+}
 
 void process_IsConnected(string command[]) {
  send_boolean(IsConnected());

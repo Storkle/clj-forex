@@ -28,16 +28,13 @@
 (def *now* (now-seconds)) 
 (defonce *indicators* (atom {}))
 
+(defn clear []
+  (var-root-set #'*indicators* (atom {})))  
 
-(defn update-time
-  ([] (itime 0))
-  ([i & e]
-     {:pre [(integer? i)]}
-     (let [{:keys [symbol period]} (env-dispatch e true)]
-       (aif (receive (format "iTime %s %s %s" symbol period
-			     i))
-	    (alter-var-root *now* it))
-       *now*)))
+(defn update-time []
+  (awhen (receive (format "TimeCurrent"))
+	 (var-root-set #'*now* it))
+  *now*) 
 
 (defn indicator-protocol
   "retrieve protocol string needed for indicator"
@@ -70,8 +67,6 @@
     []
     (receive-indicator (or proto (indicator-protocol this)) retries)))     
 
-(defn clear []
-  (var-root-set #'*indicators* (atom {})))  
 
 ;;TODO: handle situation where multiple pids get it?? - not too important, actually
 (defn add-pid [this return]
@@ -81,17 +76,11 @@
 					(self))})})
   return) 
 
-(defn subv
-  ([v start default]
-     (subv v start (count v) default))
-  ([v start end default]
-     (try (subvec v start end) (catch IndexOutOfBoundsException e default))))
-
 (defn indicator-vector-memoize
   "retrieve indicator vector from storage or from socket service if does not exist.
    Add current pid to indicator also. Returns indicator vector"
   ([args] (indicator-vector-memoize args @*env*))
-  ([{:keys [name param mode] :or {mode 0 param nil}} e]
+  ([{:keys [name param mode from] :or {from *now* mode 0 param nil}} e]
      (let [{:keys [symbol period] :as e} e
 	   id [symbol period name param mode]
 	   val (get @*indicators* id)]
@@ -100,7 +89,7 @@
 	    (let [indicator
 		  {:name name :id id :pid #{(self)} 
 		   :param param :mode mode :symbol symbol
-		   :period period
+		   :period period :from from 
 		   :max *max* :to 0}
 		  ret (indicator-vector indicator)]
 	      (aif ret

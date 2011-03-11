@@ -1,6 +1,6 @@
 * TODO Switch to event based architecture
-events for - updating streams, receiving something on socket, gui events, error events, etc...
-[[https://github.com/stuartsierra/cljque/]]
+  events for - updating streams, receiving something on socket, gui events, error events, etc...
+  https://github.com/stuartsierra/cljque/]]
 * TODO Provide Constant Environment for robustness 
 Indicaator data shouldnt change, ask/bid rate, spread shouldnt change when ea is executing once. Or we should have the option
 for it not to change, anyways (pause/unpause also needed for repl environment). Also, it should access the latest available data, but only indirectly through a background update thread.

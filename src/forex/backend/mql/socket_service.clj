@@ -1,6 +1,5 @@
 ;;forex.backend.mql.socket-service: provide background sockets which allow us to connect with metatrader. Provides functions to interact with the background socket
 
-;;todo: bug with stopping all and then stopping again! so bug with stop..
 (clojure.core/use 'nstools.ns)
 (ns+ forex.backend.mql.socket-service
      (:clone clj.core)
@@ -95,7 +94,7 @@
 	      (deliver askin (list
 			      (new-mql-error +error-clj-service-queue+)))))
 	   )))  
-     [receive ?msg] (mql-recv msg)   
+     [receive ?msg] (future (mql-recv msg))   
      ?msg (warn "Ignoring invalid message %s" msg))))
  
 ;;TODO: weird bug when stopping everything with an ea.

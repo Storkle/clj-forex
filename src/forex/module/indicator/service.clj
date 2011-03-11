@@ -1,6 +1,6 @@
 (clojure.core/use 'nstools.ns)
 (ns+ forex.module.indicator.service
-     (:clone clj.core)
+     (:clone clj.core) 
      (:use forex.module.indicator.util
 	   forex.module.indicator
 	   forex.module.indicator.map)
@@ -41,7 +41,7 @@
 		      (vec (reverse
 			    (for [indicator (vals i)]
 			      (indicator-protocol
-			       (merge indicator {:from now})))))
+			       (merge indicator {:from now :to (:from indicator)})))))
 		      0))]
        (if-not (or (e? results)
 		   (and (e? (first results))
@@ -49,9 +49,10 @@
 	 (let [new-indicators 
 	       (for+ [indicator (vals i) result results]
 		     (merge indicator
-			    {:vec
-			     (aif result 
-				  it
+			    {:vec 
+			     (aif result
+				  ;;doesnt work except for things which dont repaint - oh well! 
+				  (vec (concat it (subv (:vec indicator) (count it) [])))
 				  (do
 				    (info "mql error %s when sending indicator %s" it (dissoc indicator :vec)) 
 				    (:vec indicator)))
@@ -75,19 +76,21 @@
   (if (alive?)
     (warn "global indicator update service is already alive")
     (debugging
-     "Global Indicator Update Service"
+     "Global Indicator Update Service:"
      (var-root-set
       #'*global-indicator-update-pid*
       (spawn-log
-       #(loop []
-	  (try
-	    (clean-rates)
-	    (refresh-rates) 
-	    (catch Exception e
-	      (severe e) 
-	      (.printStackTrace e)))
-	  (Thread/sleep indicator-service-sleep-time)
-	  (if (= (? 0) "STOP")
-	    (info "stopping...")
-	    (recur)))
+       #(do
+	  (info "starting ...")
+	  (loop []
+	    (try
+	      (clean-rates)
+	      (refresh-rates) 
+	      (catch Exception e
+		(severe e) 
+		(.printStackTrace e)))
+	    (Thread/sleep indicator-service-sleep-time)
+	    (if (= (? 0) "STOP")
+	      (info "stopping...")
+	      (recur))))
        "Global Indicator Update Service"))))) 
