@@ -25,6 +25,20 @@ im pretty sure it doesnt. But this is not a problem for this tutorial!.
 
 Take a look at workflow.png on how the workflow looks like - involves emacs! (for now, i will assume you know how to install and setup everything
 later i will have more details). 
+
+*WARNING*: forex_init.clj is loaded each time you start clj-forex. This I like to think of as equivalent to the emac's .emacs file. \\
+*WARNING*: please use only on a demo account! That's because i haven't made any particular efforts (yet) to
+1. create unit tests
+2. make it secure (you can place orders in forex_init by accident, not that you would)
+And it is quite easy to screw your account - say, by doing this
+#+begin_src clojure
+  (loop []
+    (order! {:type :buy :lots 1})
+    (recur))
+#+end_src
+
+Fair warning ...
+
 * Problems
 See INSTALL for why it is not released yet
 * Usage
