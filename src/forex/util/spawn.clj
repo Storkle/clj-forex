@@ -5,7 +5,7 @@
      (:use forex.util.general forex.util.zmq)
      (:import forex.util.zmq.Poller)
      (:require [forex.util.fiber.spawn :as s]))
-
+ 
 (def- *pid* (atom []))
 
 (defalias pid? s/pid?)
@@ -20,24 +20,22 @@
   (with-open [local (doto (new-socket +push+)
                       (.connect (format "inproc://%s" pid)))] 
     (s/! pid msg)
-    (.snd local "REQUEST" +noblock+)))
+    (snd local "REQUEST" +noblock+)))
 (defn  stop-all []
   (swap! *pid*
          (fn [old]
            (map #(if (pid? %)
                    (! % "STOP")) @*pid*))))
 
-
-(defrecord LocalSocket [socket]
+(defrecord LocalSocket [socket] 
   PSocket
-  (raw [this] (.raw socket)) 
+  (raw [this] (raw (:socket this))) 
   (recv [this flags] 
-        (when (.recv socket flags)      
-          (s/?)))  
+	(when (recv (:socket this) flags)      
+	  (s/?)))  
   (recv [this] (recv this 0))
-  (close [this] (.close socket))
+  (close [this] (close (:socket this)))
   (hasMore [this] false))
-
 
 (defonce- *local* (ThreadLocal.))
 (defn- self-get [key]
@@ -80,12 +78,12 @@
 (defn recv-multi
   ([sock] (recv-multi sock 0))
   ([sock flags] 
-     (let [first-msg (.recv sock flags)]
+     (let [first-msg (recv sock flags)]
        (when first-msg 
          (if (.hasMore sock)
-           (loop [msg [(.recv sock) first-msg]]
+           (loop [msg [(recv sock) first-msg]]
              (if (.hasMore sock)
-               (recur (cons (.recv sock) msg))
+               (recur (cons (recv sock) msg))
                msg))
            first-msg)))))
 
@@ -102,10 +100,10 @@
 ;;TODO: fair queue? prevent too much messages hogging sequence? who knows! ...
 
 (import forex.util.zmq.Socket forex.util.zmq.Poller)
-(defn- event-seq* [^Poller p]
+(defn- event-seq* [p]
   (lazy-seq
    (let [amount (.poll p)]
-     (concat
+     (concat 
       ;;TODO: memory overflow with getting all messsages? probably not ....
       (doall
        (mapcat #(when (or (.pollin p %) (.pollout p %))
@@ -113,11 +111,11 @@
                (range 0 (.getSize p))))
       (event-seq* p))))) 
 
-
+ 
 (defmulti event-seq class)
 (defmethod event-seq clojure.lang.IPersistentVector [v]
   (event-seq (new-poller v)))
-(defmethod event-seq Poller [p] (event-seq* p)) 
+(defmethod event-seq forex.util.zmq.Poller [p] (event-seq* p)) 
 
 ;;? with multiple sources or change to poll
 ;;!? (timeout)

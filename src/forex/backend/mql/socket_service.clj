@@ -65,16 +65,16 @@
 ;;FIXME: snd crashes when not given a string?
 (defn snd-multi [socket id msg]
   (when-not (invalid-msg? msg) 
-    (when (.snd socket (str id) (bit-or +noblock+ +more+))
+    (when (snd socket (str id) (bit-or +noblock+ +more+))
       (if (or (vector? msg) (list? msg)) 
 	(loop [m msg]
 	  (if (= 1 (count m)) 
-	    (.snd socket (str (first m))  +noblock+)
-	    (if (.snd socket (str (first m))
+	    (snd socket (str (first m))  +noblock+)
+	    (if (snd socket (str (first m))
 		      (bit-or +more+ +noblock+))
 	      (recur (next m))
 	      false))) 
-	(.snd socket (str msg) +noblock+)))))  
+	(snd socket (str msg) +noblock+)))))  
 
 ;;TODO: make shorter
 (defn- socket-service-match [events send receive]

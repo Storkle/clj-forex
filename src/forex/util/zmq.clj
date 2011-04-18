@@ -63,11 +63,12 @@
   (setTimeout [_ timeout] (.setTimeout poll timeout))
   (poll [_] (.poll poll))
   (register [_ socket]
+	    (println "socket is " socket )
             (.register poll
                        ;;TODO: what if we reload? wont work?
-                       (if (extends? PSocket (class socket))
-                         (.raw socket)
-                         socket))
+                       (if (satisfies? PSocket socket)
+                         (do (println "YAY " (raw socket)) (raw socket))
+			 (do (println "DOESNT") socket)))
             (swap! sockets conj socket))
   (getSocket [_ i] (nth @sockets i)))
 
@@ -79,7 +80,7 @@
        (on [sock sockets]
            (.register p sock))
        p)))
-
+ 
 ;;TODO: now just a string socket!
 (defrecord StringSocket [^org.zeromq.ZMQ$Socket socket]
   PSocket 
@@ -128,10 +129,10 @@
              (.register p (.socket sock)))
          p)))
 
-  (defn new-socket
-    ([socket-type]
-       (new-socket *context* socket-type))
-    ([context socket-type ]
-       (.socket context socket-type))))
+(defn new-socket
+  ([socket-type]
+     (new-socket *context* socket-type))
+  ([context socket-type ]
+     (.socket context socket-type))))
 
 

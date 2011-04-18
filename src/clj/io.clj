@@ -349,8 +349,6 @@
   []
   (System/getProperty "user.dir"))
 
-
-
 (defmacro with-out-writer
   "Opens a writer on f, binds it to *out*, and evalutes body.
   Anything printed within body will be written to f."
@@ -586,11 +584,13 @@ Raise an exception if any deletion fails unless silently is true."
        (apply concat (vec files) (map list-files (filter #(.isDirectory %) files)))))))
 
 ;;TOOD: change to be multifn - regex string or function! or regex!
-(defn files [dir regex]
-  (let [regex (re-pattern regex)]
-    (filter #(and (.exists %) (.isFile %)
-		  (re-seq regex (.getName %)))
-	    (.listFiles (file dir)))))
+(defn files
+  ([dir] (files dir ".+"))
+  ([dir regex]
+     (let [regex (re-pattern regex)]
+       (filter #(and (.exists %) (.isFile %)
+		     (re-seq regex (.getName %)))
+	       (.listFiles (file dir))))))
 
 ;;(count (filter #(= (file-type %) "clj") (list-files "/home/seth/Dropbox/.rep/clj-forex/")))
 

@@ -63,6 +63,7 @@
 (mva smma 2)
 (mva lwma 3)
 
+(def-indicator [stochastic "Default_Stochastic"] true true)
 (def-indicator [psar "Default_Parabolic"] true)
 (def-indicator [cci "Default_CCI"] true)
 (def-indicator [momentum "Default_Momentum"] true)
@@ -76,11 +77,21 @@
   (aif (mode-ask (:symbol (env-dispatch e))) it (throwf e)))
 (defn bid [& e]
   (aif (mode-bid (:symbol (env-dispatch e))) it (throwf "MQL error %s" (:e it))))
-  
+
+(defn up?
+  ([indicator] (up? indicator 0))
+  ([indicator i]
+     (let [distance (- (indicator i) (indicator (+ i 1)))]
+       (if (> distance 0) true false))))
+(defn down?
+  ([indicator] (down? indicator 0))
+  ([indicator i]
+     (let [distance (- (indicator i) (indicator (+ i 1)))]
+       (if (< distance 0) true false))))
 (defn cross?
   ([signal main] (cross? signal main 0))
   ([signal main i]
-     (let [i1 (+ i 1) i2 (+ i 2)
+     (let [i1 i i2 (+ i 1)
 	   a1 (signal i1) a2 (signal i2)
 	   b1 (main i1) b2 (main i2)] 
        (or (and (> a1 b1) (< a2 b2) :buy)

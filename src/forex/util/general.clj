@@ -67,8 +67,6 @@
                          []) (str (last result) part)))))
       result)))
 
-
-
 (defn camel-to-dash
   "Convert a name like 'BigBlueCar' to 'big-blue-car'."
   [s]

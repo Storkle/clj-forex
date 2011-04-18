@@ -1,7 +1,7 @@
 
 (clojure.core/use 'nstools.ns)
 ;;this file allows one to automatically produce binding code for metatrader custom indicators
-(ns+ forex.utils.mql-indicator-devel
+(ns+ forex.dev.mql4-indicator
      (:clone clj.core)
      (:use forex.util.emacs clj.io)
      (:import java.io.File))

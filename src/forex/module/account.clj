@@ -1,17 +1,14 @@
-
 ;;TODO: unit test everything
 ;;TODO: create a new atom-hash on merging, etc????????
 (clojure.core/use 'nstools.ns)
 (ns+ forex.module.account
      (:clone clj.core)
      (:require forex.backend.mql.socket-service)
-    ;; (:import forex.backend.mql.socket-service.MqlError)
      (:use forex.util.core
 	   forex.util.emacs  
 	   forex.util.general forex.util.log
 	   forex.module.indicator
-	   forex.module.error forex.module.account.utils)
- 
+	   forex.module.error forex.module.account.utils) 
      (:require  [forex.module.account.core :as core]))
 
 (defvar *account-warn-on-mql-error* true)
@@ -31,11 +28,6 @@
            o#)))) 
 
 (defn- >? [a] (and (number? a) (>= a 0)))
-
-(comment
-  (defmacro- default [& body] 
-    `(binding [*default* @~#'err/*er*]
-       ~@body)))
 
 ;;TODO: do we need all of these assertions?
 (def- value-to-order-type
